@@ -128,6 +128,30 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
     @media(max-width:900px){.how-grid{grid-template-columns:1fr}}
     @media(max-width:480px){.tf-tab{padding:7px 13px;font-size:12px}}
+
+    /* ── MOBILE OVERRIDES ── */
+    @media(max-width:600px){
+      .container{padding:12px 10px}
+      h1{font-size:22px}
+      .legend{display:none}
+      .search input{width:100%;max-width:100%}
+      .tf-tabs{gap:6px;margin-top:12px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+      .tf-tabs::-webkit-scrollbar{display:none}
+      .tf-tab{flex-shrink:0;padding:14px 22px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;border:2px solid rgba(255,255,255,.15)}
+      .tf-tab.active{background:#015662;border-color:#01a0b8;box-shadow:0 0 14px rgba(1,160,184,.3)}
+      .grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+      .card{padding:10px 12px}
+      .symbol{font-size:14px}
+      .badge{font-size:9px;padding:2px 7px}
+      .win-row{font-size:10px}
+      .win-time{font-size:10px}
+      .timer{font-size:10px;margin-top:5px}
+      .card.system .symbol{font-size:13px}
+      nav{padding:8px 0}
+      .btn{padding:8px 12px;font-size:12px;border-radius:8px}
+      .howto{display:none}
+      footer{font-size:10px;padding:12px 0 60px}
+    }
   </style>
 
   <!-- NAV -->
