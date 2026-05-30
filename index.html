@@ -149,6 +149,8 @@ footer .container{display:flex;gap:32px;flex-wrap:wrap;justify-content:space-bet
 
 /* RESPONSIVE */
 @media(max-width:768px){
+  #story .container > div { grid-template-columns: 1fr !important; gap: 24px !important; }
+  #story img { max-height: 340px; }
   .nav-links,.nav-cta{display:none}
   .nav-burger{display:block}
   .mobile-nav.open{display:flex}
@@ -335,14 +337,25 @@ footer .container{display:flex;gap:32px;flex-wrap:wrap;justify-content:space-bet
 
 <!-- STORY -->
 <section class="section" id="story">
-  <div class="container" style="max-width:860px">
-    <h2>I Was Losing Just Like You, Until I Found The Truth About Trading</h2>
-    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">I've blown accounts. I've sat staring at charts for hours, chasing signals, hoping the next trade would finally save me. Every time I thought I'd cracked it, I lost again. It felt less like trading and more like gambling.</p>
-    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">The turning point came when I realised something simple but powerful: <strong>Consistency doesn't come from luck, signals, or gut feel. It comes from systems.</strong></p>
-    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">When I finally built those systems — rules I could follow, risk maps I could trust, and tools that cut through the noise — everything changed. For the first time, I wasn't guessing. I was executing with confidence.</p>
-    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">That's why I built <strong>Perfect Entry</strong>. It's not about me being special. It's about giving you the exact systems I used so you can finally trade with precision. We publish our data transparently. You can see every session window, every win rate, every confidence score before you spend a penny.</p>
-    <p style="line-height:1.75;font-weight:600;margin-bottom:20px">Today, thousands of traders worldwide are using Perfect Entry to remove doubt, follow the rules, and stay consistent. The only question is: will you be next?</p>
-    <a href="https://whop.com/perfect-entry/" target="_blank" class="btn btn-primary">Join Market Master Today</a>
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:48px;align-items:center;max-width:1100px">
+      <div style="position:relative">
+        <img src="assets/taylor.png" alt="Taylor — founder of Perfect Entry"
+          style="width:100%;border-radius:20px;border:1px solid rgba(255,255,255,0.1);object-fit:cover;box-shadow:0 20px 60px rgba(0,0,0,0.45);display:block">
+        <div style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(11,13,16,0.88);backdrop-filter:blur(8px);border:1px solid rgba(1,160,184,0.3);border-radius:999px;padding:6px 16px;font-size:12px;font-weight:700;color:#7de3ff">
+          Taylor — Founder, Perfect Entry
+        </div>
+      </div>
+      <div>
+        <h2>I Was Losing Just Like You, Until I Found The Truth About Trading</h2>
+        <p style="line-height:1.75;opacity:.92;margin-bottom:14px">I've blown accounts. I've sat staring at charts for hours, chasing signals, hoping the next trade would finally save me. Every time I thought I'd cracked it, I lost again. It felt less like trading and more like gambling.</p>
+        <p style="line-height:1.75;opacity:.92;margin-bottom:14px">The turning point came when I realised something simple but powerful: <strong>Consistency doesn't come from luck, signals, or gut feel. It comes from systems.</strong></p>
+        <p style="line-height:1.75;opacity:.92;margin-bottom:14px">When I finally built those systems — rules I could follow, risk maps I could trust, and tools that cut through the noise — everything changed. For the first time, I wasn't guessing. I was executing with confidence.</p>
+        <p style="line-height:1.75;opacity:.92;margin-bottom:14px">That's why I built <strong>Perfect Entry</strong>. It's not about me being special. It's about giving you the exact systems I used so you can finally trade with precision. We publish our data transparently. You can see every session window, every win rate, every confidence score before you spend a penny.</p>
+        <p style="line-height:1.75;font-weight:600;margin-bottom:20px">Today, thousands of traders worldwide are using Perfect Entry to remove doubt, follow the rules, and stay consistent. The only question is: will you be next?</p>
+        <a href="https://whop.com/perfect-entry/" target="_blank" class="btn btn-primary">Join Market Master Today</a>
+      </div>
+    </div>
   </div>
 </section>
 
