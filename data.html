@@ -25,6 +25,38 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .site-nav-cta{padding:7px 16px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);color:var(--text);font-weight:800;font-size:12px;text-decoration:none;white-space:nowrap;transition:all .15s}
 .site-nav-cta:hover{background:rgba(1,86,98,.35)}
 @media(max-width:768px){.site-nav-links{display:none}}
+
+@media(max-width:800px){.filter-top{grid-template-columns:1fr}.cols2{grid-template-columns:1fr}.rx{padding:14px 10px}}
+@media(max-width:600px){
+  .rx{padding:10px 10px}
+  h1{font-size:24px;margin-top:10px}
+  .subtitle{font-size:12px;margin-bottom:14px}
+  .back-btn{padding:8px 12px;font-size:11px}
+  .filter-top{grid-template-columns:1fr;gap:8px;margin-bottom:8px}
+  .filter-box{padding:12px 14px}
+  .fg-label{font-size:10px;margin-bottom:8px}
+  .tog{font-size:11px;padding:6px 12px}
+  .filter-pairs{margin-bottom:14px}
+  .stat-strip{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+  .sc{padding:12px 14px}
+  .sc-val{font-size:18px}
+  .chart-row{gap:8px;margin-bottom:8px}
+  .cols2{grid-template-columns:1fr}
+  .chart-card{padding:14px}
+  .table-card{padding:12px 10px}
+  .table-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
+  table{font-size:11px;width:100%}
+  th{padding:5px 8px;font-size:9px}
+  td{padding:6px 8px}
+  .col-group{display:none}
+  #pe-explorer{overflow-x:hidden}
+  .rx{overflow-x:hidden}
+  .chart-card{min-width:0;width:100%}
+  .chart-row{min-width:0}
+  .filter-bar,.filter-box,.filter-top,.filter-pairs,.stat-strip,.sc{min-width:0}
+  canvas{max-width:100%!important}
+}
+
 </style>
 </head>
 <body>
