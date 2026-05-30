@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reversal Sniper Data — Perfect Entry | 65,000+ Backtested Forex Trades</title>
+<meta name="description" content="Browse the full Perfect Entry Reversal Sniper dataset. 65,000+ raw trades across 29 forex pairs and 4 timeframes. Out-of-sample validated win rates. Transparent, public data.">
+<meta property="og:title" content="Perfect Entry Reversal Sniper — 65,000+ Backtested Trade Results">
+<meta property="og:description" content="Full transparency. Browse win rates, session windows, and out-of-sample validation results across 29 pairs and 4 timeframes.">
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0b0d10;--bg2:#0f1216;--teal:#01a0b8;--teal-dark:#015662;--teal-glow:rgba(1,160,184,0.15);--text:#EAFDFC;--text-dim:rgba(234,253,252,0.6);--text-mute:rgba(234,253,252,0.35);--border:rgba(255,255,255,0.08);--orange:#FF6A2A}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0}
+.site-nav{position:sticky;top:0;z-index:200;background:rgba(11,13,16,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.site-nav-inner{max-width:1600px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:10px 20px}
+.site-nav-logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px;text-decoration:none;color:var(--text)}
+.site-nav-logo img{width:24px;height:24px;object-fit:contain}
+.site-nav-links{display:flex;gap:16px;font-size:12px;font-weight:600;margin-left:auto}
+.site-nav-links a{transition:color .15s;text-decoration:none;color:rgba(234,253,252,0.6)}
+.site-nav-links a:hover,.site-nav-links a.active{color:var(--text)}
+.site-nav-links a.active{color:var(--orange)}
+.site-nav-cta{padding:7px 16px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);color:var(--text);font-weight:800;font-size:12px;text-decoration:none;white-space:nowrap;transition:all .15s}
+.site-nav-cta:hover{background:rgba(1,86,98,.35)}
+@media(max-width:768px){.site-nav-links{display:none}}
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <div class="site-nav-inner">
+    <a href="index.html" class="site-nav-logo">
+      <img src="assets/logo.png" alt="Perfect Entry">
+      <span>Perfect Entry</span>
+    </a>
+    <div class="site-nav-links">
+      <a href="index.html">Home</a>
+      <a href="screener.html">Session Screener</a>
+      <a href="signals.html">Live Signals</a>
+      <a href="data.html" class="active">Data</a>
+    </div>
+    <a href="https://whop.com/perfect-entry/" target="_blank" class="site-nav-cta">Join Now</a>
+  </div>
+</nav>
+<!-- PERFECT ENTRY — Results Explorer (Live Google Sheets) -->
+<div id="pe-explorer" style="font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0d10;color:#EAFDFC;">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+#pe-explorer *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.rx{max-width:1200px;margin:0 auto;padding:24px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.07)}
+nav{display:flex;align-items:center;gap:16px;justify-content:space-between;padding:12px 0}
+.nav-logo{display:flex;align-items:center;gap:12px;font-weight:800;font-size:15px;letter-spacing:-.01em}
+.nav-logo img{width:26px;height:auto;filter:drop-shadow(0 0 6px rgba(1,86,98,.5))}
+.back-btn{display:inline-block;padding:10px 20px;border-radius:12px;font-weight:800;font-size:13px;letter-spacing:.02em;border:2px solid #015662;background:rgba(1,86,98,.1);color:#EAFDFC;text-decoration:none;cursor:pointer;transition:all .15s}
+.back-btn:hover{background:rgba(1,86,98,.25)}
+h1{margin:16px 0 4px;font-size:clamp(26px,4vw,40px);font-weight:900;letter-spacing:-.02em}
+h1 span{color:#FF6A2A}
+.subtitle{font-size:13px;color:rgba(234,253,252,.5);margin-bottom:20px;max-width:580px;line-height:1.6}
+.filter-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px}
+.filter-pairs{margin-bottom:20px}
+.filter-box{border:1px solid rgba(255,255,255,.08);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));padding:14px 16px}
+.fg-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(234,253,252,.35);margin-bottom:10px}
+.tog-row{display:flex;flex-wrap:wrap;gap:6px}
+.tog{font-size:12px;font-weight:700;padding:7px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:rgba(234,253,252,.5);cursor:pointer;transition:all .15s;letter-spacing:.02em;white-space:nowrap;font-family:inherit}
+.tog:hover{background:rgba(255,255,255,.08);color:#EAFDFC}
+.tog.on{background:#015662;border-color:#01a0b8;color:#EAFDFC;box-shadow:0 0 10px rgba(1,160,184,.2)}
+.tog.on-s4{background:rgba(10,124,124,.8);border-color:#0A7C7C;color:#EAFDFC}
+.tog.on-s3{background:rgba(13,110,110,.7);border-color:#0D6E6E;color:#EAFDFC}
+.tog.on-s2{background:rgba(184,134,11,.6);border-color:#B8860B;color:#EAFDFC}
+.tog.on-s1{background:rgba(123,48,48,.7);border-color:#7B3030;color:#EAFDFC}
+.tog.on-s0{background:rgba(51,51,51,.8);border-color:#555;color:rgba(234,253,252,.6)}
+.stat-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.sc{border:1px solid rgba(255,255,255,.08);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));padding:14px 16px}
+.sc-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(234,253,252,.35);margin-bottom:6px}
+.sc-val{font-size:21px;font-weight:900;letter-spacing:-.02em;font-family:monospace}
+.v-teal{color:#7de3ff}.v-green{color:#4ade80}.v-red{color:#f87171}.v-orange{color:#FF6A2A}
+.sc-sub{font-size:10px;color:rgba(234,253,252,.3);margin-top:3px;font-family:monospace}
+.chart-row{display:grid;gap:12px;margin-bottom:12px}
+.cols1{grid-template-columns:1fr}.cols2{grid-template-columns:1fr 1fr}
+.chart-card{border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));padding:18px}
+.chart-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(234,253,252,.35);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.chart-title::before{content:'';width:3px;height:11px;border-radius:2px;background:#FF6A2A;flex-shrink:0}
+.table-card{border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));padding:18px;margin-bottom:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(234,253,252,.3);padding:8px 12px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-family:monospace;font-size:11px;white-space:nowrap;color:#EAFDFC}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.025)}
+.score-pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid}
+.s4{background:rgba(10,124,124,.3);border-color:#0A7C7C;color:#7de3ff}
+.s3{background:rgba(13,110,110,.25);border-color:#0D6E6E;color:#5dd}
+.s2{background:rgba(184,134,11,.2);border-color:#B8860B;color:#ffc84a}
+.s1{background:rgba(123,48,48,.2);border-color:#7B3030;color:#f87171}
+.s0{background:rgba(50,50,50,.3);border-color:#555;color:rgba(234,253,252,.4)}
+footer{margin-top:24px;padding:18px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(188,205,210,.5)}
+.bottom-cap{height:60px;background:#0b0d10}
+.score-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.score-legend-item{font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid}
+.pe-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:16px}
+.pe-loading .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.08);border-top-color:#FF6A2A;border-radius:50%;animation:pe-spin .8s linear infinite}
+@keyframes pe-spin{to{transform:rotate(360deg)}}
+.pe-loading-text{font-size:13px;color:rgba(234,253,252,.4);letter-spacing:.02em}
+.pe-error{text-align:center;padding:40px 20px;color:#f87171;font-size:14px}
+@media(max-width:800px){.filter-top{grid-template-columns:1fr}.cols2{grid-template-columns:1fr}.rx{padding:14px 10px}}
+</style>
+
+<header>
+  <div class="rx">
+    <nav>
+      <div class="nav-logo">
+        <img src="https://static.wixstatic.com/media/a7eea0_593d6f34013b40eca2df23755f1bf50f~mv2.png" alt="Perfect Entry">
+        Perfect Entry
+      </div>
+      <a class="back-btn" href="index.html" id="pe-back">&#8592; Back to Home</a>
+    </nav>
+  </div>
+</header>
+
+<div class="rx">
+  <h1>Results <span>Explorer</span></h1>
+  <p class="subtitle">This Is Where the Edge Comes From<br>
+Over 65,000 trades have already been tested, validated, and structured into the sessions you see here.<br>
+We are actively pushing past 110,000 trades, adding deeper confirmation across higher timeframes to strengthen every edge.<br>
+Nothing here is simulated. Nothing is guessed.<br>
+Every session feeds directly into the live opportunities shown in What’s Tradable Now.</p>
+
+  <div id="pe-main-content" style="display:none">
+    <div class="filter-top">
+      <div class="filter-box">
+        <div class="fg-label">Timeframe</div>
+        <div class="tog-row" id="tog-tf">
+          <button class="tog on" data-val="1min">1 min</button>
+          <button class="tog on" data-val="3min">3 min</button>
+          <button class="tog on" data-val="5min">5 min</button>
+          <button class="tog on" data-val="15min">15 min</button>
+          <button class="tog on" data-val="2hr">2 hr</button>
+        </div>
+      </div>
+      <div class="filter-box">
+        <div class="fg-label">Group</div>
+        <div class="tog-row" id="tog-group">
+          <button class="tog on" data-val="forex">Forex</button>
+          <button class="tog on" data-val="crypto">Crypto</button>
+          <button class="tog on" data-val="commodity">Metals</button>
+          <button class="tog on" data-val="index">Indices</button>
+        </div>
+      </div>
+      <div class="filter-box">
+        <div class="fg-label">Min Score</div>
+        <div class="tog-row" id="tog-score">
+          <button class="tog" data-val="1">1+</button>
+          <button class="tog" data-val="2">2+</button>
+          <button class="tog" data-val="3">3+</button>
+          <button class="tog" data-val="4">4 only</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-box filter-pairs">
+      <div class="fg-label">Pairs &nbsp;<span id="pair-count" style="color:#FF6A2A;opacity:1"></span></div>
+      <div class="tog-row" id="tog-pairs"></div>
+    </div>
+
+    <div class="score-legend">
+      <span class="score-legend-item s4">4 &mdash; 4/4 OOS passes</span>
+      <span class="score-legend-item s3">3 &mdash; 3/4 OOS passes</span>
+      <span class="score-legend-item s2">2 &mdash; 2/4 OOS passes</span>
+      <span class="score-legend-item s1">1 &mdash; 1/4 OOS pass</span>
+      <span class="score-legend-item s0">0 &mdash; 2-way validated</span>
+    </div>
+    <p style="font-size:11px;color:rgba(234,253,252,.3);margin:4px 0 16px">Score 0 shown for 3min/5min/15min/2hr pending revalidation. 1min uses full 4-way scoring.</p>
+
+    <div class="stat-strip" id="stat-strip"></div>
+
+    <div class="chart-row cols1">
+      <div class="chart-card">
+        <div class="chart-title">Equity curve &mdash; cumulative R</div>
+        <div style="position:relative;height:200px"><canvas id="cEquity"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-row cols2">
+      <div class="chart-card">
+        <div class="chart-title">Win rate by pair</div>
+        <div style="position:relative;height:300px"><canvas id="cWRPair"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Profit factor by pair</div>
+        <div style="position:relative;height:300px"><canvas id="cPFPair"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-row cols2">
+      <div class="chart-card">
+        <div class="chart-title">Win rate by day of week</div>
+        <div style="position:relative;height:200px"><canvas id="cWRDay"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Win rate by hour (UTC)</div>
+        <div style="position:relative;height:200px"><canvas id="cWRHour"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-row cols2">
+      <div class="chart-card">
+        <div class="chart-title">R contribution by pair</div>
+        <div style="position:relative;height:240px"><canvas id="cPiePair"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Trades by score</div>
+        <div style="position:relative;height:240px"><canvas id="cPieScore"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-row cols1">
+      <div class="chart-card">
+        <div class="chart-title">Drawdown from peak (R)</div>
+        <div style="position:relative;height:160px"><canvas id="cDD"></canvas></div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="chart-title" style="margin-bottom:12px">Per-pair breakdown</div>
+      <table>
+        <thead><tr>
+          <th>Pair</th><th>Group</th><th>Trades</th>
+          <th>Wins</th><th>Losses</th><th>Win Rate</th>
+          <th>Profit Factor</th><th>Total R</th>
+        </tr></thead>
+        <tbody id="pairTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="pe-loading" class="pe-loading">
+    <div class="spinner"></div>
+    <div class="pe-loading-text">Loading trade data...</div>
+  </div>
+
+  <footer>&copy; <span id="yr"></span> Perfect Entry. Educational content and software tools only. Nothing here is financial, investment, tax, or legal advice. TradingView&reg; is a registered trademark of TradingView, Inc.</footer>
+  <div class="bottom-cap"></div>
+</div>
+
+<script>
+(function(){
+const RR=1.4;
+
+/* ── Google Sheets CSV URL ── */
+const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRfp8qKJS1wuWMPrJYMsM8SzJb8WhqGFGi6Uy9BC-PXQWnUcFsUmpRmi0KhgK-X_mRM0A2Pa65Yab9q/pub?output=csv';
+
+/* ── CSV Parser ── */
+function parseCSV(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length<2)return[];
+  const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const vals=[];
+    let cur='',inQ=false;
+    for(let c=0;c<lines[i].length;c++){
+      const ch=lines[i][c];
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){vals.push(cur.trim());cur='';}
+      else{cur+=ch;}
+    }
+    vals.push(cur.trim());
+    const obj={};
+    headers.forEach((h,idx)=>{obj[h]=vals[idx]||'';});
+    rows.push(obj);
+  }
+  return rows;
+}
+
+/* ── Map sheet row to internal trade object ── */
+function mapRow(row){
+  const pair=(row['pair']||'').toUpperCase().trim();
+  const tfRaw=(row['timeframe']||'').toLowerCase().trim();
+  const tf=tfRaw; // already matches: 1min, 3min, 5min, 15min, 2hr
+  const groupRaw=(row['group']||'').toLowerCase().trim();
+  // Normalize group names to match filter values
+  let group=groupRaw;
+  if(groupRaw==='metals'||groupRaw==='commodity')group='commodity';
+  if(groupRaw==='indices'||groupRaw==='index')group='index';
+
+  // Parse date: DD/MM/YYYY -> YYYY-MM-DD
+  const dateParts=(row['entry date']||'').split('/');
+  let date_iso='';
+  let dateDisplay='';
+  if(dateParts.length===3){
+    const dd=dateParts[0].padStart(2,'0');
+    const mm=dateParts[1].padStart(2,'0');
+    const yyyy=dateParts[2].length===2?'20'+dateParts[2]:dateParts[2];
+    date_iso=yyyy+'-'+mm+'-'+dd;
+    dateDisplay=dd+'/'+mm+'/'+yyyy.slice(-2);
+  }
+
+  const day=(row['day']||'').trim();
+  const time=(row['time']||'').trim();
+  const resultRaw=(row['result']||'').toLowerCase().trim();
+  const result=resultRaw==='win'?'w':'l';
+  const pl=result==='w'?RR:-1;
+  const conf=parseInt(row['confidence'])||0;
+
+  return{pair,tf,group,date:dateDisplay,date_iso,day,time,direction:(row['direction']||'').trim(),result,pl,conf};
+}
+
+/* ── Fetch and initialize ── */
+async function init(){
+  try{
+    const resp=await fetch(SHEET_CSV_URL);
+    if(!resp.ok)throw new Error('Failed to fetch sheet: '+resp.status);
+    const text=await resp.text();
+    const rows=parseCSV(text);
+    if(rows.length===0)throw new Error('No data found in sheet');
+    const RAW=rows.map(mapRow).filter(t=>t.pair&&t.tf&&t.date_iso);
+    if(RAW.length===0)throw new Error('No valid trades after parsing');
+
+    document.getElementById('pe-loading').style.display='none';
+    document.getElementById('pe-main-content').style.display='block';
+    startDashboard(RAW);
+  }catch(err){
+    console.error('PE Results Explorer error:',err);
+    document.getElementById('pe-loading').innerHTML='<div class="pe-error">Failed to load trade data.<br><span style="font-size:12px;opacity:.6">'+err.message+'</span></div>';
+  }
+}
+
+function startDashboard(RAW){
+  const ALL_PAIRS=[...new Set(RAW.map(t=>t.pair))].sort();
+  const GROUPS={forex:[],crypto:[],commodity:[],index:[]};
+  RAW.forEach(t=>{if(GROUPS[t.group]&&!GROUPS[t.group].includes(t.pair))GROUPS[t.group].push(t.pair);});
+
+  // Auto-detect which timeframes exist in the data
+  const allTFs=new Set(RAW.map(t=>t.tf));
+  let activeTFs=new Set(['1min','3min','5min','15min','2hr'].filter(t=>allTFs.has(t)));
+  if(activeTFs.size===0)activeTFs=new Set(allTFs);
+
+  // Update TF toggle buttons to reflect available data
+  document.querySelectorAll('#tog-tf .tog').forEach(btn=>{
+    const val=btn.dataset.val;
+    if(!allTFs.has(val)){
+      btn.style.opacity='.25';btn.style.pointerEvents='none';
+      btn.classList.remove('on');
+    }else if(activeTFs.has(val)){
+      btn.classList.add('on');
+    }
+  });
+
+  // Auto-detect which groups exist in the data
+  const allGroups=new Set(RAW.map(t=>t.group));
+  let activeGroups=new Set(['forex','crypto','commodity','index'].filter(g=>allGroups.has(g)));
+  if(activeGroups.size===0)activeGroups=new Set(allGroups);
+
+  document.querySelectorAll('#tog-group .tog').forEach(btn=>{
+    const val=btn.dataset.val;
+    if(!allGroups.has(val)){
+      btn.style.opacity='.25';btn.style.pointerEvents='none';
+      btn.classList.remove('on');
+    }else if(activeGroups.has(val)){
+      btn.classList.add('on');
+    }
+  });
+
+  let minScore=0;
+  let activePairs=new Set(ALL_PAIRS);
+  let charts={};
+
+  function destroyC(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+  const GRID='rgba(255,255,255,.06)',TICK='rgba(234,253,252,.3)';
+  const tip={backgroundColor:'#0f1216',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#EAFDFC',bodyColor:'rgba(200,230,228,.7)',padding:10,cornerRadius:8,titleFont:{family:'Inter,system-ui,sans-serif'},bodyFont:{family:'monospace'}};
+  const baseOpts={responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:tip},
+    scales:{x:{grid:{color:GRID},ticks:{color:TICK,font:{size:10}}},y:{grid:{color:GRID},ticks:{color:TICK,font:{size:10,family:'monospace'}}}}};
+
+  function scoreColor(s){
+    if(s>=4)return'rgba(10,124,124,.75)';
+    if(s>=3)return'rgba(13,110,110,.65)';
+    if(s>=2)return'rgba(184,134,11,.65)';
+    if(s>=1)return'rgba(123,48,48,.7)';
+    return'rgba(80,80,80,.6)';
+  }
+  function scoreClass(s){return['s0','s1','s2','s3','s4'][Math.min(s,4)];}
+
+  function buildPairToggles(){
+    const wrap=document.getElementById('tog-pairs');
+    wrap.innerHTML='';
+    const visible=[...activeGroups].flatMap(g=>GROUPS[g]||[]).sort();
+    visible.forEach(pair=>{
+      const b=document.createElement('button');
+      b.className='tog'+(activePairs.has(pair)?' on':'');
+      b.dataset.val=pair;b.textContent=pair;
+      b.addEventListener('click',function(){
+        if(activePairs.has(pair)){if(activePairs.size>1)activePairs.delete(pair);}
+        else activePairs.add(pair);
+        b.className='tog'+(activePairs.has(pair)?' on':'');
+        render();
+      });
+      wrap.appendChild(b);
+    });
+    document.getElementById('pair-count').textContent='('+activePairs.size+'/'+visible.length+')';
+  }
+
+  function filtered(){return RAW.filter(t=>activeTFs.has(t.tf)&&activeGroups.has(t.group)&&t.conf>=minScore&&activePairs.has(t.pair));}
+
+  function calcStats(data){
+    const w=data.filter(t=>t.result==='w').length,l=data.filter(t=>t.result==='l').length,n=w+l;
+    const R=Math.round(data.reduce((s,t)=>s+t.pl,0)*10)/10;
+    const wr=n?Math.round(w/n*1000)/10:0;
+    const pf=l?Math.round(w*RR/l*100)/100:99;
+    const sorted=[...data].sort((a,b)=>a.date_iso.localeCompare(b.date_iso)||a.time.localeCompare(b.time));
+    let pk=0,run=0,dd=0;
+    sorted.forEach(t=>{run+=t.pl;if(run>pk)pk=run;if(pk-run>dd)dd=pk-run;});
+    return{w,l,n,R,wr,pf,dd:Math.round(dd*10)/10};
+  }
+
+  function render(){
+    const data=filtered(),s=calcStats(data);
+    document.getElementById('yr').textContent=new Date().getFullYear();
+    function sc(lbl,val,cls,sub){return'<div class="sc"><div class="sc-label">'+lbl+'</div><div class="sc-val '+cls+'">'+val+'</div>'+(sub?'<div class="sc-sub">'+sub+'</div>':'')+'</div>';}
+    document.getElementById('stat-strip').innerHTML=
+      sc('Total Trades',s.n.toLocaleString(),'v-teal')+
+      sc('Win Rate',s.wr+'%',s.wr>=60?'v-green':s.wr>=42?'v-teal':'v-red','Breakeven: 41.7%')+
+      sc('Total R',(s.R>=0?'+':'')+s.R+'R',s.R>=0?'v-green':'v-red')+
+      sc('Profit Factor',s.pf,s.pf>=2?'v-green':s.pf>=1?'v-teal':'v-red')+
+      sc('Wins',s.w.toLocaleString(),'v-green')+
+      sc('Losses',s.l.toLocaleString(),'v-red')+
+      sc('Peak Drawdown','-'+s.dd+'R','v-orange')+
+      sc('Avg/Trade',s.n?Math.round(s.R/s.n*1000)/1000+'R':'--',s.n&&s.R>=0?'v-green':'v-red');
+    drawEquity(data);drawWRPair(data);drawPFPair(data);
+    drawWRDay(data);drawWRHour(data);drawPiePair(data);
+    drawPieScore(data);drawDD(data);drawTable(data);
+  }
+
+  function wrCol(v){return v>=70?'rgba(68,170,255,.75)':v>=55?'rgba(1,160,184,.65)':v>=42?'rgba(255,106,42,.65)':'rgba(239,68,68,.6)';}
+
+  function drawEquity(data){
+    destroyC('eq');
+    const sorted=[...data].sort((a,b)=>a.date_iso.localeCompare(b.date_iso)||a.time.localeCompare(b.time));
+    let run=0;const pts=sorted.map(t=>{run+=t.pl;return Math.round(run*10)/10;});
+    const ctx=document.getElementById('cEquity').getContext('2d');
+    const g=ctx.createLinearGradient(0,0,0,200);
+    g.addColorStop(0,'rgba(255,106,42,.35)');g.addColorStop(1,'rgba(255,106,42,.02)');
+    charts.eq=new Chart(ctx,{type:'line',data:{labels:pts.map((_,i)=>i+1),datasets:[{data:pts,borderColor:'#FF6A2A',borderWidth:2,fill:true,backgroundColor:g,pointRadius:0,tension:.35}]},
+      options:{...baseOpts,plugins:{...baseOpts.plugins,tooltip:{...tip,callbacks:{label:c=>c.raw+'R',title:c=>'Trade #'+c[0].label}}}}});
+  }
+
+  function drawWRPair(data){
+    destroyC('wrp');
+    const pairs=[...new Set(data.map(t=>t.pair))].sort();
+    const wrs=pairs.map(p=>{const pt=data.filter(t=>t.pair===p);const w=pt.filter(t=>t.result==='w').length;return pt.length?Math.round(w/pt.length*1000)/10:0;});
+    const ctx=document.getElementById('cWRPair').getContext('2d');
+    charts.wrp=new Chart(ctx,{type:'bar',data:{labels:pairs,datasets:[{data:wrs,backgroundColor:wrs.map(wrCol),borderRadius:4,borderSkipped:false}]},
+      options:{...baseOpts,indexAxis:'y',scales:{x:{...baseOpts.scales.x,min:0,max:100,ticks:{...baseOpts.scales.x.ticks,callback:v=>v+'%'}},y:{...baseOpts.scales.y,grid:{display:false}}},
+        plugins:{...baseOpts.plugins,tooltip:{...tip,callbacks:{label:c=>c.raw+'% WR'}}}}});
+  }
+
+  function drawPFPair(data){
+    destroyC('pfp');
+    const pairs=[...new Set(data.map(t=>t.pair))].sort();
+    const pfs=pairs.map(p=>{const pt=data.filter(t=>t.pair===p);const w=pt.filter(t=>t.result==='w').length;const l=pt.filter(t=>t.result==='l').length;return Math.min(l?Math.round(w*RR/l*100)/100:15,15);});
+    const ctx=document.getElementById('cPFPair').getContext('2d');
+    charts.pfp=new Chart(ctx,{type:'bar',data:{labels:pairs,datasets:[{data:pfs,backgroundColor:pfs.map(v=>v>=3?'rgba(68,170,255,.75)':v>=1.5?'rgba(1,160,184,.65)':'rgba(239,68,68,.6)'),borderRadius:4,borderSkipped:false}]},
+      options:{...baseOpts,indexAxis:'y',scales:{x:{...baseOpts.scales.x,min:0},y:{...baseOpts.scales.y,grid:{display:false}}},
+        plugins:{...baseOpts.plugins,tooltip:{...tip,callbacks:{label:c=>'PF '+c.raw}}}}});
+  }
+
+  function drawWRDay(data){
+    destroyC('wrd');
+    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const wrs=days.map(d=>{const dt=data.filter(t=>t.day===d);const w=dt.filter(t=>t.result==='w').length;return dt.length?Math.round(w/dt.length*1000)/10:null;});
+    const ctx=document.getElementById('cWRDay').getContext('2d');
+    charts.wrd=new Chart(ctx,{type:'bar',data:{labels:days,datasets:[{data:wrs,backgroundColor:'rgba(255,106,42,.4)',borderColor:'#FF6A2A',borderWidth:1.5,borderRadius:6,borderSkipped:false}]},
+      options:{...baseOpts,scales:{x:{...baseOpts.scales.x,grid:{display:false}},y:{...baseOpts.scales.y,min:0,max:100,ticks:{...baseOpts.scales.y.ticks,callback:v=>v+'%'}}},
+        plugins:{...baseOpts.plugins,tooltip:{...tip,callbacks:{label:c=>c.raw+'% WR'}}}}});
+  }
+
+  function drawWRHour(data){
+    destroyC('wrh');
+    const hours=Array.from({length:20},(_,i)=>i);
+    const wrs=hours.map(h=>{const ht=data.filter(t=>parseInt(t.time.split(':')[0])===h);const w=ht.filter(t=>t.result==='w').length;return ht.length>=3?Math.round(w/ht.length*1000)/10:null;});
+    const ctx=document.getElementById('cWRHour').getContext('2d');
+    charts.wrh=new Chart(ctx,{type:'bar',data:{labels:hours.map(h=>('0'+h).slice(-2)+':00'),datasets:[{data:wrs,backgroundColor:wrs.map(v=>v===null?'transparent':wrCol(v)),borderRadius:4,borderSkipped:false}]},
+      options:{...baseOpts,scales:{x:{...baseOpts.scales.x,grid:{display:false},ticks:{...baseOpts.scales.x.ticks,maxRotation:45}},y:{...baseOpts.scales.y,min:0,max:100,ticks:{...baseOpts.scales.y.ticks,callback:v=>v+'%'}}},
+        plugins:{...baseOpts.plugins,tooltip:{...tip,callbacks:{label:c=>c.raw===null?'< 3 trades':c.raw+'% WR'}}}}});
+  }
+
+  function drawPiePair(data){
+    destroyC('pairpie');
+    const allP=[...new Set(data.map(t=>t.pair))].sort();
+    const labels=[],vals=[];
+    allP.forEach(p=>{const r=Math.round(data.filter(t=>t.pair===p).reduce((s,t)=>s+t.pl,0)*10)/10;if(r>0){labels.push(p);vals.push(r);}});
+    const pal=['#FF6A2A','#01a0b8','#7de3ff','#ffc84a','#4af','#4ade80','#f472b6','#818cf8','#34d399','#fb923c','#60a5fa','#e879f9','#2dd4bf','#c084fc','#ff8c5a'];
+    const ctx=document.getElementById('cPiePair').getContext('2d');
+    charts.pairpie=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:labels.map((_,i)=>pal[i%pal.length]),borderWidth:2,borderColor:'#0b0d10',hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:true,position:'right',labels:{color:'rgba(234,253,252,.6)',font:{size:10},padding:6,boxWidth:10}},tooltip:{...tip,callbacks:{label:c=>c.label+': +'+c.raw+'R'}}}}});
+  }
+
+  function drawPieScore(data){
+    destroyC('scorepie');
+    const scores=[0,1,2,3,4];
+    const counts=scores.map(s=>data.filter(t=>t.conf===s).length);
+    const labels=scores.map(s=>['Score 0','Score 1','Score 2','Score 3','Score 4'][s]);
+    const colors=['rgba(80,80,80,.7)','rgba(123,48,48,.8)','rgba(184,134,11,.75)','rgba(13,110,110,.75)','rgba(10,124,124,.85)'];
+    const ctx=document.getElementById('cPieScore').getContext('2d');
+    charts.scorepie=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data:counts,backgroundColor:colors,borderWidth:2,borderColor:'#0b0d10',hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:true,position:'right',labels:{color:'rgba(234,253,252,.6)',font:{size:11},padding:10,boxWidth:12}},tooltip:{...tip,callbacks:{label:c=>c.label+': '+c.raw+' trades'}}}}});
+  }
+
+  function drawDD(data){
+    destroyC('dd');
+    const sorted=[...data].sort((a,b)=>a.date_iso.localeCompare(b.date_iso)||a.time.localeCompare(b.time));
+    let pk=0,run=0;
+    const dds=sorted.map(t=>{run+=t.pl;if(run>pk)pk=run;return Math.round((pk-run)*10)/10;});
+    const ctx=document.getElementById('cDD').getContext('2d');
+    const g=ctx.createLinearGradient(0,0,0,140);
+    g.addColorStop(0,'rgba(255,106,42,.35)');g.addColorStop(1,'rgba(255,106,42,.02)');
+    charts.dd=new Chart(ctx,{type:'line',data:{labels:dds.map((_,i)=>i+1),datasets:[{data:dds,borderColor:'rgba(255,106,42,.7)',borderWidth:1.5,fill:true,backgroundColor:g,pointRadius:0,tension:.2}]},
+      options:{...baseOpts,scales:{x:{...baseOpts.scales.x},y:{...baseOpts.scales.y,reverse:true,ticks:{...baseOpts.scales.y.ticks,callback:v=>'-'+v+'R'}}},
+        plugins:{...baseOpts.plugins,tooltip:{...tip,callbacks:{label:c=>'-'+c.raw+'R',title:c=>'Trade #'+c[0].label}}}}});
+  }
+
+  function drawTable(data){
+    const pairs=[...new Set(data.map(t=>t.pair))].sort();
+    const tbody=document.getElementById('pairTbody');
+    tbody.innerHTML='';
+    pairs.forEach(p=>{
+      const pt=data.filter(t=>t.pair===p);
+      const w=pt.filter(t=>t.result==='w').length,l=pt.filter(t=>t.result==='l').length,n=w+l;
+      const wr=n?Math.round(w/n*1000)/10:0;
+      const pf=l?Math.round(w*RR/l*100)/100:99;
+      const R=Math.round(pt.reduce((s,t)=>s+t.pl,0)*10)/10;
+      const wrc=wr>=65?'s3':wr>=50?'s2':'s1';
+      const tr=document.createElement('tr');
+      tr.innerHTML='<td style="font-weight:700;color:#EAFDFC;font-size:12px">'+p+'</td>'+
+        '<td style="opacity:.35;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-family:inherit">'+pt[0].group+'</td>'+
+        '<td>'+n+'</td><td style="color:#4ade80">'+w+'</td><td style="color:#f87171">'+l+'</td>'+
+        '<td><span class="score-pill '+wrc+'">'+wr+'%</span></td>'+
+        '<td style="color:'+(pf>=2?'#7de3ff':pf>=1?'rgba(234,253,252,.7)':'#f87171')+'">'+pf+'</td>'+
+        '<td style="color:'+(R>=0?'#4ade80':'#f87171')+'">'+(R>=0?'+':'')+R+'R</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Score filter - single select (min score)
+  document.getElementById('tog-score').addEventListener('click',function(e){
+    const btn=e.target.closest('.tog');if(!btn)return;
+    minScore=parseInt(btn.dataset.val);
+    document.querySelectorAll('#tog-score .tog').forEach(b=>{
+      const v=parseInt(b.dataset.val);
+      const cls='s'+v;
+      b.className='tog'+(v===minScore?' on-'+cls:'');
+    });
+    render();
+  });
+
+  function setupToggles(id,set,onChange){
+    document.getElementById(id).addEventListener('click',function(e){
+      const btn=e.target.closest('.tog');if(!btn)return;
+      if(btn.style.pointerEvents==='none')return;
+      const val=btn.dataset.val;
+      if(set.has(val)){if(set.size>1)set.delete(val);}else set.add(val);
+      document.querySelectorAll('#'+id+' .tog').forEach(b=>{
+        if(b.style.pointerEvents==='none')return;
+        b.className='tog'+(set.has(b.dataset.val)?' on':'');
+      });
+      if(onChange)onChange();
+      render();
+    });
+  }
+
+  setupToggles('tog-tf',activeTFs);
+  setupToggles('tog-group',activeGroups,function(){
+    const visible=new Set([...activeGroups].flatMap(g=>GROUPS[g]||[]));
+    activePairs=new Set([...activePairs].filter(p=>visible.has(p)));
+    if(activePairs.size===0)activePairs=new Set(visible);
+    buildPairToggles();
+  });
+
+  buildPairToggles();
+  render();
+}
+
+// Back button handler
+document.getElementById('pe-back').addEventListener('click',function(e){
+  e.preventDefault();var H='https://perfectentry.store/';
+  try{if(window.top){window.top.location.href=H;return;}}catch(err){}
+  window.location.href=H;
+},true);
+
+// Start
+init();
+})();
+</script>
+</div>
+<div style="background:#0f1216;border-top:1px solid rgba(255,255,255,0.08);padding:24px 20px;text-align:center">
+  <p style="font-size:13px;color:rgba(234,253,252,0.6);margin-bottom:12px">Like what you see? Get access to all the tools plus live signals and the full education inside Market Master.</p>
+  <a href="https://whop.com/perfect-entry/" target="_blank" style="display:inline-block;padding:12px 24px;border-radius:12px;border:2px solid #015662;background:rgba(1,86,98,0.15);color:#EAFDFC;font-weight:800;font-size:14px;text-decoration:none">Join Market Master — £30/month</a>
+  <p style="font-size:11px;color:rgba(234,253,252,0.35);margin-top:12px">Educational content only. Not financial advice. Past performance does not guarantee future results.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfect Entry — We Make Profitable Traders</title>
+<meta name="description" content="Join 14,000+ traders using Perfect Entry's TradingView indicators, AI session screener, live signals dashboard, and rule-based education to trade forex with precision and consistency.">
+<meta property="og:title" content="Perfect Entry — We Make Profitable Traders">
+<meta property="og:description" content="Data-backed forex trading tools. AI session screener, live signals, reversal sniper with 65,000+ backtested trades. Join 14,000+ traders.">
+<meta property="og:image" content="assets/lockup-a.png">
+<meta property="og:url" content="https://perfectentry.store">
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d10;--bg2:#0f1216;--bg3:#131720;
+  --teal:#01a0b8;--teal-dark:#015662;--teal-glow:rgba(1,160,184,0.15);
+  --text:#EAFDFC;--text-dim:rgba(234,253,252,0.6);--text-mute:rgba(234,253,252,0.35);
+  --border:rgba(255,255,255,0.08);--orange:#FF6A2A;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+img,video{max-width:100%;display:block}
+a{text-decoration:none;color:inherit}
+
+/* PROMO BAR */
+#promo{position:sticky;top:0;z-index:200;background:#0e1014;border-bottom:1px solid var(--border);padding:0 16px}
+.promo-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}
+#promo-label{font-size:13px}
+#promo-timer{font-weight:900;background:rgba(255,255,255,.06);padding:4px 10px;border-radius:999px;border:1px solid var(--border);font-family:monospace;font-size:13px;white-space:nowrap}
+#promo-bar-wrap{flex:1;min-width:80px;height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);border:1px solid var(--border)}
+#promo-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,#015662,#FF6A2A);transition:width 1s linear}
+#promo-claim{padding:6px 14px;border-radius:10px;border:none;background:#015662;color:#EAFDFC;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+#promo-claim:hover{background:#01768a}
+
+/* NAV */
+nav{position:sticky;top:41px;z-index:190;background:rgba(11,13,16,0.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:20px;padding:12px 16px}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+.nav-logo img{width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(1,86,98,.5))}
+.nav-links{display:flex;gap:18px;font-size:13px;font-weight:600;color:var(--text-dim);margin-left:auto}
+.nav-links a{transition:color .15s}.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.nav-links a.active{color:var(--orange)}
+.nav-cta{padding:8px 18px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);color:var(--text);font-weight:800;font-size:13px;white-space:nowrap;transition:all .15s}
+.nav-cta:hover{background:rgba(1,86,98,.35)}
+.nav-burger{display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;margin-left:auto}
+.mobile-nav{display:none;flex-direction:column;background:#0e1014;border-bottom:1px solid var(--border);padding:12px 16px;gap:12px}
+.mobile-nav a{font-size:15px;font-weight:600;color:var(--text-dim);padding:6px 0;border-bottom:1px solid var(--border)}
+.mobile-nav a:last-child{border:none}
+
+/* HERO */
+.hero{position:relative;width:100%;height:85vh;min-height:520px;overflow:hidden}
+.hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.1) brightness(.9)}
+.hero-overlay-a{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:radial-gradient(90vw 52vh at 68% 16%,rgba(1,86,98,.22),transparent 60%),radial-gradient(70vw 42vh at 24% 82%,rgba(255,106,42,.18),transparent 66%)}
+.hero-overlay-b{position:absolute;inset:0;pointer-events:none;background:radial-gradient(60% 45% at 50% 30%,transparent 40%,rgba(0,0,0,.65) 100%)}
+.hero-content{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;text-align:center;padding:8vh 16px 0;z-index:5}
+.hero-inner{max-width:900px}
+.hero-logo{width:min(240px,28vw);margin:0 auto 12px;filter:drop-shadow(0 0 14px rgba(1,86,98,.55))}
+.hero h1{font-size:clamp(30px,5.5vw,80px);font-weight:900;line-height:1.05;margin-bottom:12px}
+.hero h1 .green{color:#015662;text-shadow:0 0 .8vw rgba(1,86,98,.9),0 0 2vw rgba(1,86,98,.6)}
+.hero h1 .orange{color:var(--orange);text-shadow:0 0 .8vw rgba(255,106,42,.75),0 0 2vw rgba(255,106,42,.45)}
+.hero p{font-size:clamp(15px,1.8vw,19px);opacity:.92;max-width:760px;margin:0 auto 20px}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-block;padding:13px 24px;border-radius:12px;font-weight:800;letter-spacing:.02em;cursor:pointer;transition:all .15s;font-size:14px}
+.btn-primary{border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);color:var(--text);box-shadow:0 0 18px rgba(1,86,98,.35)}
+.btn-primary:hover{background:rgba(1,86,98,.35)}
+.btn-ghost{border:2px solid rgba(255,255,255,.22);color:var(--text)}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
+.hero-scroll{position:absolute;bottom:24px;left:0;right:0;z-index:6;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.hero-scroll span:first-child{font-size:13px;opacity:.7;animation:fadepulse 2s infinite}
+.hero-scroll span:last-child{font-size:22px;animation:bounce 1.8s infinite}
+@keyframes fadepulse{0%,100%{opacity:.65}50%{opacity:1}}
+@keyframes bounce{0%,20%,50%,80%,100%{transform:translateY(0)}40%{transform:translateY(7px)}60%{transform:translateY(3px)}}
+
+/* PROOF STRIP */
+.proof-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.proof-stat{text-align:center;border:1px solid var(--border);border-radius:14px;padding:18px 12px;background:rgba(255,255,255,.02)}
+.proof-stat .n{font-size:clamp(24px,3.5vw,36px);font-weight:900;margin-bottom:4px}
+.proof-stat:nth-child(1) .n{color:#015662}
+.proof-stat:nth-child(2) .n{color:var(--orange)}
+.proof-stat:nth-child(3) .n{color:#015662}
+
+/* SECTIONS */
+.section{padding:64px 16px}
+.container{max-width:1200px;margin:0 auto}
+.section-alt{background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.01));border-top:1px solid var(--border)}
+h2{font-size:clamp(22px,4vw,38px);font-weight:900;margin-bottom:14px}
+.subtitle{opacity:.8;max-width:680px;line-height:1.65;margin-bottom:20px}
+
+/* VIDEO SECTION */
+.video-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:28px;align-items:center}
+.video-wrap{position:relative;width:100%;padding-top:56.25%;border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.4)}
+.video-wrap iframe{position:absolute;inset:0;width:100%;height:100%}
+
+/* TESTIMONIALS */
+.slider-wrap{position:relative}
+.slider{display:flex;gap:12px;overflow:hidden;scroll-behavior:smooth}
+.slide{flex:0 0 auto;width:280px;height:190px;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+.slide img{width:100%;height:100%;object-fit:cover}
+.arrow{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:999px;display:grid;place-items:center;background:rgba(11,13,16,.9);border:1px solid rgba(255,255,255,.25);cursor:pointer;z-index:5;font-size:20px;color:var(--text)}
+.arrow-prev{left:-10px}.arrow-next{right:-10px}
+
+/* TOOLS GRID */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));padding:22px}
+.card h3{font-size:17px;font-weight:800;margin-bottom:8px}
+.card p{opacity:.85;line-height:1.6;font-size:14px}
+
+/* DATA CTA */
+.data-cta-box{border:1px solid rgba(1,160,184,.25);border-radius:16px;background:linear-gradient(135deg,rgba(1,86,98,.15),rgba(1,86,98,.05));padding:32px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center}
+.data-cta-box h3{font-size:clamp(18px,2.5vw,26px);font-weight:900;margin-bottom:8px}
+.data-cta-box p{opacity:.85;line-height:1.6;max-width:580px}
+.data-stats{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
+.data-stat{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid rgba(1,160,184,.3);color:#7de3ff;background:rgba(1,160,184,.08)}
+
+/* OFFER CARD */
+.offer-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));padding:32px;max-width:720px}
+.offer-card ul{line-height:2;opacity:.92;padding-left:20px;margin-bottom:16px;font-size:15px}
+.offer-price{font-size:22px;font-weight:900;margin-bottom:18px}
+.seats-wrap{margin-top:20px}
+.seats-bar-outer{height:12px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);margin-bottom:6px}
+#seats-fill{width:0%;height:100%;background:linear-gradient(90deg,#015662,#FF6A2A)}
+
+/* FREE SECTION */
+.free-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+
+/* FAQ */
+.faq-list{display:grid;gap:16px;max-width:860px}
+.faq-item strong{display:block;font-size:16px;margin-bottom:4px}
+.faq-item p{opacity:.85;line-height:1.65}
+
+/* JOINS (floating) */
+#join-stack{position:fixed;top:100px;right:32px;z-index:1000;width:280px;max-width:calc(100vw - 64px);pointer-events:none;display:flex;flex-direction:column;gap:8px}
+.join-card{pointer-events:auto;display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#0b0d10;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.4);opacity:0;transform:translateX(16px);transition:transform .35s ease,opacity .35s ease;color:#015662}
+.join-card strong{color:var(--orange)}
+.join-card .ago{font-size:11px;color:#8fd0e8;margin-top:2px}
+.join-enter{opacity:1!important;transform:translateX(0)!important}
+.join-exit{opacity:0!important;transform:translateY(-8px)!important}
+
+/* FOOTER */
+footer{padding:32px 16px;border-top:1px solid var(--border);font-size:12px;color:rgba(234,253,252,.6);line-height:1.7}
+footer .container{display:flex;gap:32px;flex-wrap:wrap;justify-content:space-between;align-items:flex-start}
+.footer-col h4{font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px}
+.footer-col a{display:block;color:rgba(234,253,252,.55);margin-bottom:6px;font-size:12px;transition:color .15s}
+.footer-col a:hover{color:var(--text)}
+.footer-bottom{max-width:1200px;margin:24px auto 0;padding-top:16px;border-top:1px solid var(--border)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .nav-links,.nav-cta{display:none}
+  .nav-burger{display:block}
+  .mobile-nav.open{display:flex}
+  .video-grid{grid-template-columns:1fr}
+  .proof-strip{grid-template-columns:repeat(3,1fr);gap:8px}
+  .proof-stat{padding:12px 8px}
+  .proof-stat .n{font-size:20px}
+  .data-cta-box{grid-template-columns:1fr}
+  .section{padding:40px 16px}
+  .hero-logo{width:180px}
+  #promo-bar-wrap{display:none}
+  #join-stack{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- PROMO BAR -->
+<div id="promo">
+  <div class="promo-inner">
+    <span id="promo-label">Limited-time <strong>20% off</strong> first month</span>
+    <span id="promo-timer">17:00</span>
+    <div id="promo-bar-wrap"><div id="promo-bar-fill"></div></div>
+    <button id="promo-claim">Unlock 20% Off</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/logo.png" alt="Perfect Entry">
+      <span>Perfect Entry</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="active">Home</a>
+      <a href="screener.html">Session Screener</a>
+      <a href="signals.html">Live Signals</a>
+      <a href="data.html">Data</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <a href="https://whop.com/perfect-entry/" target="_blank" class="nav-cta">Join Now</a>
+    <button class="nav-burger" id="burger" aria-label="Menu">☰</button>
+  </div>
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="index.html">Home</a>
+    <a href="screener.html">Session Screener</a>
+    <a href="signals.html">Live Signals</a>
+    <a href="data.html">Data</a>
+    <a href="#faq">FAQ</a>
+    <a href="#contact">Contact</a>
+    <a href="https://whop.com/perfect-entry/" target="_blank" style="color:var(--teal);font-weight:800">Join Now →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <video class="hero-video" autoplay muted loop playsinline poster="assets/main.png">
+    <source src="assets/wave-desktop.mp4" type="video/mp4">
+  </video>
+  <div class="hero-overlay-a"></div>
+  <div class="hero-overlay-b"></div>
+  <div class="hero-content">
+    <div class="hero-inner">
+      <img src="assets/logo.png" alt="Perfect Entry" class="hero-logo">
+      <h1><span class="green">We Make</span><span class="orange"> Profitable Traders</span></h1>
+      <p>Join 14,000+ traders who use our TradingView indicators, AI-powered session screener, live signals dashboard, and rule-based education to trade forex with precision.</p>
+      <div class="hero-btns">
+        <a href="https://whop.com/perfect-entry/" target="_blank" class="btn btn-primary">Start Now</a>
+        <a href="#video" class="btn btn-ghost">Watch How It Works</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-scroll" id="scroll-cue">
+    <span>Scroll to learn more</span>
+    <span>⬇</span>
+  </div>
+</section>
+
+<!-- VIDEO SECTION -->
+<section class="section" id="video">
+  <div class="container">
+    <div class="video-grid">
+      <div class="video-wrap">
+        <iframe src="https://www.youtube.com/embed/AbrWai27-LA?rel=0&modestbranding=1&playsinline=1"
+          title="Perfect Entry — How it works" frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>
+      </div>
+      <div>
+        <h2>Trade with clarity every time, designed to fit around your busy life.</h2>
+        <p class="subtitle">See the rules, the tools, and the results — then copy the process. This video could change your trading trajectory forever.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <a href="https://whop.com/perfect-entry/" target="_blank" class="btn btn-primary">Get Instant Access</a>
+          <a href="#proof" class="btn btn-ghost">See Proof</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROOF -->
+<section class="section section-alt" id="proof">
+  <div class="container">
+    <h2>Real traders. Real results.</h2>
+    <div class="proof-strip">
+      <div class="proof-stat"><div class="n">15,954</div><div>Discord Members</div></div>
+      <div class="proof-stat"><div class="n">14,000+</div><div>Paying Customers</div></div>
+      <div class="proof-stat"><div class="n">16,300</div><div>YouTube Subscribers</div></div>
+    </div>
+    <div class="slider-wrap">
+      <button class="arrow arrow-prev" aria-label="Previous">‹</button>
+      <div class="slider" id="slider">
+        <div class="slide"><img src="assets/t1.jpeg" alt="Trader result 1" loading="lazy"></div>
+        <div class="slide"><img src="assets/t2.png" alt="Trader result 2" loading="lazy"></div>
+        <div class="slide"><img src="assets/t3.png" alt="Trader result 3" loading="lazy"></div>
+        <div class="slide"><img src="assets/t4.png" alt="Trader result 4" loading="lazy"></div>
+        <div class="slide"><img src="assets/t5.png" alt="Trader result 5" loading="lazy"></div>
+        <div class="slide"><img src="assets/t6.png" alt="Trader result 6" loading="lazy"></div>
+        <div class="slide"><img src="assets/t7.png" alt="Trader result 7" loading="lazy"></div>
+        <div class="slide"><img src="assets/t8.png" alt="Trader result 8" loading="lazy"></div>
+        <div class="slide"><img src="assets/t9.png" alt="Trader result 9" loading="lazy"></div>
+        <div class="slide"><img src="assets/t10.png" alt="Trader result 10" loading="lazy"></div>
+      </div>
+      <button class="arrow arrow-next" aria-label="Next">›</button>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section class="section" id="tools">
+  <div class="container">
+    <h2>Tools that shorten the path to consistency</h2>
+    <p class="subtitle">Every tool is built from real trading data. No guesswork, no hype — just systems that work.</p>
+    <div class="tools-grid">
+      <div class="card">
+        <h3>Piphunter Baseline Overlay</h3>
+        <p>The best indicator for MTF signals and adjustability. Giving you a great understanding of market structure at a glance, every time.</p>
+      </div>
+      <div class="card">
+        <h3>Momentum Wave Suite</h3>
+        <p>Ride wave entries, pullbacks, and continuations with precision. No clutter, no noise — just clean setups.</p>
+      </div>
+      <div class="card">
+        <h3>Reversal Sniper</h3>
+        <p>65,000+ backtested trades across 29 pairs. Out-of-sample validated session windows with a 0-4 confidence scoring system.</p>
+        <a href="data.html" style="display:inline-block;margin-top:10px;color:var(--teal);font-size:13px;font-weight:700">View the data →</a>
+      </div>
+      <div class="card">
+        <h3>AI Session Screener</h3>
+        <p>Know exactly which pairs are tradable right now based on statistically validated session windows. Free to use, updated in real time.</p>
+        <a href="screener.html" style="display:inline-block;margin-top:10px;color:var(--teal);font-size:13px;font-weight:700">Open screener →</a>
+      </div>
+    </div>
+    <div style="margin-top:22px">
+      <a href="https://whop.com/perfect-entry/" target="_blank" class="btn btn-primary">Everything is inside Market Master membership</a>
+    </div>
+  </div>
+</section>
+
+<!-- DATA CTA -->
+<section class="section section-alt" id="data-cta">
+  <div class="container">
+    <div class="data-cta-box">
+      <div>
+        <h3>Don't take our word for it — look at the numbers</h3>
+        <p>The Reversal Sniper dataset contains 65,000+ raw trades filtered through an out-of-sample validation process across 1m, 3m, 5m, and 2hr timeframes on 29 pairs. Every session window you see in the screener is backed by real data, not gut feel.</p>
+        <div class="data-stats">
+          <span class="data-stat">65,000+ raw trades</span>
+          <span class="data-stat">29 pairs</span>
+          <span class="data-stat">4 timeframes</span>
+          <span class="data-stat">Out-of-sample validated</span>
+        </div>
+        <a href="data.html" class="btn btn-primary" style="margin-top:18px;display:inline-block">Explore the data</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STORY -->
+<section class="section" id="story">
+  <div class="container" style="max-width:860px">
+    <h2>I Was Losing Just Like You, Until I Found The Truth About Trading</h2>
+    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">I've blown accounts. I've sat staring at charts for hours, chasing signals, hoping the next trade would finally save me. Every time I thought I'd cracked it, I lost again. It felt less like trading and more like gambling.</p>
+    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">The turning point came when I realised something simple but powerful: <strong>Consistency doesn't come from luck, signals, or gut feel. It comes from systems.</strong></p>
+    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">When I finally built those systems — rules I could follow, risk maps I could trust, and tools that cut through the noise — everything changed. For the first time, I wasn't guessing. I was executing with confidence.</p>
+    <p style="line-height:1.75;opacity:.92;margin-bottom:14px">That's why I built <strong>Perfect Entry</strong>. It's not about me being special. It's about giving you the exact systems I used so you can finally trade with precision. We publish our data transparently. You can see every session window, every win rate, every confidence score before you spend a penny.</p>
+    <p style="line-height:1.75;font-weight:600;margin-bottom:20px">Today, thousands of traders worldwide are using Perfect Entry to remove doubt, follow the rules, and stay consistent. The only question is: will you be next?</p>
+    <a href="https://whop.com/perfect-entry/" target="_blank" class="btn btn-primary">Join Market Master Today</a>
+  </div>
+</section>
+
+<!-- OFFER -->
+<section class="section section-alt" id="offer">
+  <div class="container">
+    <div class="offer-card">
+      <h2>Market Master Membership</h2>
+      <ul>
+        <li>All Perfect Entry indicators (TradingView)</li>
+        <li>Step-by-step education: playbooks, checklists, live examples</li>
+        <li>Live Signals Dashboard — real-time webhook alerts</li>
+        <li>AI Session Screener — know what's tradable right now</li>
+        <li>Private Discord community with 15k+ traders</li>
+        <li>Ongoing updates and support</li>
+      </ul>
+      <p class="offer-price"><strong>£30/month</strong> — think how many losses you could have prevented by following a rules-backed system.</p>
+      <a href="https://whop.com/perfect-entry/" target="_blank" class="btn btn-primary">Start Now</a>
+      <div class="seats-wrap">
+        <div style="font-weight:800;margin-bottom:8px;font-size:14px">Estimated daily seats</div>
+        <div class="seats-bar-outer"><div id="seats-fill"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;opacity:.7">
+          <span id="seats-claimed">-- claimed</span>
+          <span id="seats-left">-- left</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FREE ACCESS -->
+<section class="section" id="free">
+  <div class="container">
+    <h2>Not ready to buy? Start free and see the value</h2>
+    <div class="free-grid">
+      <div class="card">
+        <h3>Free Discord Access</h3>
+        <p style="margin-bottom:14px">Meet the community, ask questions, see the culture before you commit to anything.</p>
+        <a href="https://discord.gg/JStn5fBRgK" target="_blank" rel="noopener" class="btn btn-ghost" style="border-color:#5865F2">Join Discord</a>
+      </div>
+      <div class="card">
+        <h3>AI Session Screener</h3>
+        <p style="margin-bottom:14px">Completely free. See exactly which forex pairs are in their statistically validated trading windows right now.</p>
+        <a href="screener.html" class="btn btn-ghost">Open Screener →</a>
+      </div>
+      <div class="card">
+        <h3>See the Data First</h3>
+        <p style="margin-bottom:14px">Browse the full Reversal Sniper dataset — 65,000+ trades, win rates by pair and timeframe, out-of-sample results. All public, all transparent.</p>
+        <a href="data.html" class="btn btn-ghost">Explore the Data →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section section-alt" id="faq">
+  <div class="container">
+    <h2>FAQ</h2>
+    <div class="faq-list">
+      <div class="faq-item"><strong>Do I need experience?</strong><p>No. We train from scratch and give rules and tools for all levels. Most members see clarity within their first few days.</p></div>
+      <div class="faq-item"><strong>Is this financial advice?</strong><p>No. These are educational tools. You choose your own risk — we never promise profits and we never will.</p></div>
+      <div class="faq-item"><strong>How fast can I see results?</strong><p>Many traders gain clarity in days. Consistent results come from following the rules, not from rushing the process.</p></div>
+      <div class="faq-item"><strong>Why Perfect Entry vs others?</strong><p>14,000+ customers, 5+ years operating, transparent publicly-available data, and a community that actually helps you improve. We publish our win rates — nobody else does that.</p></div>
+      <div class="faq-item"><strong>Can I cancel anytime?</strong><p>Yes. No contracts, no lock-ins. Cancel through Whop at any time.</p></div>
+      <div class="faq-item"><strong>What is the AI Session Screener?</strong><p>A free tool that shows you which forex pairs are inside their statistically validated trading windows at any given time, updated live every second based on UTC time.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="section" id="contact" style="text-align:center">
+  <div class="container">
+    <h2>Contact</h2>
+    <p class="subtitle" style="margin:0 auto 20px">Fastest way to reach us is inside Discord. For any queries about membership or tools, ping the team there.</p>
+    <a href="https://discord.gg/JStn5fBRgK" target="_blank" rel="noopener" class="btn btn-ghost" style="border-color:#5865F2">Open Discord</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-col">
+      <h4>Perfect Entry</h4>
+      <a href="index.html">Home</a>
+      <a href="screener.html">AI Session Screener</a>
+      <a href="signals.html">Live Signals</a>
+      <a href="data.html">Reversal Sniper Data</a>
+    </div>
+    <div class="footer-col">
+      <h4>Community</h4>
+      <a href="https://discord.gg/JStn5fBRgK" target="_blank">Discord</a>
+      <a href="https://www.youtube.com/@perfectentrytrading" target="_blank">YouTube</a>
+      <a href="https://whop.com/perfect-entry/" target="_blank">Whop Store</a>
+    </div>
+    <div class="footer-col">
+      <h4>Join</h4>
+      <a href="https://whop.com/perfect-entry/" target="_blank">Market Master Membership</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © <span id="yr"></span> Perfect Entry. Educational content and software tools only. Nothing here is financial, investment, tax, or legal advice. Trading involves risk, including loss of principal. You are solely responsible for your decisions and risk management. Past performance does not guarantee future results.
+    <br>TradingView® is a registered trademark of TradingView, Inc.
+  </div>
+</footer>
+
+<!-- FLOATING JOINS -->
+<div id="join-stack"></div>
+
+<script>
+(function(){
+  const NS='pe_';
+
+  // Year
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  // Burger menu
+  document.getElementById('burger').addEventListener('click',()=>{
+    document.getElementById('mobile-nav').classList.toggle('open');
+  });
+
+  // Smooth scroll for internal links
+  document.querySelectorAll('a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      const id=a.getAttribute('href').slice(1);
+      const el=document.getElementById(id);
+      if(!el)return;
+      e.preventDefault();
+      const nav=document.querySelector('nav');
+      const promo=document.getElementById('promo');
+      const offset=(nav?nav.offsetHeight:0)+(promo?promo.offsetHeight:0)+8;
+      window.scrollTo({top:el.getBoundingClientRect().top+window.pageYOffset-offset,behavior:'smooth'});
+    });
+  });
+
+  // Scroll cue
+  document.getElementById('scroll-cue')?.addEventListener('click',()=>{
+    document.getElementById('video')?.scrollIntoView({behavior:'smooth'});
+  });
+
+  // Promo bar
+  (function(){
+    const TWIN=17*60*1000;
+    const tEl=document.getElementById('promo-timer');
+    const fill=document.getElementById('promo-bar-fill');
+    const claim=document.getElementById('promo-claim');
+    if(!tEl)return;
+    const KEY=NS+'promo_ts';
+    if(!localStorage.getItem(KEY))localStorage.setItem(KEY,Date.now().toString());
+    const rem=()=>Math.max(0,TWIN-(Date.now()-parseInt(localStorage.getItem(KEY)||Date.now())));
+    const fmt=ms=>{const s=ms/1000|0,m=s/60|0,r=s%60;return`${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`};
+    const tick=()=>{const r=rem();tEl.textContent=fmt(r);if(fill)fill.style.width=(100-r/TWIN*100)+'%'};
+    tick();setInterval(tick,1000);
+    if(claim){
+      claim.addEventListener('click',()=>{
+        try{navigator.clipboard.writeText('PERFECT20')}catch(e){}
+        window.open('https://whop.com/perfect-entry/','_blank');
+      });
+    }
+    window.__PE_rem=rem;
+    window.__PE_claim=()=>{try{navigator.clipboard.writeText('PERFECT20')}catch(e){}window.open('https://whop.com/perfect-entry/','_blank');};
+  })();
+
+  // Testimonial slider
+  (function(){
+    const rail=document.getElementById('slider');
+    if(!rail)return;
+    const prev=document.querySelector('.arrow-prev');
+    const next=document.querySelector('.arrow-next');
+    const step=dir=>{const w=(rail.querySelector('.slide')?.getBoundingClientRect().width||290)+12;rail.scrollBy({left:dir*w,behavior:'smooth'})};
+    if(prev)prev.onclick=()=>step(-1);
+    if(next)next.onclick=()=>step(1);
+    setInterval(()=>step(1),3800);
+  })();
+
+  // Seats scarcity
+  (function(){
+    const fill=document.getElementById('seats-fill');
+    const left=document.getElementById('seats-left');
+    const claimed=document.getElementById('seats-claimed');
+    if(!fill)return;
+    const CAP=100,KEY=NS+'seats';
+    const today=()=>new Date().toISOString().slice(0,10);
+    const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}};
+    const write=x=>localStorage.setItem(KEY,JSON.stringify(x));
+    const all=read();
+    if(!all[today()])all[today()]={c:Math.floor(64+Math.random()*20)};
+    write(all);
+    const render=()=>{const c=Math.min(all[today()].c,CAP);fill.style.width=(c/CAP*100)+'%';if(left)left.textContent=Math.max(0,CAP-c)+' left';if(claimed)claimed.textContent=c+' claimed (estimate)'};
+    render();
+    (function loop(){setTimeout(()=>{const s=read();if(s[today()].c<CAP&&Math.random()<.6){s[today()].c+=1;write(s);}render();loop();},30000+Math.random()*60000);})();
+  })();
+
+  // Floating joins
+  (function(){
+    const wrap=document.getElementById('join-stack');
+    if(!wrap)return;
+    const Cities={NG:['Lagos, NG','Abuja, NG','Port Harcourt, NG'],IN:['Bangalore, IN','Chennai, IN','Mumbai, IN','Pune, IN'],EN:['London, UK','Manchester, UK','New York, US','Los Angeles, US','Toronto, CA','Dubai, UAE','Sydney, AU']};
+    const Names={NG:['Tunde','Femi','Chinedu','Emeka','Seyi','Kunle','Uche','Bolu','Yemi','Kelechi'],IN:['Arjun','Rahul','Rohan','Vikram','Siddharth','Ravi','Kiran','Vivek','Pranav','Aditya','Priya','Meera'],EN:['James','John','Michael','William','David','Richard','Daniel','Matthew','Anthony','Mark','Steven']};
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    const region=()=>{const r=Math.random();return r<.3?'NG':r<.75?'IN':'EN'};
+    const ago=m=>m<=0?'just now':m===1?'1 min ago':`${m} mins ago`;
+    const makeCard=(offset=0)=>{
+      const rg=region(),name=pick(Names[rg]),city=pick(Cities[rg]),ts=Date.now()-offset*60000;
+      const el=document.createElement('div');el.className='join-card';el.dataset.ts=ts;
+      el.innerHTML=`<div><div>Trader <strong>${name}</strong> from <strong>${city}</strong> joined Market Master</div><div class="ago js-ago">${ago(offset)}</div></div>`;
+      requestAnimationFrame(()=>el.classList.add('join-enter'));
+      return el;
+    };
+    [2,0].forEach(m=>wrap.appendChild(makeCard(m)));
+    setInterval(()=>{wrap.querySelectorAll('.join-card').forEach(el=>{const a=el.querySelector('.js-ago');if(a)a.textContent=ago(Math.max(0,Math.floor((Date.now()-+el.dataset.ts)/60000)));});},60000);
+    (function loop(){setTimeout(()=>{
+      const card=makeCard();wrap.prepend(card);
+      const cards=wrap.querySelectorAll('.join-card');
+      if(cards.length>3){const old=cards[cards.length-1];old.classList.add('join-exit');setTimeout(()=>old.remove(),380);}
+      loop();
+    },28000+Math.random()*14000);})();
+  })();
+
+  // Idle modal
+  (function(){
+    if(sessionStorage.getItem(NS+'idle')==='1')return;
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:9999';
+    overlay.innerHTML=`<div style="width:min(540px,92vw);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:24px;background:#0b0d10;color:#EAFDFC;font-family:Inter,system-ui"><h3 style="margin:0 0 10px;font-size:20px;font-weight:900">Still thinking?</h3><p style="margin:0 0 14px;opacity:.9">Lock in your 20% off before the timer runs out. Use code <strong style="color:#FF6A2A">PERFECT20</strong> at checkout.</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button id="idle-cta" style="padding:12px 18px;border-radius:12px;font-weight:800;border:none;background:#015662;color:#EAFDFC;cursor:pointer">Claim 20% Off</button><button id="idle-close" style="padding:12px 18px;border-radius:12px;font-weight:800;border:1px solid rgba(255,255,255,.2);background:transparent;color:#EAFDFC;cursor:pointer">Keep browsing</button></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#idle-cta').onclick=()=>{if(window.__PE_claim)window.__PE_claim();overlay.style.display='none';sessionStorage.setItem(NS+'idle','1')};
+    overlay.querySelector('#idle-close').onclick=()=>{overlay.style.display='none';sessionStorage.setItem(NS+'idle','1')};
+    let t;const limit=(5+Math.floor(Math.random()*6))*60000;
+    const reset=()=>{clearTimeout(t);t=setTimeout(()=>{overlay.style.display='flex'},limit)};
+    ['mousemove','keydown','scroll','touchstart','click'].forEach(ev=>window.addEventListener(ev,reset,{passive:true}));
+    reset();
+  })();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfect Entry — Live Signals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b0d10; --bg2: #0f1216; --bg3: #131720;
+    --teal: #01a0b8; --teal-dark: #015662; --teal-glow: rgba(1,160,184,0.15);
+    --text: #EAFDFC; --text-dim: rgba(234,253,252,0.55); --text-mute: rgba(234,253,252,0.28);
+    --border: rgba(255,255,255,0.07); --border-teal: rgba(1,160,184,0.25);
+    --green: #00c896; --green-dim: rgba(0,200,150,0.15); --green-border: rgba(0,200,150,0.3);
+    --orange: #FF6A2A; --orange-dim: rgba(255,106,42,0.15); --orange-border: rgba(255,106,42,0.3);
+    --amber: #ffb700;
+  }
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  header { flex-shrink: 0; background: rgba(11,13,16,0.95); border-bottom: 1px solid var(--border); padding: 0 24px; }
+  .header-inner { display: flex; align-items: center; gap: 14px; height: 52px; max-width: 1600px; margin: 0 auto; }
+  .logo-mark { width: 26px; height: 26px; flex-shrink: 0; }
+  .site-name { font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
+  .live-pill { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--teal); padding: 3px 10px; border: 1px solid var(--border-teal); border-radius: 999px; background: var(--teal-glow); }
+  .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:.9} 50%{transform:scale(1.4);opacity:.4} }
+  .utc-clock { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .conn-pill { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-mute); background: rgba(255,255,255,0.04); transition: all 0.4s; }
+  .conn-pill.ok { color: #00e6aa; border-color: rgba(0,200,150,0.3); background: rgba(0,200,150,0.08); }
+  .conn-pill.err { color: #FF9060; border-color: rgba(255,106,42,0.3); background: rgba(255,106,42,0.08); }
+  .filter-bar { flex-shrink: 0; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 9px 24px; }
+  .filter-bar-inner { max-width: 1600px; margin: 0 auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-mute); text-transform: uppercase; margin-right: 2px; }
+  .ftag { font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.15s; user-select: none; }
+  .ftag:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .ftag.on { background: var(--teal-dark); border-color: var(--teal); color: #7de3ff; }
+  .filter-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+  .clear-btn { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-mute); cursor: pointer; transition: all 0.15s; }
+  .clear-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+  .nav-links { display:flex; gap:8px; align-items:center; }
+  .nav-btn { font-family:'Inter',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.03em; padding:5px 12px; border-radius:8px; border:1px solid var(--border-teal); background:var(--teal-glow); color:var(--teal); text-decoration:none; transition:all 0.15s; white-space:nowrap; }
+  .nav-btn:hover { background:rgba(1,160,184,0.25); color:#7de3ff; }
+  .site-footer { flex-shrink:0; border-top:1px solid var(--border); background:var(--bg2); padding:10px 24px; }
+  .site-footer p { max-width:1600px; margin:0 auto; font-size:10px; color:var(--text-mute); line-height:1.6; }
+  .cols-outer { flex: 1; display: flex; flex-direction: column; }
+  .cols-grid { display: grid; grid-template-columns: repeat(5, 1fr); height: 720px; border-left: 1px solid var(--border); overflow: hidden; }
+  .col { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; height: 100%; }
+  .col-head { flex-shrink: 0; background: rgba(11,13,16,0.98); border-bottom: 1px solid var(--border); padding: 11px 14px 9px; }
+  .col-tf { font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+  .col-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  .col-count { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-mute); }
+  .col-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); display: none; animation: pulse 1.8s infinite; }
+  .col-dot.show { display: block; }
+  .signals-list { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow: hidden !important; min-height: 0; }
+  .empty-msg { padding: 24px 12px; text-align: center; font-size: 11px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; line-height: 1.8; }
+  .sig-card { border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); padding: 9px 11px; position: relative; overflow: hidden; flex-shrink: 0; }
+  .sig-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 10px 0 0 10px; }
+  .sig-card.buy::before { background: var(--green); }
+  .sig-card.sell::before { background: var(--orange); }
+  .sig-card.entering { animation: cardIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+  @keyframes cardIn { from{opacity:0;transform:translateY(-16px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .sig-card.fading { opacity:0; transform:translateY(10px) scale(0.97); transition:opacity 0.55s ease,transform 0.55s ease; pointer-events:none; }
+  .card-exit-wrap { overflow:hidden; flex-shrink:0; transition:height 0.55s cubic-bezier(0.4,0,0.2,1),margin-bottom 0.55s cubic-bezier(0.4,0,0.2,1),opacity 0.55s ease; }
+  .sig-head { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px; }
+  .sig-left { display:flex; align-items:center; gap:6px; }
+  .sig-sym { font-size:13px; font-weight:800; letter-spacing:0.01em; color:var(--text); line-height:1; }
+  .score-badge { font-size:9px; font-weight:700; letter-spacing:0.04em; padding:2px 6px; border-radius:5px; }
+  .sb-4{background:rgba(68,170,255,0.18);color:#7de3ff;border:1px solid rgba(68,170,255,0.35)}
+  .sb-3{background:rgba(68,170,255,0.10);color:#7de3ff;border:1px solid rgba(68,170,255,0.2)}
+  .sb-2{background:rgba(255,183,0,0.13);color:var(--amber);border:1px solid rgba(255,183,0,0.28)}
+  .sb-1{background:rgba(255,255,255,0.05);color:#777;border:1px solid rgba(255,255,255,0.1)}
+  .sb-H{background:rgba(68,170,255,0.10);color:#7de3ff;border:1px solid rgba(68,170,255,0.2)}
+  .sb-M{background:rgba(255,183,0,0.13);color:var(--amber);border:1px solid rgba(255,183,0,0.28)}
+  .sb-L{background:rgba(255,255,255,0.05);color:#777;border:1px solid rgba(255,255,255,0.1)}
+  .dir-badge{font-size:10px;font-weight:700;letter-spacing:0.05em;padding:2px 8px;border-radius:999px}
+  .dir-badge.buy{background:var(--green-dim);color:#00e6aa;border:1px solid var(--green-border)}
+  .dir-badge.sell{background:var(--orange-dim);color:#FF9060;border:1px solid var(--orange-border)}
+  .sig-rows{display:flex;flex-direction:column;gap:3px}
+  .sig-row{display:flex;align-items:baseline;justify-content:space-between;gap:4px}
+  .row-label{font-size:10px;font-weight:600;letter-spacing:0.04em;color:var(--text-mute);text-transform:uppercase;min-width:36px}
+  .row-right{display:flex;align-items:baseline;gap:4px}
+  .row-price{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text)}
+  .row-price.entry{font-size:12px;font-weight:700;color:#EAFDFC}
+  .row-pip{font-family:'IBM Plex Mono',monospace;font-size:9px}
+  .row-pip.sl{color:rgba(255,106,42,0.55)}
+  .row-pip.tp{color:rgba(0,200,150,0.55)}
+  .sig-time{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-mute);margin-top:6px;padding-top:5px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+<nav style="position:sticky;top:0;z-index:300;background:rgba(11,13,16,0.97);border-bottom:1px solid rgba(255,255,255,0.07);padding:0 24px">
+  <div style="max-width:1600px;margin:0 auto;display:flex;align-items:center;gap:14px;height:38px">
+    <a href="index.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:#EAFDFC;font-weight:800;font-size:12px">
+      <img src="assets/logo.png" style="width:20px;height:20px;object-fit:contain" alt="Perfect Entry">
+      <span>Perfect Entry</span>
+    </a>
+    <div style="display:flex;gap:14px;font-size:11px;font-weight:600;margin-left:auto">
+      <a href="index.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Home</a>
+      <a href="screener.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Screener</a>
+      <a href="signals.html" style="color:#FF6A2A;text-decoration:none">Live Signals</a>
+      <a href="data.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Data</a>
+    </div>
+    <a href="https://whop.com/perfect-entry/" target="_blank" style="padding:5px 12px;border-radius:8px;border:2px solid #015662;background:rgba(1,86,98,0.15);color:#EAFDFC;font-weight:800;font-size:11px;text-decoration:none;white-space:nowrap">Join Now</a>
+  </div>
+</nav>
+<header>
+  <div class="header-inner">
+    <img src="https://static.wixstatic.com/media/a7eea0_593d6f34013b40eca2df23755f1bf50f~mv2.png" class="logo-mark" alt="Perfect Entry">
+    <span class="site-name">Perfect Entry — Live Signals</span>
+    <div class="live-pill"><span class="pulse-dot"></span>LIVE</div>
+    <span class="conn-pill" id="connPill">Connecting...</span>
+    <div class="nav-links">
+      <a class="nav-btn" href="data.html" target="_blank">View data</a>
+      <a class="nav-btn" href="screener.html" target="_blank">Session timings</a>
+    </div>
+    <div class="utc-clock" id="utcClock">UTC — —</div>
+  </div>
+</header>
+<div class="filter-bar">
+  <div class="filter-bar-inner">
+    <span class="filter-label">Score</span>
+    <span class="ftag on" data-f="S4">S4</span>
+    <span class="ftag on" data-f="S3">S3</span>
+    <span class="ftag on" data-f="S2">S2</span>
+    <span class="ftag on" data-f="S1">S1</span>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Conf</span>
+    <span class="ftag on" data-f="H">HIGH</span>
+    <span class="ftag on" data-f="M">MED</span>
+    <span class="ftag on" data-f="L">LOW</span>
+    <button class="clear-btn" id="clearBtn">Clear signals</button>
+  </div>
+</div>
+<div class="cols-outer">
+  <div class="cols-grid">
+    <div class="col"><div class="col-head"><div class="col-tf">1 min</div><div class="col-meta"><span class="col-dot" id="dot-1min"></span><span class="col-count" id="cnt-1min">waiting...</span></div></div><div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
+    <div class="col"><div class="col-head"><div class="col-tf">3 min</div><div class="col-meta"><span class="col-dot" id="dot-3min"></span><span class="col-count" id="cnt-3min">waiting...</span></div></div><div class="signals-list" id="list-3min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
+    <div class="col"><div class="col-head"><div class="col-tf">5 min</div><div class="col-meta"><span class="col-dot" id="dot-5min"></span><span class="col-count" id="cnt-5min">waiting...</span></div></div><div class="signals-list" id="list-5min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
+    <div class="col"><div class="col-head"><div class="col-tf">15 min</div><div class="col-meta"><span class="col-dot" id="dot-15min"></span><span class="col-count" id="cnt-15min">waiting...</span></div></div><div class="signals-list" id="list-15min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
+    <div class="col"><div class="col-head"><div class="col-tf">2 hr</div><div class="col-meta"><span class="col-dot" id="dot-2hr"></span><span class="col-count" id="cnt-2hr">waiting...</span></div></div><div class="signals-list" id="list-2hr"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
+  </div>
+</div>
+<script>
+const SUPABASE_URL='https://nmfsqgqwjihpudiqnuwh.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
+const SESSION_DATA={"1min":[{"sym":"AUDCAD","day_windows":[{"day":"Tue","window":"01:00-05:59","score":3},{"day":"Wed","window":"03:00-07:59","score":1},{"day":"Thu","window":"00:00-07:59","score":3},{"day":"Fri","window":"00:00-04:59","score":1}]},{"sym":"AUDCHF","day_windows":[{"day":"Mon","window":"01:00-14:59","score":2},{"day":"Tue","window":"08:00-10:59","score":1},{"day":"Wed","window":"01:00-05:59","score":1},{"day":"Thu","window":"00:00-07:59","score":1},{"day":"Fri","window":"11:00-14:59","score":2}]},{"sym":"AUDNZD","day_windows":[{"day":"Mon","window":"00:00-10:59","score":1},{"day":"Tue","window":"00:00-12:59","score":2},{"day":"Fri","window":"00:00-10:59","score":2}]},{"sym":"AUDUSD","day_windows":[{"day":"Thu","window":"13:00-16:59","score":1},{"day":"Fri","window":"00:00-05:59","score":2}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"01:00-10:59","score":2},{"day":"Tue","window":"03:00-05:59","score":1},{"day":"Wed","window":"03:00-11:59","score":3},{"day":"Fri","window":"02:00-09:59","score":1},{"day":"Sat","window":"10:00-14:59","score":2},{"day":"Sun","window":"08:00-17:59","score":3}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"01:00-07:59","score":1},{"day":"Tue","window":"00:00-07:59","score":1},{"day":"Thu","window":"00:00-07:59","score":2},{"day":"Fri","window":"01:00-08:59","score":2}]},{"sym":"CHFJPY","day_windows":[{"day":"Tue","window":"00:00-07:59","score":2},{"day":"Wed","window":"07:00-11:59","score":2},{"day":"Thu","window":"10:00-15:59","score":2},{"day":"Fri","window":"13:00-17:59","score":1}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"00:00-07:59","score":3},{"day":"Tue","window":"00:00-05:59","score":2},{"day":"Wed","window":"06:00-12:59","score":1},{"day":"Thu","window":"06:00-14:59","score":1},{"day":"Fri","window":"07:00-14:59","score":1},{"day":"Sat","window":"00:00-16:59","score":2},{"day":"Sun","window":"00:00-13:59","score":1}]},{"sym":"EURAUD","day_windows":[{"day":"Thu","window":"10:00-15:59","score":1},{"day":"Fri","window":"00:00-13:59","score":2}]},{"sym":"EURCAD","day_windows":[{"day":"Mon","window":"00:00-13:59","score":2},{"day":"Wed","window":"13:00-18:59","score":1},{"day":"Fri","window":"11:00-15:59","score":1}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"13:00-16:59","score":1},{"day":"Tue","window":"00:00-07:59","score":2},{"day":"Wed","window":"05:00-09:59","score":1},{"day":"Thu","window":"00:00-04:59","score":2},{"day":"Fri","window":"02:00-07:59","score":2}]},{"sym":"EURNZD","day_windows":[{"day":"Wed","window":"12:00-19:59","score":2},{"day":"Thu","window":"08:00-15:59","score":2},{"day":"Fri","window":"00:00-04:59","score":1}]},{"sym":"EURUSD","day_windows":[{"day":"Mon","window":"00:00-06:59","score":2},{"day":"Tue","window":"10:00-15:59","score":2},{"day":"Wed","window":"13:00-18:59","score":1}]},{"sym":"GBPAUD","day_windows":[{"day":"Tue","window":"00:00-05:59","score":2},{"day":"Wed","window":"00:00-09:59","score":2},{"day":"Thu","window":"00:00-06:59","score":2},{"day":"Fri","window":"01:00-05:59","score":1}]},{"sym":"GBPCAD","day_windows":[{"day":"Tue","window":"00:00-07:59","score":2},{"day":"Thu","window":"13:00-16:59","score":1}]},{"sym":"GBPCHF","day_windows":[{"day":"Wed","window":"11:00-15:59","score":1}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"00:00-09:59","score":1},{"day":"Tue","window":"10:00-15:59","score":1},{"day":"Thu","window":"09:00-18:59","score":1}]},{"sym":"GBPUSD","day_windows":[{"day":"Mon","window":"02:00-11:59","score":2},{"day":"Thu","window":"12:00-17:59","score":2}]},{"sym":"NAS100","day_windows":[{"day":"Mon","window":"13:00-16:59","score":3},{"day":"Tue","window":"01:00-08:59","score":1},{"day":"Wed","window":"00:00-06:59","score":1},{"day":"Thu","window":"10:00-15:59","score":2},{"day":"Fri","window":"00:00-08:59","score":1}]},{"sym":"NZDCAD","day_windows":[{"day":"Mon","window":"09:00-13:59","score":1},{"day":"Wed","window":"02:00-06:59","score":1}]},{"sym":"NZDCHF","day_windows":[{"day":"Wed","window":"12:00-19:59","score":2}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"06:00-11:59","score":2},{"day":"Tue","window":"01:00-15:59","score":3},{"day":"Wed","window":"04:00-12:59","score":1},{"day":"Thu","window":"05:00-12:59","score":2}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"00:00-05:59","score":1},{"day":"Fri","window":"00:00-06:59","score":1}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"00:00-09:59","score":2},{"day":"Tue","window":"09:00-13:59","score":1},{"day":"Wed","window":"06:00-12:59","score":3},{"day":"Thu","window":"00:00-06:59","score":3},{"day":"Fri","window":"10:00-16:59","score":2}]},{"sym":"USDCHF","day_windows":[{"day":"Mon","window":"07:00-10:59","score":2},{"day":"Wed","window":"14:00-17:59","score":1},{"day":"Fri","window":"06:00-16:59","score":2}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"10:00-15:59","score":1},{"day":"Tue","window":"05:00-13:59","score":2},{"day":"Wed","window":"00:00-09:59","score":1}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"00:00-08:59","score":1},{"day":"Tue","window":"02:00-08:59","score":2},{"day":"Wed","window":"00:00-10:59","score":2},{"day":"Fri","window":"00:00-14:59","score":3}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"12:00-18:59","score":2},{"day":"Tue","window":"04:00-17:59","score":3},{"day":"Wed","window":"00:00-07:59","score":3},{"day":"Thu","window":"02:00-15:59","score":1},{"day":"Fri","window":"10:00-16:59","score":2}]}],"3min":[{"sym":"AUDCAD","day_windows":[{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Tue","window":"14:00-15:59","score":1},{"day":"Tue","window":"00:00-01:59","score":1},{"day":"Tue","window":"11:00-12:59","score":1},{"day":"Wed","window":"02:00-03:59","score":2},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Fri","window":"01:00-02:59","score":1}]},{"sym":"AUDCHF","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Tue","window":"12:00-13:59","score":2},{"day":"Tue","window":"03:00-04:59","score":1},{"day":"Wed","window":"01:00-02:59","score":2},{"day":"Wed","window":"12:00-13:59","score":1},{"day":"Thu","window":"00:00-01:59","score":1},{"day":"Thu","window":"16:00-17:59","score":1}]},{"sym":"AUDNZD","day_windows":[{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"13:00-14:59","score":1},{"day":"Thu","window":"06:00-07:59","score":1},{"day":"Thu","window":"10:00-11:59","score":1},{"day":"Fri","window":"07:00-08:59","score":1}]},{"sym":"AUDUSD","day_windows":[{"day":"Mon","window":"12:00-13:59","score":1},{"day":"Tue","window":"14:00-15:59","score":2},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Tue","window":"01:00-02:59","score":1},{"day":"Wed","window":"13:00-14:59","score":1},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"11:00-12:59","score":2},{"day":"Thu","window":"08:00-09:59","score":1}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"01:00-02:59","score":3},{"day":"Mon","window":"11:00-12:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Tue","window":"01:00-02:59","score":1},{"day":"Wed","window":"13:00-14:59","score":2},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Thu","window":"15:00-16:59","score":1},{"day":"Thu","window":"04:00-05:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1},{"day":"Sun","window":"10:00-11:59","score":2},{"day":"Sun","window":"00:00-01:59","score":1}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Mon","window":"05:00-06:59","score":1},{"day":"Mon","window":"08:00-09:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"01:00-02:59","score":2},{"day":"Tue","window":"04:00-05:59","score":2},{"day":"Wed","window":"17:00-18:59","score":1},{"day":"Wed","window":"12:00-13:59","score":1},{"day":"Thu","window":"05:00-06:59","score":2},{"day":"Thu","window":"12:00-13:59","score":1},{"day":"Fri","window":"15:00-16:59","score":2},{"day":"Fri","window":"08:00-09:59","score":1}]},{"sym":"CHFJPY","day_windows":[{"day":"Mon","window":"08:00-09:59","score":2},{"day":"Mon","window":"12:00-13:59","score":1},{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Tue","window":"08:00-09:59","score":3},{"day":"Tue","window":"04:00-05:59","score":2},{"day":"Tue","window":"16:00-17:59","score":1},{"day":"Wed","window":"06:00-07:59","score":2},{"day":"Wed","window":"11:00-12:59","score":1},{"day":"Thu","window":"06:00-07:59","score":2},{"day":"Thu","window":"00:00-01:59","score":1},{"day":"Fri","window":"07:00-08:59","score":2},{"day":"Fri","window":"10:00-11:59","score":1},{"day":"Fri","window":"14:00-15:59","score":1}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"02:00-03:59","score":2},{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"00:00-01:59","score":1},{"day":"Tue","window":"18:00-19:59","score":1},{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Wed","window":"15:00-16:59","score":1},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Thu","window":"03:00-04:59","score":1},{"day":"Thu","window":"12:00-13:59","score":1},{"day":"Fri","window":"14:00-15:59","score":2},{"day":"Fri","window":"06:00-07:59","score":1},{"day":"Sun","window":"12:00-13:59","score":2},{"day":"Sun","window":"09:00-10:59","score":1},{"day":"Sun","window":"16:00-17:59","score":1}]},{"sym":"EURAUD","day_windows":[{"day":"Tue","window":"14:00-15:59","score":2},{"day":"Tue","window":"09:00-10:59","score":2},{"day":"Tue","window":"01:00-02:59","score":1},{"day":"Wed","window":"15:00-16:59","score":2},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"13:00-14:59","score":1},{"day":"Thu","window":"17:00-18:59","score":1}]},{"sym":"EURCAD","day_windows":[{"day":"Mon","window":"08:00-09:59","score":1},{"day":"Tue","window":"14:00-15:59","score":2},{"day":"Wed","window":"17:00-18:59","score":3},{"day":"Fri","window":"13:00-14:59","score":1}]},{"sym":"EURGBP","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"00:00-01:59","score":1},{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Wed","window":"14:00-15:59","score":2},{"day":"Wed","window":"09:00-10:59","score":1},{"day":"Fri","window":"13:00-14:59","score":2},{"day":"Fri","window":"06:00-07:59","score":2}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"08:00-09:59","score":2},{"day":"Mon","window":"00:00-01:59","score":1},{"day":"Mon","window":"04:00-05:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"04:00-05:59","score":2},{"day":"Tue","window":"18:00-19:59","score":1},{"day":"Wed","window":"10:00-11:59","score":1},{"day":"Wed","window":"07:00-08:59","score":1},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Fri","window":"03:00-04:59","score":1},{"day":"Fri","window":"06:00-07:59","score":1}]},{"sym":"EURNZD","day_windows":[{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Mon","window":"12:00-13:59","score":1},{"day":"Tue","window":"00:00-01:59","score":2},{"day":"Tue","window":"08:00-09:59","score":2},{"day":"Tue","window":"13:00-14:59","score":2},{"day":"Wed","window":"02:00-03:59","score":1},{"day":"Wed","window":"11:00-12:59","score":1},{"day":"Thu","window":"03:00-04:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1}]},{"sym":"EURUSD","day_windows":[{"day":"Mon","window":"06:00-07:59","score":2},{"day":"Mon","window":"15:00-16:59","score":1},{"day":"Mon","window":"18:00-19:59","score":1},{"day":"Tue","window":"16:00-17:59","score":2},{"day":"Tue","window":"13:00-14:59","score":2},{"day":"Tue","window":"05:00-06:59","score":1},{"day":"Wed","window":"04:00-05:59","score":1},{"day":"Wed","window":"14:00-15:59","score":1},{"day":"Wed","window":"09:00-10:59","score":1},{"day":"Thu","window":"10:00-11:59","score":3},{"day":"Fri","window":"08:00-09:59","score":1}]},{"sym":"GBPAUD","day_windows":[{"day":"Tue","window":"03:00-04:59","score":2},{"day":"Tue","window":"14:00-15:59","score":1},{"day":"Tue","window":"09:00-10:59","score":1},{"day":"Wed","window":"02:00-03:59","score":1},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Thu","window":"15:00-16:59","score":1}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"14:00-15:59","score":1},{"day":"Tue","window":"13:00-14:59","score":2},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Wed","window":"18:00-19:59","score":1},{"day":"Thu","window":"18:00-19:59","score":1},{"day":"Fri","window":"13:00-14:59","score":2}]},{"sym":"GBPCHF","day_windows":[{"day":"Mon","window":"09:00-10:59","score":2},{"day":"Tue","window":"13:00-14:59","score":3},{"day":"Wed","window":"18:00-19:59","score":1},{"day":"Thu","window":"09:00-10:59","score":1},{"day":"Fri","window":"11:00-12:59","score":2}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"12:00-13:59","score":1},{"day":"Tue","window":"16:00-17:59","score":1},{"day":"Wed","window":"08:00-09:59","score":2},{"day":"Wed","window":"02:00-03:59","score":1},{"day":"Wed","window":"13:00-14:59","score":1},{"day":"Thu","window":"07:00-08:59","score":1},{"day":"Thu","window":"12:00-13:59","score":1},{"day":"Thu","window":"15:00-16:59","score":1},{"day":"Fri","window":"12:00-13:59","score":1}]},{"sym":"GBPUSD","day_windows":[{"day":"Mon","window":"10:00-11:59","score":2},{"day":"Mon","window":"15:00-16:59","score":1},{"day":"Tue","window":"12:00-13:59","score":2},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Wed","window":"16:00-17:59","score":2},{"day":"Wed","window":"13:00-14:59","score":2},{"day":"Wed","window":"09:00-10:59","score":1},{"day":"Thu","window":"12:00-13:59","score":3},{"day":"Thu","window":"09:00-10:59","score":1},{"day":"Thu","window":"05:00-06:59","score":1}]},{"sym":"NAS100","day_windows":[{"day":"Mon","window":"08:00-09:59","score":1},{"day":"Mon","window":"15:00-16:59","score":1},{"day":"Tue","window":"11:00-12:59","score":3},{"day":"Tue","window":"16:00-17:59","score":2},{"day":"Tue","window":"08:00-09:59","score":1},{"day":"Wed","window":"14:00-15:59","score":2},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"14:00-15:59","score":2},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Fri","window":"15:00-16:59","score":3}]},{"sym":"NZDCAD","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Mon","window":"16:00-17:59","score":1},{"day":"Tue","window":"08:00-09:59","score":1},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Wed","window":"17:00-18:59","score":1},{"day":"Thu","window":"13:00-14:59","score":1}]},{"sym":"NZDCHF","day_windows":[{"day":"Mon","window":"11:00-12:59","score":1},{"day":"Tue","window":"02:00-03:59","score":1},{"day":"Wed","window":"12:00-13:59","score":2},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Thu","window":"02:00-03:59","score":1},{"day":"Thu","window":"17:00-18:59","score":1},{"day":"Fri","window":"13:00-14:59","score":1},{"day":"Fri","window":"07:00-08:59","score":1}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"08:00-09:59","score":2},{"day":"Tue","window":"03:00-04:59","score":1},{"day":"Tue","window":"16:00-17:59","score":1},{"day":"Tue","window":"09:00-10:59","score":1},{"day":"Wed","window":"14:00-15:59","score":1},{"day":"Thu","window":"05:00-06:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1},{"day":"Fri","window":"01:00-02:59","score":1},{"day":"Fri","window":"05:00-06:59","score":1}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"04:00-05:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Tue","window":"04:00-05:59","score":1},{"day":"Wed","window":"14:00-15:59","score":1},{"day":"Thu","window":"13:00-14:59","score":2},{"day":"Thu","window":"03:00-04:59","score":1}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"14:00-15:59","score":3},{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"17:00-18:59","score":1},{"day":"Wed","window":"14:00-15:59","score":2},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Wed","window":"05:00-06:59","score":1},{"day":"Thu","window":"11:00-12:59","score":2},{"day":"Thu","window":"15:00-16:59","score":2},{"day":"Fri","window":"15:00-16:59","score":2},{"day":"Fri","window":"12:00-13:59","score":1}]},{"sym":"USDCHF","day_windows":[{"day":"Mon","window":"02:00-03:59","score":1},{"day":"Tue","window":"14:00-15:59","score":4},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Tue","window":"00:00-01:59","score":1},{"day":"Wed","window":"17:00-18:59","score":2},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Wed","window":"11:00-12:59","score":1},{"day":"Thu","window":"11:00-12:59","score":3},{"day":"Thu","window":"00:00-01:59","score":2}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"18:00-19:59","score":1},{"day":"Tue","window":"03:00-04:59","score":3},{"day":"Tue","window":"12:00-13:59","score":2},{"day":"Tue","window":"00:00-01:59","score":2},{"day":"Wed","window":"08:00-09:59","score":2},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Wed","window":"12:00-13:59","score":1},{"day":"Thu","window":"03:00-04:59","score":1},{"day":"Fri","window":"04:00-05:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"00:00-08:59","score":1},{"day":"Tue","window":"02:00-08:59","score":2},{"day":"Wed","window":"00:00-10:59","score":2},{"day":"Fri","window":"00:00-14:59","score":3}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"12:00-18:59","score":2},{"day":"Tue","window":"04:00-17:59","score":3},{"day":"Wed","window":"00:00-07:59","score":3},{"day":"Thu","window":"02:00-15:59","score":1},{"day":"Fri","window":"10:00-16:59","score":2}]}],"5min":[{"sym":"AUDCAD","day_windows":[{"day":"Tue","window":"09:00-14:59","conf":"LOW"},{"day":"Wed","window":"01:00-05:59","conf":"LOW"}]},{"sym":"AUDCHF","day_windows":[{"day":"Tue","window":"08:00-11:59","conf":"HIGH"},{"day":"Thu","window":"12:00-16:59","conf":"LOW"}]},{"sym":"AUDNZD","day_windows":[{"day":"Tue","window":"01:00-03:59","conf":"HIGH"},{"day":"Wed","window":"00:00-01:59","conf":"LOW"}]},{"sym":"AUDUSD","day_windows":[{"day":"Tue","window":"06:00-10:59","conf":"LOW"}]},{"sym":"BTCUSD","day_windows":[{"day":"Tue","window":"02:00-03:59","conf":"HIGH"},{"day":"Wed","window":"04:00-15:59","conf":"HIGH"},{"day":"Thu","window":"06:00-16:59","conf":"HIGH"},{"day":"Fri","window":"07:00-17:59","conf":"LOW"}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"00:00-02:59","conf":"LOW"},{"day":"Tue","window":"00:00-04:59","conf":"LOW"},{"day":"Wed","window":"00:00-03:59","conf":"MEDIUM"},{"day":"Thu","window":"00:00-05:59","conf":"LOW"},{"day":"Fri","window":"03:00-09:59","conf":"HIGH"}]},{"sym":"CHFJPY","day_windows":[{"day":"Mon","window":"02:00-05:59","conf":"LOW"},{"day":"Tue","window":"03:00-07:59","conf":"LOW"}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"00:00-03:59","conf":"LOW"},{"day":"Fri","window":"05:00-16:59","conf":"HIGH"},{"day":"Sat","window":"05:00-12:59","conf":"LOW"}]},{"sym":"EURAUD","day_windows":[{"day":"Mon","window":"10:00-15:59","conf":"LOW"},{"day":"Tue","window":"08:00-11:59","conf":"HIGH"},{"day":"Wed","window":"05:00-13:59","conf":"LOW"},{"day":"Thu","window":"10:00-12:59","conf":"LOW"}]},{"sym":"EURCAD","day_windows":[{"day":"Mon","window":"00:00-06:59","conf":"HIGH"},{"day":"Wed","window":"14:00-18:59","conf":"LOW"}]},{"sym":"EURGBP","day_windows":[{"day":"Wed","window":"07:00-07:59","conf":"LOW"},{"day":"Thu","window":"01:00-02:59","conf":"HIGH"},{"day":"Fri","window":"02:00-18:59","conf":"HIGH"}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"01:00-10:59","conf":"HIGH"},{"day":"Tue","window":"01:00-06:59","conf":"LOW"},{"day":"Wed","window":"00:00-05:59","conf":"HIGH"},{"day":"Thu","window":"14:00-16:59","conf":"LOW"},{"day":"Fri","window":"05:00-07:59","conf":"LOW"}]},{"sym":"EURNZD","day_windows":[{"day":"Tue","window":"00:00-08:59","conf":"HIGH"},{"day":"Thu","window":"00:00-09:59","conf":"LOW"}]},{"sym":"EURUSD","day_windows":[{"day":"Mon","window":"00:00-06:59","conf":"HIGH"},{"day":"Tue","window":"07:00-09:59","conf":"HIGH"},{"day":"Wed","window":"09:00-18:59","conf":"LOW"},{"day":"Thu","window":"09:00-12:59","conf":"HIGH"}]},{"sym":"GBPAUD","day_windows":[{"day":"Tue","window":"09:00-12:00","conf":"HIGH"},{"day":"Fri","window":"07:00-12:00","conf":"HIGH"}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"00:00-06:00","conf":"LOW"},{"day":"Fri","window":"15:00-20:00","conf":"LOW"}]},{"sym":"GBPCHF","day_windows":[{"day":"Tue","window":"12:00-20:00","conf":"LOW"},{"day":"Thu","window":"08:00-12:00","conf":"LOW"},{"day":"Fri","window":"08:00-14:00","conf":"HIGH"}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"08:00-09:00","conf":"LOW"},{"day":"Tue","window":"06:00-09:00","conf":"LOW"},{"day":"Wed","window":"03:00-05:00","conf":"LOW"},{"day":"Fri","window":"02:00-09:00","conf":"LOW"}]},{"sym":"GBPUSD","day_windows":[{"day":"Tue","window":"09:00-10:00","conf":"LOW"},{"day":"Wed","window":"09:00-15:00","conf":"LOW"}]},{"sym":"NAS100","day_windows":[{"day":"Fri","window":"10:00-15:00","conf":"LOW"}]},{"sym":"NZDCAD","day_windows":[{"day":"Mon","window":"14:00-17:00","conf":"LOW"},{"day":"Fri","window":"03:00-09:00","conf":"HIGH"}]},{"sym":"NZDCHF","day_windows":[{"day":"Tue","window":"09:00-11:00","conf":"HIGH"},{"day":"Wed","window":"13:00-14:00","conf":"LOW"},{"day":"Fri","window":"13:00-19:00","conf":"LOW"}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"02:00-04:00","conf":"HIGH"},{"day":"Tue","window":"04:00-09:00","conf":"HIGH"},{"day":"Thu","window":"11:00-19:00","conf":"LOW"},{"day":"Fri","window":"11:00-14:00","conf":"LOW"}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"10:00-14:00","conf":"HIGH"},{"day":"Tue","window":"08:00-10:00","conf":"LOW"},{"day":"Wed","window":"00:00-03:00","conf":"HIGH"},{"day":"Thu","window":"10:00-12:00","conf":"LOW"},{"day":"Fri","window":"14:00-17:00","conf":"HIGH"}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"12:00-18:00","conf":"LOW"},{"day":"Tue","window":"06:00-12:00","conf":"HIGH"},{"day":"Thu","window":"10:00-16:00","conf":"HIGH"},{"day":"Fri","window":"13:00-14:00","conf":"LOW"}]},{"sym":"USDCHF","day_windows":[{"day":"Mon","window":"09:00-13:00","conf":"LOW"},{"day":"Tue","window":"06:00-09:00","conf":"LOW"},{"day":"Thu","window":"10:00-13:00","conf":"LOW"}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"11:00-15:00","conf":"LOW"},{"day":"Tue","window":"01:00-03:00","conf":"HIGH"}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"01:00-02:00","conf":"LOW"}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"00:00-03:00","conf":"LOW"},{"day":"Tue","window":"02:00-06:00","conf":"LOW"},{"day":"Thu","window":"15:00-18:00","conf":"LOW"},{"day":"Fri","window":"05:00-07:00","conf":"LOW"}]}],"15min":[{"sym":"AUDCAD","day_windows":[{"day":"Mon","window":"05:00-06:59","conf":"LOW"},{"day":"Tue","window":"00:00-03:59","conf":"LOW"},{"day":"Wed","window":"10:00-13:59","conf":"LOW"}]},{"sym":"AUDCHF","day_windows":[{"day":"Mon","window":"12:00-15:59","conf":"LOW"}]},{"sym":"AUDNZD","day_windows":[{"day":"Wed","window":"00:00-02:59","conf":"LOW"},{"day":"Thu","window":"04:00-06:59","conf":"LOW"},{"day":"Fri","window":"04:00-06:59","conf":"LOW"}]},{"sym":"AUDUSD","day_windows":[{"day":"Tue","window":"00:00-08:59","conf":"LOW"}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"04:00-11:59","conf":"HIGH"},{"day":"Tue","window":"04:00-06:59","conf":"LOW"},{"day":"Wed","window":"06:00-12:59","conf":"HIGH"},{"day":"Thu","window":"04:00-17:59","conf":"HIGH"},{"day":"Fri","window":"00:00-06:59","conf":"LOW"},{"day":"Sun","window":"06:00-13:59","conf":"LOW"}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"00:00-04:59","conf":"LOW"},{"day":"Tue","window":"00:00-05:59","conf":"LOW"},{"day":"Fri","window":"00:00-06:59","conf":"LOW"}]},{"sym":"CHFJPY","day_windows":[{"day":"Mon","window":"13:00-17:59","conf":"LOW"},{"day":"Tue","window":"07:00-10:59","conf":"LOW"},{"day":"Thu","window":"12:00-15:59","conf":"LOW"}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"13:00-13:59","conf":"LOW"},{"day":"Tue","window":"12:00-18:59","conf":"LOW"},{"day":"Thu","window":"07:00-15:59","conf":"LOW"},{"day":"Sat","window":"02:00-14:59","conf":"HIGH"},{"day":"Sun","window":"06:00-10:59","conf":"HIGH"}]},{"sym":"EURAUD","day_windows":[{"day":"Tue","window":"15:00-16:59","conf":"LOW"},{"day":"Wed","window":"04:00-13:59","conf":"LOW"},{"day":"Fri","window":"11:00-13:59","conf":"LOW"}]},{"sym":"EURCAD","day_windows":[{"day":"Wed","window":"13:00-14:59","conf":"LOW"}]},{"sym":"EURGBP","day_windows":[{"day":"Tue","window":"06:00-09:59","conf":"HIGH"},{"day":"Fri","window":"02:00-13:59","conf":"HIGH"}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"17:00-19:59","conf":"LOW"}]},{"sym":"EURNZD","day_windows":[{"day":"Mon","window":"14:00-16:59","conf":"LOW"},{"day":"Wed","window":"01:00-15:59","conf":"HIGH"},{"day":"Thu","window":"09:00-13:59","conf":"LOW"}]},{"sym":"EURUSD","day_windows":[{"day":"Wed","window":"10:00-12:59","conf":"LOW"}]},{"sym":"GBPAUD","day_windows":[{"day":"Mon","window":"04:00-10:00","conf":"LOW"},{"day":"Thu","window":"10:00-11:00","conf":"LOW"}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"02:00-06:00","conf":"HIGH"},{"day":"Tue","window":"06:00-14:00","conf":"LOW"},{"day":"Wed","window":"00:00-07:00","conf":"LOW"}]},{"sym":"GBPCHF","day_windows":[{"day":"Mon","window":"11:00-15:00","conf":"LOW"},{"day":"Fri","window":"09:00-17:00","conf":"LOW"}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"12:00-18:00","conf":"HIGH"}]},{"sym":"GBPUSD","day_windows":[{"day":"Wed","window":"11:00-14:00","conf":"LOW"},{"day":"Fri","window":"10:00-15:00","conf":"HIGH"}]},{"sym":"NAS100","day_windows":[{"day":"Mon","window":"16:00-20:00","conf":"LOW"},{"day":"Tue","window":"11:00-19:00","conf":"LOW"},{"day":"Wed","window":"11:00-15:00","conf":"LOW"},{"day":"Fri","window":"07:00-12:00","conf":"LOW"}]},{"sym":"NZDCHF","day_windows":[{"day":"Wed","window":"00:00-04:00","conf":"HIGH"}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"08:00-11:00","conf":"LOW"},{"day":"Wed","window":"00:00-04:00","conf":"LOW"},{"day":"Thu","window":"13:00-17:00","conf":"LOW"}]},{"sym":"NZDUSD","day_windows":[{"day":"Wed","window":"00:00-04:00","conf":"HIGH"},{"day":"Fri","window":"09:00-14:00","conf":"LOW"}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"06:00-08:00","conf":"HIGH"},{"day":"Tue","window":"14:00-16:00","conf":"LOW"},{"day":"Thu","window":"10:00-18:00","conf":"LOW"},{"day":"Fri","window":"13:00-16:00","conf":"LOW"}]},{"sym":"USDCHF","day_windows":[{"day":"Tue","window":"05:00-08:00","conf":"LOW"},{"day":"Thu","window":"01:00-07:00","conf":"HIGH"}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"03:00-07:00","conf":"LOW"},{"day":"Fri","window":"04:00-07:00","conf":"LOW"}]},{"sym":"XAGUSD","day_windows":[{"day":"Tue","window":"14:00-16:00","conf":"LOW"},{"day":"Wed","window":"13:00-17:00","conf":"HIGH"},{"day":"Thu","window":"14:00-19:00","conf":"HIGH"},{"day":"Fri","window":"07:00-15:00","conf":"LOW"}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"10:00-14:00","conf":"LOW"},{"day":"Tue","window":"14:00-17:00","conf":"LOW"},{"day":"Wed","window":"10:00-16:00","conf":"LOW"},{"day":"Thu","window":"13:00-18:00","conf":"HIGH"},{"day":"Fri","window":"12:00-13:00","conf":"LOW"}]}],"2hr":[{"sym":"AUDCAD","day_windows":[{"day":"Thu","window":"04:00-07:59","conf":"LOW"},{"day":"Fri","window":"08:00-11:59","conf":"HIGH"}]},{"sym":"AUDCHF","day_windows":[{"day":"Tue","window":"11:00-15:59","conf":"HIGH"},{"day":"Wed","window":"09:00-16:59","conf":"HIGH"}]},{"sym":"AUDNZD","day_windows":[{"day":"Mon","window":"10:00-14:59","conf":"HIGH"},{"day":"Tue","window":"06:00-09:59","conf":"LOW"},{"day":"Wed","window":"00:00-01:59","conf":"LOW"},{"day":"Thu","window":"01:00-06:59","conf":"LOW"},{"day":"Fri","window":"08:00-14:59","conf":"LOW"}]},{"sym":"AUDUSD","day_windows":[{"day":"Wed","window":"10:00-14:59","conf":"LOW"},{"day":"Fri","window":"00:00-06:59","conf":"LOW"}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"07:00-16:59","conf":"LOW"},{"day":"Tue","window":"13:00-16:59","conf":"LOW"},{"day":"Wed","window":"07:00-16:59","conf":"LOW"},{"day":"Thu","window":"11:00-14:59","conf":"LOW"},{"day":"Fri","window":"00:00-12:59","conf":"LOW"}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"14:00-17:59","conf":"HIGH"},{"day":"Wed","window":"04:00-08:59","conf":"HIGH"}]},{"sym":"CHFJPY","day_windows":[{"day":"Wed","window":"09:00-10:59","conf":"LOW"},{"day":"Fri","window":"09:00-12:59","conf":"LOW"}]},{"sym":"ETHUSD","day_windows":[{"day":"Thu","window":"00:00-08:59","conf":"HIGH"},{"day":"Sat","window":"01:00-08:59","conf":"HIGH"},{"day":"Sun","window":"01:00-08:59","conf":"HIGH"}]},{"sym":"EURAUD","day_windows":[{"day":"Tue","window":"04:00-05:59","conf":"MEDIUM"},{"day":"Wed","window":"02:00-12:59","conf":"HIGH"},{"day":"Thu","window":"14:00-16:59","conf":"LOW"},{"day":"Fri","window":"04:00-06:59","conf":"LOW"}]},{"sym":"EURCAD","day_windows":[{"day":"Thu","window":"09:00-13:59","conf":"HIGH"},{"day":"Fri","window":"04:00-10:59","conf":"HIGH"}]},{"sym":"EURGBP","day_windows":[{"day":"Thu","window":"09:00-14:59","conf":"HIGH"},{"day":"Fri","window":"05:00-07:59","conf":"HIGH"}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"16:00-19:59","conf":"HIGH"},{"day":"Tue","window":"04:00-05:59","conf":"LOW"},{"day":"Wed","window":"08:00-14:59","conf":"LOW"},{"day":"Thu","window":"16:00-17:59","conf":"LOW"},{"day":"Fri","window":"04:00-11:59","conf":"HIGH"}]},{"sym":"EURNZD","day_windows":[{"day":"Mon","window":"11:00-16:59","conf":"HIGH"},{"day":"Tue","window":"02:00-05:59","conf":"HIGH"},{"day":"Fri","window":"04:00-15:59","conf":"HIGH"}]},{"sym":"EURUSD","day_windows":[{"day":"Thu","window":"15:00-15:59","conf":"LOW"},{"day":"Fri","window":"00:00-13:59","conf":"LOW"}]},{"sym":"GBPAUD","day_windows":[{"day":"Wed","window":"09:00-12:00","conf":"HIGH"},{"day":"Thu","window":"10:00-11:00","conf":"LOW"},{"day":"Fri","window":"00:00-05:00","conf":"HIGH"}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"10:00-13:00","conf":"HIGH"},{"day":"Tue","window":"02:00-08:00","conf":"LOW"}]},{"sym":"GBPCHF","day_windows":[{"day":"Mon","window":"11:00-14:00","conf":"HIGH"},{"day":"Wed","window":"08:00-10:00","conf":"LOW"},{"day":"Fri","window":"12:00-15:00","conf":"LOW"}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"14:00-16:00","conf":"LOW"},{"day":"Tue","window":"08:00-12:00","conf":"LOW"},{"day":"Wed","window":"09:00-11:00","conf":"HIGH"},{"day":"Thu","window":"10:00-14:00","conf":"HIGH"}]},{"sym":"GBPUSD","day_windows":[{"day":"Tue","window":"13:00-16:00","conf":"HIGH"},{"day":"Wed","window":"03:00-06:00","conf":"HIGH"},{"day":"Fri","window":"06:00-09:00","conf":"HIGH"}]},{"sym":"NAS100","day_windows":[{"day":"Tue","window":"05:00-09:00","conf":"LOW"},{"day":"Thu","window":"08:00-10:00","conf":"LOW"},{"day":"Fri","window":"07:00-13:00","conf":"LOW"}]},{"sym":"NZDCAD","day_windows":[{"day":"Tue","window":"05:00-07:00","conf":"LOW"},{"day":"Thu","window":"14:00-15:00","conf":"HIGH"}]},{"sym":"NZDCHF","day_windows":[{"day":"Mon","window":"03:00-06:00","conf":"LOW"},{"day":"Tue","window":"12:00-17:00","conf":"HIGH"},{"day":"Wed","window":"10:00-15:00","conf":"LOW"},{"day":"Thu","window":"07:00-12:00","conf":"HIGH"}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"07:00-10:00","conf":"LOW"},{"day":"Tue","window":"12:00-14:00","conf":"HIGH"},{"day":"Wed","window":"10:00-15:00","conf":"LOW"},{"day":"Fri","window":"08:00-09:00","conf":"HIGH"}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"04:00-08:00","conf":"HIGH"},{"day":"Tue","window":"00:00-04:00","conf":"LOW"},{"day":"Fri","window":"12:00-14:00","conf":"LOW"}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"13:00-16:00","conf":"LOW"},{"day":"Tue","window":"12:00-16:00","conf":"LOW"},{"day":"Wed","window":"10:00-13:00","conf":"HIGH"},{"day":"Thu","window":"13:00-14:00","conf":"HIGH"},{"day":"Fri","window":"06:00-10:00","conf":"LOW"}]},{"sym":"USDCHF","day_windows":[{"day":"Wed","window":"02:00-10:00","conf":"LOW"},{"day":"Fri","window":"04:00-08:00","conf":"HIGH"}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"01:00-05:00","conf":"HIGH"},{"day":"Wed","window":"03:00-06:00","conf":"HIGH"}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"10:00-11:00","conf":"LOW"},{"day":"Wed","window":"06:00-09:00","conf":"LOW"},{"day":"Fri","window":"14:00-18:00","conf":"LOW"}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"01:00-08:00","conf":"HIGH"},{"day":"Tue","window":"14:00-16:00","conf":"LOW"},{"day":"Thu","window":"15:00-20:00","conf":"HIGH"},{"day":"Fri","window":"01:00-06:00","conf":"HIGH"}]}]};
+const PIP={EURUSD:0.0001,GBPUSD:0.0001,AUDUSD:0.0001,NZDUSD:0.0001,USDCAD:0.0001,USDCHF:0.0001,EURGBP:0.0001,EURAUD:0.0001,EURCAD:0.0001,EURNZD:0.0001,EURJPY:0.01,GBPJPY:0.01,USDJPY:0.01,CADJPY:0.01,CHFJPY:0.01,AUDJPY:0.01,NZDJPY:0.01,AUDCAD:0.0001,AUDCHF:0.0001,AUDNZD:0.0001,GBPAUD:0.0001,GBPCAD:0.0001,GBPCHF:0.0001,GBPNZD:0.0001,NZDCAD:0.0001,NZDCHF:0.0001,XAUUSD:0.01,XAGUSD:0.01,NAS100:0.01,BTCUSD:1,ETHUSD:0.01};
+const TFS=['1min','3min','5min','15min','2hr'],MAX=5,DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const signals={},activeFilters=new Set(['S4','S3','S2','S1','H','M','L']);
+TFS.forEach(tf=>signals[tf]=[]);
+function pad(n){return String(n).padStart(2,'0')}
+
+// Chime
+let audioCtx=null;
+
+// Resume audio on any interaction so chime works after page load
+function unlockAudio(){
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+  if(!audioCtx){
+    try{ audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  }
+}
+['click','touchstart','keydown','scroll','mousemove'].forEach(evt=>
+  document.addEventListener(evt, unlockAudio, {once:true, passive:true})
+);
+
+function playChime(){
+  try{
+    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const ctx=audioCtx,t=ctx.currentTime;
+    const o1=ctx.createOscillator(),o2=ctx.createOscillator(),g=ctx.createGain();
+    o1.connect(g);o2.connect(g);g.connect(ctx.destination);
+    o1.type='sine';o1.frequency.setValueAtTime(880,t);o1.frequency.exponentialRampToValueAtTime(1320,t+0.08);
+    o2.type='sine';o2.frequency.setValueAtTime(1320,t+0.07);o2.frequency.exponentialRampToValueAtTime(1760,t+0.18);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.18,t+0.04);g.gain.exponentialRampToValueAtTime(0.001,t+0.55);
+    o1.start(t);o1.stop(t+0.55);o2.start(t+0.07);o2.stop(t+0.55);
+  }catch(e){}
+}
+
+function getScore(sym,tf,now){
+  const data=SESSION_DATA[tf];if(!data)return null;
+  const inst=data.find(i=>i.sym===sym);if(!inst)return null;
+  const day=DAY[now.getUTCDay()],mins=now.getUTCHours()*60+now.getUTCMinutes();
+  const dw=inst.day_windows.find(w=>{
+    if(w.day!==day)return false;
+    const[a,b]=w.window.split('-'),toM=s=>{const[h,m]=s.split(':').map(Number);return h*60+m};
+    return mins>=toM(a)&&mins<=toM(b);
+  });
+  if(!dw)return null;
+  if(dw.score!==undefined)return{type:'score',val:dw.score};
+  if(dw.conf!==undefined)return{type:'conf',val:dw.conf};
+  return null;
+}
+function pips(sym,p1,p2){return(Math.abs(p1-p2)/(PIP[sym]||0.0001)).toFixed(1)}
+function fmtPrice(sym,p){const pip=PIP[sym]||0.0001;if(pip>=1)return Number(p).toFixed(0);if(pip>=0.01)return Number(p).toFixed(2);return Number(p).toFixed(5)}
+function fk(sc){if(!sc)return null;return sc.type==='score'?'S'+sc.val:sc.val[0]}
+function sbC(sc){if(!sc)return'';return sc.type==='score'?'sb-'+sc.val:'sb-'+sc.val[0]}
+function sbL(sc){if(!sc)return'';return sc.type==='score'?'S'+sc.val:sc.val}
+
+function makeCard(sig){
+  const dir=sig.dir.toLowerCase(),sc=sig.score,f=fk(sc);
+  const now=new Date(),t=pad(now.getUTCHours())+':'+pad(now.getUTCMinutes())+' UTC';
+  const d=document.createElement('div');
+  d.className=`sig-card ${dir} entering`;
+  d.dataset.fkey=f||'';
+  if(f&&!activeFilters.has(f))d.style.display='none';
+  const ts=sig.created_at?new Date(sig.created_at):now;
+  d.dataset.ts=ts.getTime();
+  d.innerHTML=`<div class="sig-head"><div class="sig-left"><span class="sig-sym">${sig.sym}</span>${sc?`<span class="score-badge ${sbC(sc)}">${sbL(sc)}</span>`:''}</div><span class="dir-badge ${dir}">${sig.dir.toUpperCase()}</span></div><div class="sig-rows"><div class="sig-row"><span class="row-label">Entry</span><div class="row-right"><span class="row-price entry">${fmtPrice(sig.sym,sig.entry)}</span></div></div><div class="sig-row"><span class="row-label">SL</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.sl)}</span><span class="row-pip sl">${pips(sig.sym,sig.entry,sig.sl)}p</span></div></div><div class="sig-row"><span class="row-label">TP</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.tp)}</span><span class="row-pip tp">${pips(sig.sym,sig.entry,sig.tp)}p</span></div></div></div><div class="sig-time"><span>${t}</span><span class="sig-ago"></span></div>`;
+  return d;
+}
+
+function exitCard(el){
+  const h=el.offsetHeight,wrap=document.createElement('div');
+  wrap.className='card-exit-wrap';wrap.style.height=h+'px';wrap.style.marginBottom='6px';
+  el.parentNode.insertBefore(wrap,el);wrap.appendChild(el);
+  requestAnimationFrame(()=>{
+    el.classList.add('fading');wrap.style.height='0px';wrap.style.marginBottom='0px';wrap.style.opacity='0';
+    setTimeout(()=>{if(wrap.parentNode)wrap.remove()},600);
+  });
+}
+
+function pushSignal(sig){
+  const list=document.getElementById('list-'+sig.tf);if(!list)return;
+  const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
+  signals[sig.tf].unshift(sig);
+  const card=makeCard(sig);
+  list.insertBefore(card,list.firstChild);
+  setTimeout(()=>card.classList.remove('entering'),520);
+  if(signals[sig.tf].length>MAX){
+    const cards=list.querySelectorAll('.sig-card:not(.fading)');
+    const last=cards[cards.length-1];
+    if(last&&!last.closest('.card-exit-wrap'))exitCard(last);
+    signals[sig.tf].pop();
+  }
+  updateCounts();
+  playChime();
+}
+
+function timeAgo(ts){
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return s+'s ago';
+  const m=Math.floor(s/60);
+  if(m<60)return m+'m ago';
+  const h=Math.floor(m/60);
+  if(h<24)return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+
+function updateAgos(){
+  document.querySelectorAll('.sig-card[data-ts]').forEach(card=>{
+    const ago=card.querySelector('.sig-ago');
+    if(ago)ago.textContent=timeAgo(parseInt(card.dataset.ts));
+  });
+}
+
+function updateCounts(){
+  TFS.forEach(tf=>{
+    const n=signals[tf].length;
+    document.getElementById('cnt-'+tf).textContent=n===0?'waiting...':n+(n===1?' signal':' signals');
+    document.getElementById('dot-'+tf).classList.toggle('show',n>0);
+  });
+}
+
+setInterval(updateAgos, 30000);
+
+function applyFilters(){
+  TFS.forEach(tf=>{
+    document.getElementById('list-'+tf).querySelectorAll('.sig-card').forEach(c=>{
+      const f=c.dataset.fkey;c.style.display=(f&&!activeFilters.has(f))?'none':'';
+    });
+  });
+}
+
+document.querySelector('.filter-bar-inner').addEventListener('click',e=>{
+  const tag=e.target.closest('.ftag');if(!tag)return;
+  const f=tag.dataset.f;
+  if(activeFilters.has(f)){activeFilters.delete(f);tag.classList.remove('on')}
+  else{activeFilters.add(f);tag.classList.add('on')}
+  applyFilters();
+});
+
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  TFS.forEach(tf=>{signals[tf]=[];document.getElementById('list-'+tf).innerHTML='<div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div>';});
+  updateCounts();
+});
+
+setInterval(()=>{
+  const n=new Date();
+  document.getElementById('utcClock').textContent='UTC '+DAY[n.getUTCDay()]+' '+pad(n.getUTCHours())+':'+pad(n.getUTCMinutes())+':'+pad(n.getUTCSeconds());
+},1000);
+
+// Supabase Realtime via WebSocket
+function connect(){
+  const ws=new WebSocket(SUPABASE_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPABASE_ANON+'&vsn=1.0.0');
+  const pill=document.getElementById('connPill');
+
+  ws.onopen=()=>{
+    pill.textContent='Connected';pill.className='conn-pill ok';
+    ws.send(JSON.stringify({topic:'realtime:public:signals',event:'phx_join',payload:{config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'INSERT',schema:'public',table:'signals'}]}},ref:'1'}));
+  };
+
+  ws.onmessage=e=>{
+    try{
+      const msg=JSON.parse(e.data);
+      if(msg.event==='phx_reply'&&msg.ref==='1'&&msg.payload?.status==='ok'){
+        pill.textContent='Listening';pill.className='conn-pill ok';
+      }
+      if(msg.event==='postgres_changes'&&msg.payload?.data?.type==='INSERT'){
+        const row=msg.payload.data.record;if(!row)return;
+        const score=getScore(row.sym,row.tf,new Date());
+        pushSignal({sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score});
+      }
+    }catch(err){}
+  };
+
+  ws.onerror=()=>{pill.textContent='Error';pill.className='conn-pill err';};
+  ws.onclose=()=>{pill.textContent='Reconnecting...';pill.className='conn-pill';setTimeout(connect,3000);};
+
+  setInterval(()=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null}));},30000);
+}
+
+async function loadRecent(){
+  try{
+    const res=await fetch(
+      SUPABASE_URL+'/rest/v1/signals?select=*&order=created_at.desc&limit=50',
+      {headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}}
+    );
+    if(!res.ok)return;
+    const rows=await res.json();
+    const byTF={};
+    rows.forEach(row=>{
+      if(!byTF[row.tf])byTF[row.tf]=[];
+      if(byTF[row.tf].length<MAX)byTF[row.tf].push(row);
+    });
+    // rows are newest-first from DB — append in order so newest ends up at top
+    TFS.forEach(tf=>{
+      if(!byTF[tf])return;
+      byTF[tf].forEach(row=>{
+        const list=document.getElementById('list-'+row.tf);if(!list)return;
+        const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
+        const score=getScore(row.sym,row.tf,new Date(row.created_at));
+        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at};
+        signals[row.tf].push(sig);
+        const card=makeCard(sig);
+        card.classList.remove('entering');
+        list.appendChild(card);
+      });
+    });
+    updateCounts();
+    updateAgos();
+  }catch(e){}
+}
+
+loadRecent();
+connect();
+updateCounts();
+</script>
+<footer class="site-footer">
+  <p>Perfect Entry signals are provided for educational and informational purposes only. Nothing displayed on this page constitutes financial advice, investment advice, or a recommendation to buy or sell any financial instrument. Trading involves significant risk of loss and is not suitable for all investors. Past performance is not indicative of future results. You are solely responsible for your own trading decisions and risk management. Perfect Entry accepts no liability for any losses incurred as a result of acting on information displayed here.</p>
+</footer>
+</body>
+</html>
