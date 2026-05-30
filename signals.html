@@ -194,6 +194,20 @@ function getScore(sym,tf,now){
   if(dw.conf!==undefined)return{type:'conf',val:dw.conf};
   return null;
 }
+// Check if a signal was valid — i.e. its timestamp falls within a known session window
+function wasInSession(sym,tf,signalDate){
+  const data=SESSION_DATA[tf];if(!data)return false;
+  const inst=data.find(i=>i.sym===sym);if(!inst)return false;
+  const day=DAY[signalDate.getUTCDay()];
+  const mins=signalDate.getUTCHours()*60+signalDate.getUTCMinutes();
+  if(mins>=20*60)return false; // blackout 20:00-23:59 UTC
+  return inst.day_windows.some(w=>{
+    if(w.day!==day)return false;
+    const[a,b]=w.window.split('-'),toM=s=>{const[h,m]=s.split(':').map(Number);return h*60+m};
+    return mins>=toM(a)&&mins<=toM(b);
+  });
+}
+
 function pips(sym,p1,p2){return(Math.abs(p1-p2)/(PIP[sym]||0.0001)).toFixed(1)}
 function fmtPrice(sym,p){const pip=PIP[sym]||0.0001;if(pip>=1)return Number(p).toFixed(0);if(pip>=0.01)return Number(p).toFixed(2);return Number(p).toFixed(5)}
 function fk(sc){if(!sc)return null;return sc.type==='score'?'S'+sc.val:sc.val[0]}
@@ -225,6 +239,9 @@ function exitCard(el){
 
 function pushSignal(sig){
   const list=document.getElementById('list-'+sig.tf);if(!list)return;
+  // Only display if the signal fired during a valid session window
+  const sigTime=sig.created_at?new Date(sig.created_at):new Date();
+  if(!wasInSession(sig.sym,sig.tf,sigTime))return;
   const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
   signals[sig.tf].unshift(sig);
   const card=makeCard(sig);
@@ -342,7 +359,10 @@ async function loadRecent(){
       byTF[tf].forEach(row=>{
         const list=document.getElementById('list-'+row.tf);if(!list)return;
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
-        const score=getScore(row.sym,row.tf,new Date(row.created_at));
+        const sigTime=new Date(row.created_at);
+        // Skip if signal didn't fire during a valid session window
+        if(!wasInSession(row.sym,row.tf,sigTime))return;
+        const score=getScore(row.sym,row.tf,sigTime);
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at};
         signals[row.tf].push(sig);
         const card=makeCard(sig);
