@@ -207,7 +207,8 @@ footer .container{display:flex;gap:32px;flex-wrap:wrap;justify-content:space-bet
 
 <!-- HERO -->
 <section class="hero" id="home">
-  <video class="hero-video" autoplay muted loop playsinline poster="assets/main.png">
+  <video class="hero-video" autoplay muted loop playsinline>
+    <source src="https://video.wixstatic.com/video/a7eea0_e265ac5ed41b476f939c1555689b5fa0/720p/mp4/file.mp4" type="video/mp4">
     <source src="assets/wave-desktop.mp4" type="video/mp4">
   </video>
   <div class="hero-overlay-a"></div>
@@ -226,6 +227,9 @@ footer .container{display:flex;gap:32px;flex-wrap:wrap;justify-content:space-bet
   <div class="hero-scroll" id="scroll-cue">
     <span>Scroll to learn more</span>
     <span>⬇</span>
+  </div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:44vh;min-height:240px;z-index:4;pointer-events:none;mix-blend-mode:screen;clip-path:polygon(0% 34%,100% 12%,100% 100%,0% 100%);">
+    <div id="tvchart" style="position:absolute;inset:0;"></div>
   </div>
 </section>
 
@@ -574,6 +578,48 @@ footer .container{display:flex;gap:32px;flex-wrap:wrap;justify-content:space-bet
     reset();
   })();
 
+})();
+</script>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+(function(){
+  function mountTV(){
+    if(!window.TradingView)return setTimeout(mountTV,200);
+    new TradingView.widget({
+      container_id:"tvchart",
+      symbol:"BINANCE:XRPUSDT",
+      interval:"1",
+      autosize:true,
+      hide_top_toolbar:true,
+      hide_legend:true,
+      hide_side_toolbar:true,
+      allow_symbol_change:false,
+      locale:"en",
+      theme:"dark",
+      backgroundColor:"rgba(0,0,0,0)",
+      overrides:{
+        "mainSeriesProperties.style":8,
+        "mainSeriesProperties.candleStyle.upColor":"#015662",
+        "mainSeriesProperties.candleStyle.downColor":"#FF6A2A",
+        "mainSeriesProperties.candleStyle.borderUpColor":"#015662",
+        "mainSeriesProperties.candleStyle.borderDownColor":"#FF6A2A",
+        "mainSeriesProperties.candleStyle.wickUpColor":"#015662",
+        "mainSeriesProperties.candleStyle.wickDownColor":"#FF6A2A",
+        "paneProperties.background":"rgba(0,0,0,0)",
+        "paneProperties.vertGridProperties.color":"rgba(0,0,0,0)",
+        "paneProperties.horzGridProperties.color":"rgba(0,0,0,0)",
+        "scalesProperties.showLeftScale":false,
+        "scalesProperties.showRightScale":false,
+        "scalesProperties.showTopScale":false,
+        "scalesProperties.showBottomScale":false,
+        "scalesProperties.textColor":"rgba(0,0,0,0)",
+        "paneProperties.topMargin":20,
+        "paneProperties.bottomMargin":12
+      }
+    });
+  }
+  mountTV();
 })();
 </script>
 </body>
