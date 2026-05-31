@@ -505,22 +505,11 @@ function getWeekStart() {
   const diff = day === 0 ? 6 : day - 1;
   const mon = new Date(now);
   mon.setUTCDate(now.getUTCDate() - diff);
-  mon.setUTCHours(0,0,1,0);
-  return mon;
+  mon.setUTCHours(0,0,0,0);
+  return mon.toISOString();
 }
 
-function updateWeeklyStrip() {
-  const weekStart = getWeekStart();
-  let wins = 0, losses = 0, active = 0;
-  TFS.forEach(tf => {
-    signals[tf].forEach(sig => {
-      const sigTime = sig.created_at ? new Date(sig.created_at) : null;
-      if (!sigTime || sigTime < weekStart) return;
-      if (sig.outcome === 'tp') wins++;
-      else if (sig.outcome === 'sl') losses++;
-      else if (sig.outcome === 'active') active++;
-    });
-  });
+function renderWeeklyStrip(wins, losses, active) {
   const r = (wins * 1.4) - (losses * 1.0);
   const rStr = (r >= 0 ? '+' : '') + r.toFixed(1) + 'R';
   const rClass = r > 0 ? 'pos' : r < 0 ? 'neg' : 'zero';
@@ -541,6 +530,28 @@ function updateWeeklyStrip() {
   if (mr) { mr.textContent = rStr; mr.style.color = r > 0 ? '#00e6aa' : r < 0 ? '#FF9060' : 'rgba(234,253,252,0.35)'; }
   if (mo) mo.textContent = active + ' active';
 }
+
+async function updateWeeklyStrip() {
+  try {
+    const weekStart = getWeekStart();
+    // Fetch ALL signals this week from DB — not just what's displayed
+    // Use Supabase count endpoint — no row limit, just counts
+    const [winsRes, lossesRes, activeRes] = await Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/signals?outcome=eq.tp&created_at=gte.' + weekStart + '&select=id',
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' } }),
+      fetch(SUPABASE_URL + '/rest/v1/signals?outcome=eq.sl&created_at=gte.' + weekStart + '&select=id',
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' } }),
+      fetch(SUPABASE_URL + '/rest/v1/signals?outcome=is.null&closed_at=is.null&created_at=gte.' + weekStart + '&select=id',
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' } })
+    ]);
+    const parseCount = r => { const cr = r.headers.get('content-range'); return cr ? parseInt(cr.split('/')[1]) || 0 : 0; };
+    const wins = parseCount(winsRes);
+    const losses = parseCount(lossesRes);
+    const active = parseCount(activeRes);
+    renderWeeklyStrip(wins, losses, active);
+  } catch(e) {}
+}
+
 setInterval(updateWeeklyStrip, 60000);
 
 // Push to mobile layout too
@@ -671,7 +682,7 @@ async function loadRecent(){
     });
     updateCounts();
     updateMobileCounts();
-    updateWeeklyStrip();
+    updateWeeklyStrip();  // fetches from DB directly
     // Also populate mobile lists from loaded signals
     TFS.forEach(tf => {
       const mobList = document.getElementById('mob-list-' + tf);
