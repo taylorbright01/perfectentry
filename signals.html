@@ -344,31 +344,51 @@
         <div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-1min"></div>
-
+      <div class="col-view-toggle visible" id="hist-toggle-1min" onclick="toggleHistory('1min')">
+        <span class="vt-live">Live</span>
+        <span class="vt-count" id="hist-label-1min"></span>
+        <span class="vt-hist">Today</span>
+      </div>
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">3 min</div><div class="col-meta"><span class="col-dot" id="dot-3min"></span><span class="col-count" id="cnt-3min">waiting...</span></div></div><div class="col-live-view" id="live-view-3min">
         <div class="signals-list" id="list-3min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-3min"></div>
-
+      <div class="col-view-toggle visible" id="hist-toggle-3min" onclick="toggleHistory('3min')">
+        <span class="vt-live">Live</span>
+        <span class="vt-count" id="hist-label-3min"></span>
+        <span class="vt-hist">Today</span>
+      </div>
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">5 min</div><div class="col-meta"><span class="col-dot" id="dot-5min"></span><span class="col-count" id="cnt-5min">waiting...</span></div></div><div class="col-live-view" id="live-view-5min">
         <div class="signals-list" id="list-5min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-5min"></div>
-
+      <div class="col-view-toggle visible" id="hist-toggle-5min" onclick="toggleHistory('5min')">
+        <span class="vt-live">Live</span>
+        <span class="vt-count" id="hist-label-5min"></span>
+        <span class="vt-hist">Today</span>
+      </div>
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">15 min</div><div class="col-meta"><span class="col-dot" id="dot-15min"></span><span class="col-count" id="cnt-15min">waiting...</span></div></div><div class="col-live-view" id="live-view-15min">
         <div class="signals-list" id="list-15min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-15min"></div>
-
+      <div class="col-view-toggle visible" id="hist-toggle-15min" onclick="toggleHistory('15min')">
+        <span class="vt-live">Live</span>
+        <span class="vt-count" id="hist-label-15min"></span>
+        <span class="vt-hist">Today</span>
+      </div>
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">2 hr</div><div class="col-meta"><span class="col-dot" id="dot-2hr"></span><span class="col-count" id="cnt-2hr">waiting...</span></div></div><div class="col-live-view" id="live-view-2hr">
         <div class="signals-list" id="list-2hr"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-2hr"></div>
-
+      <div class="col-view-toggle visible" id="hist-toggle-2hr" onclick="toggleHistory('2hr')">
+        <span class="vt-live">Live</span>
+        <span class="vt-count" id="hist-label-2hr"></span>
+        <span class="vt-hist">Today</span>
+      </div>
     </div>
   </div>
 </div>
@@ -757,9 +777,14 @@ async function loadTodayHistory() {
         count++;
       });
 
-      if (count > MAX && toggle) {
-        toggle.classList.add('visible');
-        if (label) label.textContent = count + ' signals today';
+      if (label) {
+        if (count > 0) {
+          label.textContent = count + ' today';
+          if (toggle) toggle.style.opacity = '1';
+        } else {
+          label.textContent = '';
+          if (toggle) toggle.style.opacity = '0.4';
+        }
       }
     });
   } catch(e) {}
