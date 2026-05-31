@@ -323,6 +323,20 @@
     <button class="clear-btn" id="clearBtn">Clear signals</button>
   </div>
 </div>
+
+<div class="weekly-strip" id="weeklyStrip">
+  <div class="weekly-inner">
+    <span class="weekly-label">This week</span>
+    <span class="weekly-stat"><span class="weekly-w" id="wkWins">0</span>W</span>
+    <span class="weekly-sep">/</span>
+    <span class="weekly-stat"><span class="weekly-l" id="wkLosses">0</span>L</span>
+    <span class="weekly-sep">·</span>
+    <span class="weekly-r zero" id="wkR">+0.0R</span>
+    <span class="weekly-sep">·</span>
+    <span class="weekly-open" id="wkOpen">0 active</span>
+  </div>
+</div>
+
 <div class="cols-outer">
   <div class="cols-grid">
     <div class="col"><div class="col-head"><div class="col-tf">1 min</div><div class="col-meta"><span class="col-dot" id="dot-1min"></span><span class="col-count" id="cnt-1min">waiting...</span></div></div><div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
@@ -387,7 +401,9 @@ function getScore(sym,tf,now){
   return null;
 }
 // Check if a signal was valid — i.e. its timestamp falls within a known session window
-function wasInSession(sym,tf,signalDate){
+function wasInSession(sym,tf,signalDate,outcome){
+  // Always show signals that have a recorded outcome — they happened, display them
+  if(outcome==='tp'||outcome==='sl') return true;
   const data=SESSION_DATA[tf];if(!data)return false;
   const inst=data.find(i=>i.sym===sym);if(!inst)return false;
   const day=DAY[signalDate.getUTCDay()];
@@ -437,7 +453,7 @@ function pushSignal(sig){
   const list=document.getElementById('list-'+sig.tf);if(!list)return;
   // Only display if the signal fired during a valid session window
   const sigTime=sig.created_at?new Date(sig.created_at):new Date();
-  if(!wasInSession(sig.sym,sig.tf,sigTime))return;
+  if(!wasInSession(sig.sym,sig.tf,sigTime,sig.outcome))return;
   const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
   signals[sig.tf].unshift(sig);
   const card=makeCard(sig);
@@ -640,7 +656,7 @@ async function loadRecent(){
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
         const sigTime=new Date(row.created_at);
         // Skip if signal didn't fire during a valid session window
-        if(!wasInSession(row.sym,row.tf,sigTime))return;
+        if(!wasInSession(row.sym,row.tf,sigTime,outcome))return;
         const score=getScore(row.sym,row.tf,sigTime);
         // Determine outcome: use DB value, or 'active' if no outcome and no closed_at, or 'closed' if old
         let outcome = row.outcome || null;
