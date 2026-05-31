@@ -481,7 +481,9 @@ function updateAll() {
       if (!ref) return;
       const {card, badge, timer, winList} = ref;
 
-      const todayDW = inst.day_windows.find(dw => dw.day === dayName);
+      // Get ALL windows for today, not just first
+      const todayDWs = inst.day_windows.filter(dw => dw.day === dayName);
+      const todayDW = todayDWs[0] || null;
 
       winList.querySelectorAll(".win-row").forEach(row => {
         row.classList.remove("win-active");
@@ -502,7 +504,16 @@ function updateAll() {
         return;
       }
 
-      const ws = windowState(todayDW.window, nowMins);
+      // Check all today's windows — any one open means the card is active
+      const openDW = todayDWs.find(dw => windowState(dw.window, nowMins).open);
+      const ws = openDW ? windowState(openDW.window, nowMins) : (() => {
+        // Find the next upcoming window today
+        const upcoming = todayDWs
+          .map(dw => ({ dw, ws: windowState(dw.window, nowMins) }))
+          .filter(x => x.ws.secsUntil !== null && x.ws.secsUntil > 0)
+          .sort((a, b) => a.ws.secsUntil - b.ws.secsUntil)[0];
+        return upcoming ? upcoming.ws : windowState(todayDWs[todayDWs.length-1].window, nowMins);
+      })();
 
       if (ws.open) {
         card.classList.remove("inactive-card"); card.classList.add("active-card");
