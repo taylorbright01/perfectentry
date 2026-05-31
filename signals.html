@@ -310,17 +310,18 @@
 </header>
 <div class="filter-bar">
   <div class="filter-bar-inner">
-    <span class="filter-label">Score</span>
+    <span class="filter-label">S1-S4 <span style="font-weight:500;opacity:0.55;font-size:9px">1m·3m·5m</span></span>
     <span class="ftag on" data-f="S4">S4</span>
     <span class="ftag on" data-f="S3">S3</span>
     <span class="ftag on" data-f="S2">S2</span>
     <span class="ftag on" data-f="S1">S1</span>
     <div class="filter-sep"></div>
-    <span class="filter-label">Conf</span>
+    <span class="filter-label">Conf <span style="font-weight:500;opacity:0.55;font-size:9px">15m·2h</span></span>
     <span class="ftag on" data-f="H">HIGH</span>
     <span class="ftag on" data-f="M">MED</span>
     <span class="ftag on" data-f="L">LOW</span>
     <button class="clear-btn" id="clearBtn">Clear signals</button>
+    <button class="ftag" id="histBtn" onclick="toggleAllHistory()">Today's history</button>
   </div>
 </div>
 
@@ -343,51 +344,31 @@
         <div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-1min"></div>
-      <div class="col-view-toggle" id="hist-toggle-1min" onclick="toggleHistory('1min')">
-        <span class="vt-live">● Live</span>
-        <span id="hist-label-1min"></span>
-        <span class="vt-hist">History ●</span>
-      </div>
+
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">3 min</div><div class="col-meta"><span class="col-dot" id="dot-3min"></span><span class="col-count" id="cnt-3min">waiting...</span></div></div><div class="col-live-view" id="live-view-3min">
         <div class="signals-list" id="list-3min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-3min"></div>
-      <div class="col-view-toggle" id="hist-toggle-3min" onclick="toggleHistory('3min')">
-        <span class="vt-live">● Live</span>
-        <span id="hist-label-3min"></span>
-        <span class="vt-hist">History ●</span>
-      </div>
+
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">5 min</div><div class="col-meta"><span class="col-dot" id="dot-5min"></span><span class="col-count" id="cnt-5min">waiting...</span></div></div><div class="col-live-view" id="live-view-5min">
         <div class="signals-list" id="list-5min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-5min"></div>
-      <div class="col-view-toggle" id="hist-toggle-5min" onclick="toggleHistory('5min')">
-        <span class="vt-live">● Live</span>
-        <span id="hist-label-5min"></span>
-        <span class="vt-hist">History ●</span>
-      </div>
+
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">15 min</div><div class="col-meta"><span class="col-dot" id="dot-15min"></span><span class="col-count" id="cnt-15min">waiting...</span></div></div><div class="col-live-view" id="live-view-15min">
         <div class="signals-list" id="list-15min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-15min"></div>
-      <div class="col-view-toggle" id="hist-toggle-15min" onclick="toggleHistory('15min')">
-        <span class="vt-live">● Live</span>
-        <span id="hist-label-15min"></span>
-        <span class="vt-hist">History ●</span>
-      </div>
+
     </div>
     <div class="col"><div class="col-head"><div class="col-tf">2 hr</div><div class="col-meta"><span class="col-dot" id="dot-2hr"></span><span class="col-count" id="cnt-2hr">waiting...</span></div></div><div class="col-live-view" id="live-view-2hr">
         <div class="signals-list" id="list-2hr"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
       </div>
       <div class="col-hist-view" id="hist-2hr"></div>
-      <div class="col-view-toggle" id="hist-toggle-2hr" onclick="toggleHistory('2hr')">
-        <span class="vt-live">● Live</span>
-        <span id="hist-label-2hr"></span>
-        <span class="vt-hist">History ●</span>
-      </div>
+
     </div>
   </div>
 </div>
@@ -446,9 +427,9 @@ function getScore(sym,tf,now){
   return null;
 }
 // Check if a signal was valid — i.e. its timestamp falls within a known session window
-function wasInSession(sym,tf,signalDate,outcome){
-  // Always show signals that have a recorded outcome — they happened, display them
-  if(outcome==='tp'||outcome==='sl') return true;
+function wasInSession(sym,tf,signalDate){
+  // Check if the signal fired during a valid session window for this pair/tf
+  // Uses the signal's own timestamp — signals outside windows never show
   const data=SESSION_DATA[tf];if(!data)return false;
   const inst=data.find(i=>i.sym===sym);if(!inst)return false;
   const day=DAY[signalDate.getUTCDay()];
@@ -498,7 +479,7 @@ function pushSignal(sig){
   const list=document.getElementById('list-'+sig.tf);if(!list)return;
   // Only display if the signal fired during a valid session window
   const sigTime=sig.created_at?new Date(sig.created_at):new Date();
-  if(!wasInSession(sig.sym,sig.tf,sigTime,sig.outcome))return;
+  if(!wasInSession(sig.sym,sig.tf,sigTime))return;
   const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
   signals[sig.tf].unshift(sig);
   const card=makeCard(sig);
@@ -589,7 +570,7 @@ async function updateWeeklyStrip() {
     rows.forEach(row => {
       const sigTime = new Date(row.created_at);
       const outcome = row.outcome || (!row.closed_at ? 'active' : 'closed');
-      if (!wasInSession(row.sym, row.tf, sigTime, outcome)) return;
+      if (!wasInSession(row.sym, row.tf, sigTime)) return;
       const score = getScore(row.sym, row.tf, sigTime);
       const fkey = score ? (score.type === 'score' ? 'S' + score.val : score.val[0]) : null;
       if (fkey && !activeFilters.has(fkey)) return;
@@ -696,6 +677,22 @@ function connect(){
   setInterval(()=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null}));},30000);
 }
 
+// Global history toggle
+let showingHistory = false;
+function toggleAllHistory() {
+  showingHistory = !showingHistory;
+  const btn = document.getElementById('histBtn');
+  if (btn) {
+    btn.classList.toggle('on', showingHistory);
+  }
+  TFS.forEach(tf => {
+    const liveView = document.getElementById('live-view-' + tf);
+    const histView = document.getElementById('hist-' + tf);
+    if (liveView) liveView.style.display = showingHistory ? 'none' : '';
+    if (histView) histView.classList.toggle('active', showingHistory);
+  });
+}
+
 function toggleHistory(tf) {
   const toggle = document.getElementById('hist-toggle-' + tf);
   const liveView = document.getElementById('live-view-' + tf);
@@ -793,7 +790,7 @@ async function loadRecent(){
         if (!outcome && !row.closed_at) outcome = 'active';
         else if (!outcome && row.closed_at) outcome = 'closed';
         // Skip if signal didn't fire during a valid session window (bypassed for completed trades)
-        if(!wasInSession(row.sym,row.tf,sigTime,outcome))return;
+        if(!wasInSession(row.sym,row.tf,sigTime))return;
         const score=getScore(row.sym,row.tf,sigTime);
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
