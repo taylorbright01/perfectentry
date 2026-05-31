@@ -319,12 +319,13 @@ function sbL(sc){if(!sc)return'';return sc.type==='score'?'S'+sc.val:sc.val}
 
 function makeCard(sig){
   const dir=sig.dir.toLowerCase(),sc=sig.score,f=fk(sc);
-  const now=new Date(),t=pad(now.getUTCHours())+':'+pad(now.getUTCMinutes())+' UTC';
+  const now=new Date();
+  const ts=sig.created_at?new Date(sig.created_at):now;
+  const t=pad(ts.getUTCHours())+':'+pad(ts.getUTCMinutes())+' UTC';
   const d=document.createElement('div');
   d.className=`sig-card ${dir} entering`;
   d.dataset.fkey=f||'';
   if(f&&!activeFilters.has(f))d.style.display='none';
-  const ts=sig.created_at?new Date(sig.created_at):now;
   d.dataset.ts=ts.getTime();
   d.innerHTML=`<div class="sig-head"><div class="sig-left"><span class="sig-sym">${sig.sym}</span>${sc?`<span class="score-badge ${sbC(sc)}">${sbL(sc)}</span>`:''}</div><span class="dir-badge ${dir}">${sig.dir.toUpperCase()}</span></div><div class="sig-rows"><div class="sig-row"><span class="row-label">Entry</span><div class="row-right"><span class="row-price entry">${fmtPrice(sig.sym,sig.entry)}</span></div></div><div class="sig-row"><span class="row-label">SL</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.sl)}</span><span class="row-pip sl">${pips(sig.sym,sig.entry,sig.sl)}p</span></div></div><div class="sig-row"><span class="row-label">TP</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.tp)}</span><span class="row-pip tp">${pips(sig.sym,sig.entry,sig.tp)}p</span></div></div></div><div class="sig-time"><span>${t}</span><span class="sig-ago"></span></div>`;
   return d;
