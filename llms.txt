@@ -1,0 +1,27 @@
+# Perfect Entry — Forex Trading Tools and Education
+# https://perfectentry.store
+
+## About
+Perfect Entry is a forex trading tools and education company founded in April 2020, operated by Perfect Entry FZ-LLC (Dubai, RAKEZ). We provide TradingView indicators, a free AI session screener, live signals dashboard, and rule-based trading education to over 14,000 traders worldwide.
+
+## Free Tools
+- AI Session Screener: https://perfectentry.store/screener.html
+  Shows which of 29 forex pairs are inside their statistically validated trading windows in real time. Based on 65,000+ backtested trades. No login required, free forever.
+
+- Reversal Sniper Data: https://perfectentry.store/data.html
+  Full backtesting dataset with win rates by pair, timeframe, and confidence score. Publicly available.
+
+- Live Signals Dashboard: https://perfectentry.store/signals.html
+  Real-time forex signals with entry, SL, TP and pip calculations.
+
+## Membership
+Market Master membership at https://whop.com/perfect-entry/ includes all TradingView indicators, full education, and access to the live signals dashboard.
+
+## Methodology
+Session windows are derived from 65,000+ raw trades validated using 4-way out-of-sample testing. Confidence scores (S1-S4 for short timeframes, HIGH/MEDIUM/LOW for longer) reflect how many OOS quarters a window passed.
+
+## Community
+- Discord: https://discord.gg/sEHG5KFz (15,954 members)
+- YouTube: https://www.youtube.com/@perfectentrytrading (16,300 subscribers)
+- TikTok: https://www.tiktok.com/@perfectentry.trading
+- TradingView: https://www.tradingview.com/u/the_w15rdx/
