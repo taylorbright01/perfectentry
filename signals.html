@@ -622,8 +622,8 @@ function connect(){
       }
       if(msg.event==='postgres_changes'&&msg.payload?.data?.type==='INSERT'){
         const row=msg.payload.data.record;if(!row)return;
-        const score=getScore(row.sym,row.tf,new Date());
         const outcome = row.outcome || (row.closed_at ? 'closed' : 'active');
+        const score=getScore(row.sym,row.tf,new Date());
         pushSignal({sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,outcome});
       }
     }catch(err){}
@@ -655,13 +655,13 @@ async function loadRecent(){
         const list=document.getElementById('list-'+row.tf);if(!list)return;
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
         const sigTime=new Date(row.created_at);
-        // Skip if signal didn't fire during a valid session window
-        if(!wasInSession(row.sym,row.tf,sigTime,outcome))return;
-        const score=getScore(row.sym,row.tf,sigTime);
-        // Determine outcome: use DB value, or 'active' if no outcome and no closed_at, or 'closed' if old
+        // Determine outcome first so wasInSession can use it
         let outcome = row.outcome || null;
         if (!outcome && !row.closed_at) outcome = 'active';
         else if (!outcome && row.closed_at) outcome = 'closed';
+        // Skip if signal didn't fire during a valid session window (bypassed for completed trades)
+        if(!wasInSession(row.sym,row.tf,sigTime,outcome))return;
+        const score=getScore(row.sym,row.tf,sigTime);
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
         const card=makeCard(sig);
