@@ -1,3 +1,26 @@
 User-agent: *
 Allow: /
+Disallow: /assets/wave-desktop.mp4
+Disallow: /assets/wave-mobile.mp4
+
+# Sitemap
 Sitemap: https://perfectentry.store/sitemap.xml
+
+# AI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
