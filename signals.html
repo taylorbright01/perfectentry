@@ -109,6 +109,27 @@
   .row-pip.tp{color:rgba(0,200,150,0.55)}
   .sig-time{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-mute);margin-top:6px;padding-top:5px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 
+  /* WEEKLY STRIP */
+  .weekly-strip{flex-shrink:0;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border);padding:7px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .weekly-inner{max-width:1600px;margin:0 auto;width:100%;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .weekly-label{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-mute)}
+  .weekly-stat{font-size:12px;font-weight:800;font-family:'IBM Plex Mono',monospace}
+  .weekly-w{color:#00e6aa}
+  .weekly-l{color:#FF9060}
+  .weekly-r{font-size:13px;font-weight:900}
+  .weekly-r.pos{color:#00e6aa}
+  .weekly-r.neg{color:#FF9060}
+  .weekly-r.zero{color:var(--text-mute)}
+  .weekly-open{font-size:11px;color:var(--teal);font-weight:700}
+  .weekly-sep{color:var(--text-mute);font-size:11px}
+
+  /* OUTCOME BADGES */
+  .outcome-badge{font-size:9px;font-weight:800;letter-spacing:0.05em;padding:2px 7px;border-radius:999px;margin-left:4px}
+  .ob-win{background:rgba(0,200,150,0.15);color:#00e6aa;border:1px solid rgba(0,200,150,0.3)}
+  .ob-loss{background:rgba(255,106,42,0.15);color:#FF9060;border:1px solid rgba(255,106,42,0.3)}
+  .ob-active{background:rgba(1,160,184,0.15);color:#7de3ff;border:1px solid rgba(1,160,184,0.3)}
+  .ob-closed{background:rgba(255,255,255,0.05);color:rgba(234,253,252,0.3);border:1px solid rgba(255,255,255,0.08)}
+
   /* ============ MOBILE LAYOUT (max-width: 767px) ============ */
   @media (max-width: 767px) {
     /* Hide desktop layout */
@@ -395,7 +416,10 @@ function makeCard(sig){
   d.dataset.fkey=f||'';
   if(f&&!activeFilters.has(f))d.style.display='none';
   d.dataset.ts=ts.getTime();
-  d.innerHTML=`<div class="sig-head"><div class="sig-left"><span class="sig-sym">${sig.sym}</span>${sc?`<span class="score-badge ${sbC(sc)}">${sbL(sc)}</span>`:''}</div><span class="dir-badge ${dir}">${sig.dir.toUpperCase()}</span></div><div class="sig-rows"><div class="sig-row"><span class="row-label">Entry</span><div class="row-right"><span class="row-price entry">${fmtPrice(sig.sym,sig.entry)}</span></div></div><div class="sig-row"><span class="row-label">SL</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.sl)}</span><span class="row-pip sl">${pips(sig.sym,sig.entry,sig.sl)}p</span></div></div><div class="sig-row"><span class="row-label">TP</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.tp)}</span><span class="row-pip tp">${pips(sig.sym,sig.entry,sig.tp)}p</span></div></div></div><div class="sig-time"><span>${t}</span><span class="sig-ago"></span></div>`;
+  const obClass = sig.outcome==='tp'?'ob-win':sig.outcome==='sl'?'ob-loss':sig.outcome==='active'?'ob-active':'ob-closed';
+  const obLabel = sig.outcome==='tp'?'WIN':sig.outcome==='sl'?'LOSS':sig.outcome==='active'?'ACTIVE':'CLOSED';
+  const showOb = sig.outcome !== undefined;
+  d.innerHTML=`<div class="sig-head"><div class="sig-left"><span class="sig-sym">${sig.sym}</span>${sc?`<span class="score-badge ${sbC(sc)}">${sbL(sc)}</span>`:''}</div><div style="display:flex;align-items:center;gap:4px">${showOb?`<span class="outcome-badge ${obClass}">${obLabel}</span>`:''}<span class="dir-badge ${dir}">${sig.dir.toUpperCase()}</span></div></div><div class="sig-rows"><div class="sig-row"><span class="row-label">Entry</span><div class="row-right"><span class="row-price entry">${fmtPrice(sig.sym,sig.entry)}</span></div></div><div class="sig-row"><span class="row-label">SL</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.sl)}</span><span class="row-pip sl">${pips(sig.sym,sig.entry,sig.sl)}p</span></div></div><div class="sig-row"><span class="row-label">TP</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.tp)}</span><span class="row-pip tp">${pips(sig.sym,sig.entry,sig.tp)}p</span></div></div></div><div class="sig-time"><span>${t}</span><span class="sig-ago"></span></div>`;
   return d;
 }
 
@@ -428,6 +452,7 @@ function pushSignal(sig){
   updateCounts();
   updateMobileCounts();
   pushToMobile(sig, card);
+  updateWeeklyStrip();
   playChime();
 }
 
@@ -458,6 +483,49 @@ function updateCounts(){
 
 setInterval(updateAgos, 30000);
 
+function getWeekStart() {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const mon = new Date(now);
+  mon.setUTCDate(now.getUTCDate() - diff);
+  mon.setUTCHours(0,0,1,0);
+  return mon;
+}
+
+function updateWeeklyStrip() {
+  const weekStart = getWeekStart();
+  let wins = 0, losses = 0, active = 0;
+  TFS.forEach(tf => {
+    signals[tf].forEach(sig => {
+      const sigTime = sig.created_at ? new Date(sig.created_at) : null;
+      if (!sigTime || sigTime < weekStart) return;
+      if (sig.outcome === 'tp') wins++;
+      else if (sig.outcome === 'sl') losses++;
+      else if (sig.outcome === 'active') active++;
+    });
+  });
+  const r = (wins * 1.4) - (losses * 1.0);
+  const rStr = (r >= 0 ? '+' : '') + r.toFixed(1) + 'R';
+  const rClass = r > 0 ? 'pos' : r < 0 ? 'neg' : 'zero';
+  const wEl = document.getElementById('wkWins');
+  const lEl = document.getElementById('wkLosses');
+  const rEl = document.getElementById('wkR');
+  const oEl = document.getElementById('wkOpen');
+  if (wEl) wEl.textContent = wins;
+  if (lEl) lEl.textContent = losses;
+  if (rEl) { rEl.textContent = rStr; rEl.className = 'weekly-r ' + rClass; }
+  if (oEl) oEl.textContent = active + ' active';
+  const mw = document.getElementById('mob-wkWins');
+  const ml = document.getElementById('mob-wkLosses');
+  const mr = document.getElementById('mob-wkR');
+  const mo = document.getElementById('mob-wkOpen');
+  if (mw) mw.textContent = wins;
+  if (ml) ml.textContent = losses;
+  if (mr) { mr.textContent = rStr; mr.style.color = r > 0 ? '#00e6aa' : r < 0 ? '#FF9060' : 'rgba(234,253,252,0.35)'; }
+  if (mo) mo.textContent = active + ' active';
+}
+setInterval(updateWeeklyStrip, 60000);
 
 // Push to mobile layout too
 function pushToMobile(sig, card) {
@@ -539,7 +607,8 @@ function connect(){
       if(msg.event==='postgres_changes'&&msg.payload?.data?.type==='INSERT'){
         const row=msg.payload.data.record;if(!row)return;
         const score=getScore(row.sym,row.tf,new Date());
-        pushSignal({sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score});
+        const outcome = row.outcome || (row.closed_at ? 'closed' : 'active');
+        pushSignal({sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,outcome});
       }
     }catch(err){}
   };
@@ -573,7 +642,11 @@ async function loadRecent(){
         // Skip if signal didn't fire during a valid session window
         if(!wasInSession(row.sym,row.tf,sigTime))return;
         const score=getScore(row.sym,row.tf,sigTime);
-        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at};
+        // Determine outcome: use DB value, or 'active' if no outcome and no closed_at, or 'closed' if old
+        let outcome = row.outcome || null;
+        if (!outcome && !row.closed_at) outcome = 'active';
+        else if (!outcome && row.closed_at) outcome = 'closed';
+        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
         const card=makeCard(sig);
         card.classList.remove('entering');
@@ -582,6 +655,7 @@ async function loadRecent(){
     });
     updateCounts();
     updateMobileCounts();
+    updateWeeklyStrip();
     // Also populate mobile lists from loaded signals
     TFS.forEach(tf => {
       const mobList = document.getElementById('mob-list-' + tf);
@@ -617,6 +691,12 @@ updateCounts();
     <span class="mob-utc" id="mobUtcClock">UTC — —</span>
     <a class="mob-nav-btn" href="data.html">View data</a>
     <a class="mob-nav-btn" href="screener.html">Session timings</a>
+  </div>
+  <div style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.07);padding:7px 16px;display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;flex-wrap:wrap">
+    <span style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(234,253,252,0.35)">This week</span>
+    <span style="font-size:11px;font-weight:800"><span id="mob-wkWins" style="color:#00e6aa">0</span>W / <span id="mob-wkLosses" style="color:#FF9060">0</span>L</span>
+    <span style="font-size:12px;font-weight:900" id="mob-wkR">0.0R</span>
+    <span style="font-size:10px;color:#7de3ff;font-weight:700" id="mob-wkOpen">0 active</span>
   </div>
 
   <div class="mob-tf-section">
