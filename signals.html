@@ -339,11 +339,36 @@
 
 <div class="cols-outer">
   <div class="cols-grid">
-    <div class="col"><div class="col-head"><div class="col-tf">1 min</div><div class="col-meta"><span class="col-dot" id="dot-1min"></span><span class="col-count" id="cnt-1min">waiting...</span></div></div><div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
-    <div class="col"><div class="col-head"><div class="col-tf">3 min</div><div class="col-meta"><span class="col-dot" id="dot-3min"></span><span class="col-count" id="cnt-3min">waiting...</span></div></div><div class="signals-list" id="list-3min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
-    <div class="col"><div class="col-head"><div class="col-tf">5 min</div><div class="col-meta"><span class="col-dot" id="dot-5min"></span><span class="col-count" id="cnt-5min">waiting...</span></div></div><div class="signals-list" id="list-5min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
-    <div class="col"><div class="col-head"><div class="col-tf">15 min</div><div class="col-meta"><span class="col-dot" id="dot-15min"></span><span class="col-count" id="cnt-15min">waiting...</span></div></div><div class="signals-list" id="list-15min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
-    <div class="col"><div class="col-head"><div class="col-tf">2 hr</div><div class="col-meta"><span class="col-dot" id="dot-2hr"></span><span class="col-count" id="cnt-2hr">waiting...</span></div></div><div class="signals-list" id="list-2hr"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div></div>
+    <div class="col"><div class="col-head"><div class="col-tf">1 min</div><div class="col-meta"><span class="col-dot" id="dot-1min"></span><span class="col-count" id="cnt-1min">waiting...</span></div></div><div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-history-toggle" id="hist-toggle-1min" style="display:none" onclick="toggleHistory('1min')">
+        <span class="arrow">▾</span><span id="hist-label-1min">Earlier today</span>
+      </div>
+      <div class="col-history" id="hist-1min"><div class="col-history-inner" id="hist-list-1min"></div></div>
+    </div>
+    <div class="col"><div class="col-head"><div class="col-tf">3 min</div><div class="col-meta"><span class="col-dot" id="dot-3min"></span><span class="col-count" id="cnt-3min">waiting...</span></div></div><div class="signals-list" id="list-3min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-history-toggle" id="hist-toggle-3min" style="display:none" onclick="toggleHistory('3min')">
+        <span class="arrow">▾</span><span id="hist-label-3min">Earlier today</span>
+      </div>
+      <div class="col-history" id="hist-3min"><div class="col-history-inner" id="hist-list-3min"></div></div>
+    </div>
+    <div class="col"><div class="col-head"><div class="col-tf">5 min</div><div class="col-meta"><span class="col-dot" id="dot-5min"></span><span class="col-count" id="cnt-5min">waiting...</span></div></div><div class="signals-list" id="list-5min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-history-toggle" id="hist-toggle-5min" style="display:none" onclick="toggleHistory('5min')">
+        <span class="arrow">▾</span><span id="hist-label-5min">Earlier today</span>
+      </div>
+      <div class="col-history" id="hist-5min"><div class="col-history-inner" id="hist-list-5min"></div></div>
+    </div>
+    <div class="col"><div class="col-head"><div class="col-tf">15 min</div><div class="col-meta"><span class="col-dot" id="dot-15min"></span><span class="col-count" id="cnt-15min">waiting...</span></div></div><div class="signals-list" id="list-15min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-history-toggle" id="hist-toggle-15min" style="display:none" onclick="toggleHistory('15min')">
+        <span class="arrow">▾</span><span id="hist-label-15min">Earlier today</span>
+      </div>
+      <div class="col-history" id="hist-15min"><div class="col-history-inner" id="hist-list-15min"></div></div>
+    </div>
+    <div class="col"><div class="col-head"><div class="col-tf">2 hr</div><div class="col-meta"><span class="col-dot" id="dot-2hr"></span><span class="col-count" id="cnt-2hr">waiting...</span></div></div><div class="signals-list" id="list-2hr"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-history-toggle" id="hist-toggle-2hr" style="display:none" onclick="toggleHistory('2hr')">
+        <span class="arrow">▾</span><span id="hist-label-2hr">Earlier today</span>
+      </div>
+      <div class="col-history" id="hist-2hr"><div class="col-history-inner" id="hist-list-2hr"></div></div>
+    </div>
   </div>
 </div>
 <script>
@@ -534,20 +559,24 @@ function renderWeeklyStrip(wins, losses, active) {
 async function updateWeeklyStrip() {
   try {
     const weekStart = getWeekStart();
-    // Fetch ALL signals this week from DB — not just what's displayed
-    // Use Supabase count endpoint — no row limit, just counts
-    const [winsRes, lossesRes, activeRes] = await Promise.all([
-      fetch(SUPABASE_URL + '/rest/v1/signals?outcome=eq.tp&created_at=gte.' + weekStart + '&select=id',
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' } }),
-      fetch(SUPABASE_URL + '/rest/v1/signals?outcome=eq.sl&created_at=gte.' + weekStart + '&select=id',
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' } }),
-      fetch(SUPABASE_URL + '/rest/v1/signals?outcome=is.null&closed_at=is.null&created_at=gte.' + weekStart + '&select=id',
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' } })
-    ]);
-    const parseCount = r => { const cr = r.headers.get('content-range'); return cr ? parseInt(cr.split('/')[1]) || 0 : 0; };
-    const wins = parseCount(winsRes);
-    const losses = parseCount(lossesRes);
-    const active = parseCount(activeRes);
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,outcome,closed_at,created_at&created_at=gte.' + weekStart + '&limit=2000',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
+    let wins = 0, losses = 0, active = 0;
+    rows.forEach(row => {
+      const sigTime = new Date(row.created_at);
+      const outcome = row.outcome || (!row.closed_at ? 'active' : 'closed');
+      if (!wasInSession(row.sym, row.tf, sigTime, outcome)) return;
+      const score = getScore(row.sym, row.tf, sigTime);
+      const fkey = score ? (score.type === 'score' ? 'S' + score.val : score.val[0]) : null;
+      if (fkey && !activeFilters.has(fkey)) return;
+      if (outcome === 'tp') wins++;
+      else if (outcome === 'sl') losses++;
+      else if (outcome === 'active') active++;
+    });
     renderWeeklyStrip(wins, losses, active);
   } catch(e) {}
 }
@@ -603,6 +632,7 @@ document.querySelector('.filter-bar-inner').addEventListener('click',e=>{
   if(activeFilters.has(f)){activeFilters.delete(f);tag.classList.remove('on')}
   else{activeFilters.add(f);tag.classList.add('on')}
   applyFilters();
+  updateWeeklyStrip();
 });
 
 document.getElementById('clearBtn').addEventListener('click',()=>{
@@ -646,6 +676,71 @@ function connect(){
   setInterval(()=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null}));},30000);
 }
 
+function toggleHistory(tf) {
+  const toggle = document.getElementById('hist-toggle-' + tf);
+  const drawer = document.getElementById('hist-' + tf);
+  if (!toggle || !drawer) return;
+  toggle.classList.toggle('open');
+  drawer.classList.toggle('open');
+}
+
+async function loadTodayHistory() {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setUTCHours(0,0,0,0);
+
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=*&created_at=gte.' + todayStart.toISOString() + '&order=created_at.desc&limit=500',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
+
+    // Group by TF, skip the top MAX already shown, show the rest
+    const byTF = {};
+    rows.forEach(row => {
+      if (!byTF[row.tf]) byTF[row.tf] = [];
+      byTF[row.tf].push(row);
+    });
+
+    TFS.forEach(tf => {
+      if (!byTF[tf]) return;
+      const histList = document.getElementById('hist-list-' + tf);
+      const toggle = document.getElementById('hist-toggle-' + tf);
+      const label = document.getElementById('hist-label-' + tf);
+      if (!histList) return;
+
+      // Skip first MAX rows (already in main display), show the rest
+      const older = byTF[tf].slice(MAX);
+      if (older.length === 0) return;
+
+      histList.innerHTML = '';
+      older.forEach(row => {
+        let outcome = row.outcome || null;
+        if (!outcome && !row.closed_at) outcome = 'active';
+        else if (!outcome && row.closed_at) outcome = 'closed';
+        const sigTime = new Date(row.created_at);
+        const score = getScore(row.sym, tf, sigTime);
+        const sig = {
+          sym: row.sym, tf, dir: row.dir,
+          entry: parseFloat(row.entry), sl: parseFloat(row.sl), tp: parseFloat(row.tp),
+          score, created_at: row.created_at, outcome
+        };
+        const card = makeCard(sig);
+        card.classList.remove('entering');
+        histList.appendChild(card);
+      });
+
+      // Show toggle with count
+      if (toggle) {
+        toggle.style.display = 'flex';
+        if (label) label.textContent = older.length + ' earlier today';
+      }
+    });
+  } catch(e) {}
+}
+
 async function loadRecent(){
   try{
     const res=await fetch(
@@ -682,7 +777,8 @@ async function loadRecent(){
     });
     updateCounts();
     updateMobileCounts();
-    updateWeeklyStrip();  // fetches from DB directly
+    updateWeeklyStrip();
+    loadTodayHistory();
     // Also populate mobile lists from loaded signals
     TFS.forEach(tf => {
       const mobList = document.getElementById('mob-list-' + tf);
