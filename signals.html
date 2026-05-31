@@ -87,6 +87,109 @@
   .row-pip.sl{color:rgba(255,106,42,0.55)}
   .row-pip.tp{color:rgba(0,200,150,0.55)}
   .sig-time{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-mute);margin-top:6px;padding-top:5px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+
+  /* ============ MOBILE LAYOUT (max-width: 767px) ============ */
+  @media (max-width: 767px) {
+    /* Hide desktop layout */
+    .filter-bar .demo-btn { display: none; }
+    .cols-outer { display: none !important; }
+
+    /* Show mobile layout */
+    .mob-layout { display: flex !important; }
+
+    /* Mobile header adjustments */
+    .header-inner { height: 46px; }
+    .site-name { font-size: 12px; }
+    .utc-clock { display: none; }
+    .nav-links { display: none; }
+    .nav-cta-desktop { display: none; }
+
+    /* Filter bar scrollable on mobile */
+    .filter-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-bar-inner { white-space: nowrap; min-width: max-content; }
+  }
+
+  /* ============ MOBILE STRUCTURE ============ */
+  .mob-layout {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+  }
+
+  .mob-nav-bar {
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 16px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mob-nav-bar::-webkit-scrollbar { display: none; }
+  .mob-nav-btn {
+    font-size: 10px; font-weight: 700; padding: 5px 12px;
+    border-radius: 8px; border: 1px solid var(--border-teal);
+    background: var(--teal-glow); color: var(--teal);
+    text-decoration: none; white-space: nowrap; flex-shrink: 0;
+  }
+  .mob-utc { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); margin-right: auto; align-self: center; }
+
+  .mob-tf-section { border-bottom: 1px solid var(--border); }
+  .mob-tf-header {
+    padding: 10px 16px 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mob-tf-label { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+  .mob-tf-count { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-mute); }
+  .mob-tf-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); display: none; animation: pulse 1.8s infinite; flex-shrink: 0; }
+  .mob-tf-dot.show { display: block; }
+
+  .mob-cards-scroll {
+    padding: 10px 16px 14px;
+    display: flex; gap: 8px;
+    overflow-x: auto; overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    align-items: flex-start;
+  }
+  .mob-cards-scroll::-webkit-scrollbar { display: none; }
+
+  .mob-empty { padding: 16px; font-size: 11px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; line-height: 1.8; }
+
+  /* Mobile signal card — narrower, horizontal scroll */
+  @media (max-width: 767px) {
+    .mob-layout .sig-card {
+      flex-shrink: 0;
+      width: 158px;
+      margin-top: 2px;
+    }
+    .mob-layout .sig-sym { font-size: 12px; }
+    .mob-layout .row-price.entry { font-size: 11px; }
+    .mob-layout .row-price { font-size: 10px; }
+    .mob-layout .row-pip { font-size: 8px; }
+    .mob-layout .sig-time { font-size: 8px; }
+    .mob-layout .dir-badge { font-size: 9px; padding: 2px 7px; }
+    .mob-layout .score-badge { font-size: 8px; padding: 2px 5px; }
+  }
+
+  .mob-footer {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 12px 16px;
+    font-size: 9px;
+    color: var(--text-mute);
+    line-height: 1.7;
+  }
+
 </style>
 </head>
 <body>
@@ -254,6 +357,8 @@ function pushSignal(sig){
     signals[sig.tf].pop();
   }
   updateCounts();
+  updateMobileCounts();
+  pushToMobile(sig, card);
   playChime();
 }
 
@@ -283,6 +388,42 @@ function updateCounts(){
 }
 
 setInterval(updateAgos, 30000);
+
+
+// Push to mobile layout too
+function pushToMobile(sig, card) {
+  const mobList = document.getElementById('mob-list-' + sig.tf);
+  if (!mobList) return;
+  const empty = mobList.querySelector('.mob-empty');
+  if (empty) empty.remove();
+  const mobCard = card.cloneNode(true);
+  mobCard.classList.add('entering');
+  mobList.insertBefore(mobCard, mobList.firstChild);
+  setTimeout(() => mobCard.classList.remove('entering'), 520);
+  // Trim mobile list to MAX
+  const mobCards = mobList.querySelectorAll('.sig-card:not(.fading)');
+  if (mobCards.length > MAX) {
+    const last = mobCards[mobCards.length - 1];
+    if (last) { last.classList.add('fading'); setTimeout(() => { if (last.parentNode) last.remove(); }, 450); }
+  }
+}
+
+function updateMobileCounts() {
+  TFS.forEach(tf => {
+    const n = signals[tf].length;
+    const cnt = document.getElementById('mob-cnt-' + tf);
+    const dot = document.getElementById('mob-dot-' + tf);
+    if (cnt) cnt.textContent = n === 0 ? 'waiting...' : n + (n === 1 ? ' signal' : ' signals');
+    if (dot) dot.classList.toggle('show', n > 0);
+  });
+}
+
+// Mobile UTC clock
+setInterval(() => {
+  const n = new Date();
+  const mobClock = document.getElementById('mobUtcClock');
+  if (mobClock) mobClock.textContent = 'UTC ' + DAY[n.getUTCDay()] + ' ' + pad(n.getUTCHours()) + ':' + pad(n.getUTCMinutes()) + ':' + pad(n.getUTCSeconds());
+}, 1000);
 
 function applyFilters(){
   TFS.forEach(tf=>{
@@ -371,6 +512,23 @@ async function loadRecent(){
       });
     });
     updateCounts();
+    updateMobileCounts();
+    // Also populate mobile lists from loaded signals
+    TFS.forEach(tf => {
+      const mobList = document.getElementById('mob-list-' + tf);
+      if (!mobList) return;
+      const desktopList = document.getElementById('list-' + tf);
+      if (!desktopList) return;
+      const cards = desktopList.querySelectorAll('.sig-card');
+      if (cards.length === 0) return;
+      const empty = mobList.querySelector('.mob-empty');
+      if (empty) empty.remove();
+      cards.forEach(card => {
+        const clone = card.cloneNode(true);
+        clone.classList.remove('entering');
+        mobList.appendChild(clone);
+      });
+    });
     updateAgos();
   }catch(e){}
 }
@@ -382,5 +540,41 @@ updateCounts();
 <footer class="site-footer">
   <p>Perfect Entry signals are provided for educational and informational purposes only. Nothing displayed on this page constitutes financial advice, investment advice, or a recommendation to buy or sell any financial instrument. Trading involves significant risk of loss and is not suitable for all investors. Past performance is not indicative of future results. You are solely responsible for your own trading decisions and risk management. Perfect Entry accepts no liability for any losses incurred as a result of acting on information displayed here.</p>
 </footer>
+
+<!-- MOBILE LAYOUT (hidden on desktop, shown on mobile via CSS) -->
+<div class="mob-layout" id="mobLayout">
+
+  <div class="mob-nav-bar">
+    <span class="mob-utc" id="mobUtcClock">UTC — —</span>
+    <a class="mob-nav-btn" href="data.html">View data</a>
+    <a class="mob-nav-btn" href="screener.html">Session timings</a>
+  </div>
+
+  <div class="mob-tf-section">
+    <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-1min"></span><span class="mob-tf-label">1 min</span><span class="mob-tf-count" id="mob-cnt-1min">waiting...</span></div>
+    <div class="mob-cards-scroll" id="mob-list-1min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+  </div>
+  <div class="mob-tf-section">
+    <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-3min"></span><span class="mob-tf-label">3 min</span><span class="mob-tf-count" id="mob-cnt-3min">waiting...</span></div>
+    <div class="mob-cards-scroll" id="mob-list-3min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+  </div>
+  <div class="mob-tf-section">
+    <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-5min"></span><span class="mob-tf-label">5 min</span><span class="mob-tf-count" id="mob-cnt-5min">waiting...</span></div>
+    <div class="mob-cards-scroll" id="mob-list-5min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+  </div>
+  <div class="mob-tf-section">
+    <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-15min"></span><span class="mob-tf-label">15 min</span><span class="mob-tf-count" id="mob-cnt-15min">waiting...</span></div>
+    <div class="mob-cards-scroll" id="mob-list-15min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+  </div>
+  <div class="mob-tf-section">
+    <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-2hr"></span><span class="mob-tf-label">2 hr</span><span class="mob-tf-count" id="mob-cnt-2hr">waiting...</span></div>
+    <div class="mob-cards-scroll" id="mob-list-2hr"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+  </div>
+
+  <div class="mob-footer">
+    Perfect Entry signals are for educational purposes only. Not financial advice. Trading involves risk. You are solely responsible for your decisions.
+  </div>
+</div>
+
 </body>
 </html>
