@@ -69,6 +69,9 @@
   .col-dot.show { display: block; }
   .signals-list { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow: hidden !important; min-height: 0; }
   .empty-msg { padding: 24px 12px; text-align: center; font-size: 11px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; line-height: 1.8; }
+  .col-hist { display: none; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 8px; flex-direction: column; gap: 6px; }
+  .col-hist.active { display: flex; }
+  .col-hist .sig-card { flex-shrink: 0; opacity: 0.85; }
   .sig-card { border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); padding: 9px 11px; position: relative; overflow: hidden; flex-shrink: 0; }
   .sig-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 10px 0 0 10px; }
   .sig-card.buy::before { background: var(--green); }
@@ -340,55 +343,20 @@
 
 <div class="cols-outer">
   <div class="cols-grid">
-    <div class="col"><div class="col-head"><div class="col-tf">1 min</div><div class="col-meta"><span class="col-dot" id="dot-1min"></span><span class="col-count" id="cnt-1min">waiting...</span></div></div><div class="col-live-view" id="live-view-1min">
-        <div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
-      </div>
-      <div class="col-hist-view" id="hist-1min"></div>
-      <div class="col-view-toggle visible" id="hist-toggle-1min" onclick="toggleHistory('1min')">
-        <span class="vt-live">Live</span>
-        <span class="vt-count" id="hist-label-1min"></span>
-        <span class="vt-hist">Today</span>
-      </div>
+    <div class="col"><div class="col-head"><div class="col-tf">1 min</div><div class="col-meta"><span class="col-dot" id="dot-1min"></span><span class="col-count" id="cnt-1min">waiting...</span></div></div><div class="signals-list" id="list-1min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-hist" id="hist-1min"></div>
     </div>
-    <div class="col"><div class="col-head"><div class="col-tf">3 min</div><div class="col-meta"><span class="col-dot" id="dot-3min"></span><span class="col-count" id="cnt-3min">waiting...</span></div></div><div class="col-live-view" id="live-view-3min">
-        <div class="signals-list" id="list-3min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
-      </div>
-      <div class="col-hist-view" id="hist-3min"></div>
-      <div class="col-view-toggle visible" id="hist-toggle-3min" onclick="toggleHistory('3min')">
-        <span class="vt-live">Live</span>
-        <span class="vt-count" id="hist-label-3min"></span>
-        <span class="vt-hist">Today</span>
-      </div>
+    <div class="col"><div class="col-head"><div class="col-tf">3 min</div><div class="col-meta"><span class="col-dot" id="dot-3min"></span><span class="col-count" id="cnt-3min">waiting...</span></div></div><div class="signals-list" id="list-3min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-hist" id="hist-3min"></div>
     </div>
-    <div class="col"><div class="col-head"><div class="col-tf">5 min</div><div class="col-meta"><span class="col-dot" id="dot-5min"></span><span class="col-count" id="cnt-5min">waiting...</span></div></div><div class="col-live-view" id="live-view-5min">
-        <div class="signals-list" id="list-5min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
-      </div>
-      <div class="col-hist-view" id="hist-5min"></div>
-      <div class="col-view-toggle visible" id="hist-toggle-5min" onclick="toggleHistory('5min')">
-        <span class="vt-live">Live</span>
-        <span class="vt-count" id="hist-label-5min"></span>
-        <span class="vt-hist">Today</span>
-      </div>
+    <div class="col"><div class="col-head"><div class="col-tf">5 min</div><div class="col-meta"><span class="col-dot" id="dot-5min"></span><span class="col-count" id="cnt-5min">waiting...</span></div></div><div class="signals-list" id="list-5min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-hist" id="hist-5min"></div>
     </div>
-    <div class="col"><div class="col-head"><div class="col-tf">15 min</div><div class="col-meta"><span class="col-dot" id="dot-15min"></span><span class="col-count" id="cnt-15min">waiting...</span></div></div><div class="col-live-view" id="live-view-15min">
-        <div class="signals-list" id="list-15min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
-      </div>
-      <div class="col-hist-view" id="hist-15min"></div>
-      <div class="col-view-toggle visible" id="hist-toggle-15min" onclick="toggleHistory('15min')">
-        <span class="vt-live">Live</span>
-        <span class="vt-count" id="hist-label-15min"></span>
-        <span class="vt-hist">Today</span>
-      </div>
+    <div class="col"><div class="col-head"><div class="col-tf">15 min</div><div class="col-meta"><span class="col-dot" id="dot-15min"></span><span class="col-count" id="cnt-15min">waiting...</span></div></div><div class="signals-list" id="list-15min"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-hist" id="hist-15min"></div>
     </div>
-    <div class="col"><div class="col-head"><div class="col-tf">2 hr</div><div class="col-meta"><span class="col-dot" id="dot-2hr"></span><span class="col-count" id="cnt-2hr">waiting...</span></div></div><div class="col-live-view" id="live-view-2hr">
-        <div class="signals-list" id="list-2hr"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
-      </div>
-      <div class="col-hist-view" id="hist-2hr"></div>
-      <div class="col-view-toggle visible" id="hist-toggle-2hr" onclick="toggleHistory('2hr')">
-        <span class="vt-live">Live</span>
-        <span class="vt-count" id="hist-label-2hr"></span>
-        <span class="vt-hist">Today</span>
-      </div>
+    <div class="col"><div class="col-head"><div class="col-tf">2 hr</div><div class="col-meta"><span class="col-dot" id="dot-2hr"></span><span class="col-count" id="cnt-2hr">waiting...</span></div></div><div class="signals-list" id="list-2hr"><div class="empty-msg">No signals yet.<br>Waiting for<br>webhook alerts.</div></div>
+      <div class="col-hist" id="hist-2hr"></div>
     </div>
   </div>
 </div>
@@ -713,52 +681,52 @@ function toggleAllHistory() {
   });
 }
 
-function toggleHistory(tf) {
-  const toggle = document.getElementById('hist-toggle-' + tf);
-  const liveView = document.getElementById('live-view-' + tf);
-  const histView = document.getElementById('hist-' + tf);
-  if (!toggle || !liveView || !histView) return;
-  const showingHist = toggle.classList.contains('showing-hist');
-  if (showingHist) {
-    toggle.classList.remove('showing-hist');
-    liveView.style.display = '';
-    histView.classList.remove('active');
-  } else {
-    toggle.classList.add('showing-hist');
-    liveView.style.display = 'none';
-    histView.classList.add('active');
+let historyMode = false;
+
+function toggleAllHistory() {
+  historyMode = !historyMode;
+  const btn = document.getElementById('histBtn');
+  TFS.forEach(tf => {
+    const liveList = document.getElementById('list-' + tf);
+    const histView = document.getElementById('hist-' + tf);
+    if (!liveList || !histView) return;
+    if (historyMode) {
+      liveList.style.display = 'none';
+      histView.classList.add('active');
+    } else {
+      liveList.style.display = '';
+      histView.classList.remove('active');
+    }
+  });
+  if (btn) {
+    btn.classList.toggle('on', historyMode);
+    btn.textContent = historyMode ? '← Live view' : "Today's history";
   }
 }
+
+function toggleHistory(tf) { toggleAllHistory(); }
 
 async function loadTodayHistory() {
   try {
     const now = new Date();
     const todayStart = new Date(now);
     todayStart.setUTCHours(0,0,0,0);
-
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=*&created_at=gte.' + todayStart.toISOString() + '&order=created_at.desc&limit=500',
+      SUPABASE_URL + '/rest/v1/signals?select=*&created_at=gte.' + todayStart.toISOString() + '&order=created_at.desc&limit=1000',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) return;
     const rows = await res.json();
-
     const byTF = {};
     rows.forEach(row => {
       if (!byTF[row.tf]) byTF[row.tf] = [];
       byTF[row.tf].push(row);
     });
-
     TFS.forEach(tf => {
       const histView = document.getElementById('hist-' + tf);
-      const toggle = document.getElementById('hist-toggle-' + tf);
-      const label = document.getElementById('hist-label-' + tf);
       if (!histView) return;
-
       const allToday = byTF[tf] || [];
-      // Show ALL today's signals in history view (including the top 5)
       histView.innerHTML = '';
-      let count = 0;
       allToday.forEach(row => {
         let outcome = row.outcome || null;
         if (!outcome && !row.closed_at) outcome = 'active';
@@ -766,26 +734,11 @@ async function loadTodayHistory() {
         const sigTime = new Date(row.created_at);
         if (!wasInSession(row.sym, tf, sigTime, outcome)) return;
         const score = getScore(row.sym, tf, sigTime);
-        const sig = {
-          sym: row.sym, tf, dir: row.dir,
-          entry: parseFloat(row.entry), sl: parseFloat(row.sl), tp: parseFloat(row.tp),
-          score, created_at: row.created_at, outcome
-        };
+        const sig = { sym:row.sym, tf, dir:row.dir, entry:parseFloat(row.entry), sl:parseFloat(row.sl), tp:parseFloat(row.tp), score, created_at:row.created_at, outcome };
         const card = makeCard(sig);
         card.classList.remove('entering');
         histView.appendChild(card);
-        count++;
       });
-
-      if (label) {
-        if (count > 0) {
-          label.textContent = count + ' today';
-          if (toggle) toggle.style.opacity = '1';
-        } else {
-          label.textContent = '';
-          if (toggle) toggle.style.opacity = '0.4';
-        }
-      }
     });
   } catch(e) {}
 }
