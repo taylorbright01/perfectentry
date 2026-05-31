@@ -256,14 +256,15 @@ TFS.forEach(tf=>signals[tf]=[]);
 function pad(n){return String(n).padStart(2,'0')}
 
 // Chime
-let audioCtx=null;
+// Notification sound
+const chimeAudio = new Audio('assets/universfield-new-notification-013-363676.mp3');
+chimeAudio.volume = 0.7;
 
-// Resume audio on any interaction so chime works after page load
+// Unlock audio on first interaction (browser autoplay policy)
+let audioUnlocked = false;
 function unlockAudio(){
-  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
-  if(!audioCtx){
-    try{ audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }catch(e){}
-  }
+  if(audioUnlocked) return;
+  chimeAudio.play().then(()=>{ chimeAudio.pause(); chimeAudio.currentTime=0; audioUnlocked=true; }).catch(()=>{});
 }
 ['click','touchstart','keydown','scroll','mousemove'].forEach(evt=>
   document.addEventListener(evt, unlockAudio, {once:true, passive:true})
@@ -271,15 +272,8 @@ function unlockAudio(){
 
 function playChime(){
   try{
-    if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended')audioCtx.resume();
-    const ctx=audioCtx,t=ctx.currentTime;
-    const o1=ctx.createOscillator(),o2=ctx.createOscillator(),g=ctx.createGain();
-    o1.connect(g);o2.connect(g);g.connect(ctx.destination);
-    o1.type='sine';o1.frequency.setValueAtTime(880,t);o1.frequency.exponentialRampToValueAtTime(1320,t+0.08);
-    o2.type='sine';o2.frequency.setValueAtTime(1320,t+0.07);o2.frequency.exponentialRampToValueAtTime(1760,t+0.18);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.18,t+0.04);g.gain.exponentialRampToValueAtTime(0.001,t+0.55);
-    o1.start(t);o1.stop(t+0.55);o2.start(t+0.07);o2.stop(t+0.55);
+    chimeAudio.currentTime=0;
+    chimeAudio.play().catch(()=>{});
   }catch(e){}
 }
 
