@@ -60,6 +60,13 @@
   .sig-card.buy::before { background: var(--green); }
   .sig-card.sell::before { background: var(--orange); }
   .sig-card.entering { animation: cardIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .sig-card.unread {
+    animation: cardIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards, newSignalGlow 2s ease-in-out 0.5s infinite;
+  }
+  @keyframes newSignalGlow {
+    0%, 100% { border-color: rgba(255,255,255,0.07); box-shadow: none; }
+    50% { border-color: rgba(255,183,0,0.6); box-shadow: 0 0 14px rgba(255,183,0,0.2); }
+  }
   @keyframes cardIn { from{opacity:0;transform:translateY(-16px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .sig-card.fading { opacity:0; transform:translateY(10px) scale(0.97); transition:opacity 0.55s ease,transform 0.55s ease; pointer-events:none; }
   .card-exit-wrap { overflow:hidden; flex-shrink:0; transition:height 0.55s cubic-bezier(0.4,0,0.2,1),margin-bottom 0.55s cubic-bezier(0.4,0,0.2,1),opacity 0.55s ease; }
@@ -260,15 +267,23 @@ function pad(n){return String(n).padStart(2,'0')}
 const chimeAudio = new Audio('assets/universfield-new-notification-013-363676.mp3');
 chimeAudio.volume = 0.7;
 
-// Unlock audio on first interaction (browser autoplay policy)
+// Unlock audio and clear unread glow on first interaction
 let audioUnlocked = false;
 function unlockAudio(){
   if(audioUnlocked) return;
   chimeAudio.play().then(()=>{ chimeAudio.pause(); chimeAudio.currentTime=0; audioUnlocked=true; }).catch(()=>{});
 }
-['click','touchstart','keydown','scroll','mousemove'].forEach(evt=>
-  document.addEventListener(evt, unlockAudio, {once:true, passive:true})
-);
+
+function clearUnread(){
+  document.querySelectorAll('.sig-card.unread').forEach(card=>{
+    card.classList.remove('unread');
+  });
+}
+
+['click','touchstart','keydown','scroll','mousemove'].forEach(evt=>{
+  document.addEventListener(evt, unlockAudio, {once:true, passive:true});
+  document.addEventListener(evt, clearUnread, {once:true, passive:true});
+});
 
 function playChime(){
   try{
@@ -394,7 +409,7 @@ function pushToMobile(sig, card) {
   const mobCard = card.cloneNode(true);
   mobCard.classList.add('entering');
   mobList.insertBefore(mobCard, mobList.firstChild);
-  setTimeout(() => mobCard.classList.remove('entering'), 520);
+  setTimeout(() => { mobCard.classList.remove('entering'); mobCard.classList.add('unread'); }, 520);
   // Trim mobile list to MAX
   const mobCards = mobList.querySelectorAll('.sig-card:not(.fading)');
   if (mobCards.length > MAX) {
