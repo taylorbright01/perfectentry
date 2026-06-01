@@ -769,9 +769,7 @@ async function loadRecent(){
         if(!outcome&&!row.closed_at)outcome='active';
         else if(!outcome&&row.closed_at)outcome='closed';
         if(!wasInSession(row.sym,row.tf,sigTime,outcome))return;
-        // Must have a score
         const score=getScore(row.sym,row.tf,sigTime);
-        if(!score)return;
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
