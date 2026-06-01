@@ -745,8 +745,9 @@ async function loadTodayHistory() {
 
 async function loadRecent(){
   try{
+    // Fetch last 5 per TF that have a score — fetch more rows to allow for filtering
     const res=await fetch(
-      SUPABASE_URL+'/rest/v1/signals?select=*&order=created_at.desc&limit=50',
+      SUPABASE_URL+'/rest/v1/signals?select=*&order=created_at.desc&limit=200',
       {headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}}
     );
     if(!res.ok)return;
@@ -754,27 +755,30 @@ async function loadRecent(){
     const byTF={};
     rows.forEach(row=>{
       if(!byTF[row.tf])byTF[row.tf]=[];
-      if(byTF[row.tf].length<MAX)byTF[row.tf].push(row);
+      byTF[row.tf].push(row);
     });
-    // rows are newest-first from DB — append in order so newest ends up at top
     TFS.forEach(tf=>{
       if(!byTF[tf])return;
+      const list=document.getElementById('list-'+tf);if(!list)return;
+      let shown=0;
       byTF[tf].forEach(row=>{
-        const list=document.getElementById('list-'+row.tf);if(!list)return;
-        const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
+        if(shown>=MAX)return;
         const sigTime=new Date(row.created_at);
-        // Determine outcome first so wasInSession can use it
-        let outcome = row.outcome || null;
-        if (!outcome && !row.closed_at) outcome = 'active';
-        else if (!outcome && row.closed_at) outcome = 'closed';
-        // Skip if signal didn't fire during a valid session window (bypassed for completed trades)
-        if(!wasInSession(row.sym,row.tf,sigTime))return;
+        // Must have fired during a valid session window
+        let outcome=row.outcome||null;
+        if(!outcome&&!row.closed_at)outcome='active';
+        else if(!outcome&&row.closed_at)outcome='closed';
+        if(!wasInSession(row.sym,row.tf,sigTime,outcome))return;
+        // Must have a score
         const score=getScore(row.sym,row.tf,sigTime);
+        if(!score)return;
+        const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
         const card=makeCard(sig);
         card.classList.remove('entering');
         list.appendChild(card);
+        shown++;
       });
     });
     updateCounts();
