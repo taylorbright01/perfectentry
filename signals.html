@@ -108,9 +108,10 @@
   /* BETA FILTER BUTTON */
   .beta-btn { font-family:'Inter',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.05em;
     padding:4px 11px; border-radius:999px; border:1px solid rgba(255,183,0,0.35);
-    background:rgba(255,183,0,0.08); color:var(--amber); cursor:pointer; transition:all 0.15s; user-select:none; }
-  .beta-btn.on { background:rgba(255,183,0,0.2); border-color:var(--amber); color:#fff; }
-  .beta-btn:hover { background:rgba(255,183,0,0.18); }
+    background:rgba(255,183,0,0.08); color:var(--amber); cursor:pointer; transition:all 0.2s; user-select:none; }
+  .beta-btn.on { background:var(--amber); border-color:var(--amber); color:#0b0d10;
+    box-shadow:0 0 12px rgba(255,183,0,0.45); }
+  .beta-btn:hover { background:rgba(255,183,0,0.2); }
 
   /* Hide filtered signals */
   .sig-card.beta-hidden { display:none !important; }
