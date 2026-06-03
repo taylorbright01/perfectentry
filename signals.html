@@ -579,12 +579,14 @@ async function updateWeeklyStrip() {
     const rows = await res.json();
     let wins = 0, losses = 0, active = 0;
     rows.forEach(row => {
-      const sigTime = new Date(row.created_at);
       const outcome = row.outcome || (!row.closed_at ? 'active' : 'closed');
-      if (!wasInSession(row.sym, row.tf, sigTime, outcome)) return;
+      const sigTime = new Date(row.created_at);
+      // Must have a score at the time it fired
       const score = getScore(row.sym, row.tf, sigTime);
-      const fkey = score ? (score.type === 'score' ? 'S' + score.val : score.val[0]) : null;
-      if (fkey && !activeFilters.has(fkey)) return;
+      if (!score) return;
+      // Must match active score filters
+      const fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
+      if (!activeFilters.has(fkey)) return;
       // Beta filter — skip signals that would be hidden
       if (betaMode && BETA_TFS.includes(row.tf)) {
         const key = row.sym + '|' + row.tf + '|' + row.dir;
