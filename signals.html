@@ -844,7 +844,12 @@ async function loadSignalStats() {
 function toggleBetaFilter() {
   betaMode = !betaMode;
   const btn = document.getElementById('betaBtn');
+  const mobBtn = document.getElementById('mobBetaBtn');
   if (btn) btn.classList.toggle('on', betaMode);
+  if (mobBtn) {
+    mobBtn.style.background = betaMode ? '#ffb700' : 'rgba(255,183,0,0.08)';
+    mobBtn.style.color = betaMode ? '#0b0d10' : '#ffb700';
+  }
   applyBetaFilter();
 }
 
@@ -882,22 +887,26 @@ function applyBetaFilter() {
 function toggleAllHistory() {
   historyMode = !historyMode;
   const btn = document.getElementById('histBtn');
+  const mobBtn = document.getElementById('mobHistBtn');
   TFS.forEach(tf => {
+    // Desktop
     const liveList = document.getElementById('list-' + tf);
     const histView = document.getElementById('hist-' + tf);
-    if (!liveList || !histView) return;
-    if (historyMode) {
-      liveList.style.display = 'none';
-      histView.classList.add('active');
-    } else {
-      liveList.style.display = '';
-      histView.classList.remove('active');
+    if (liveList && histView) {
+      if (historyMode) { liveList.style.display = 'none'; histView.classList.add('active'); }
+      else { liveList.style.display = ''; histView.classList.remove('active'); }
+    }
+    // Mobile
+    const mobLive = document.getElementById('mob-list-' + tf);
+    const mobHist = document.getElementById('mob-hist-' + tf);
+    if (mobLive && mobHist) {
+      if (historyMode) { mobLive.style.display = 'none'; mobHist.classList.add('active'); }
+      else { mobLive.style.display = ''; mobHist.classList.remove('active'); }
     }
   });
-  if (btn) {
-    btn.classList.toggle('on', historyMode);
-    btn.textContent = historyMode ? '← Live view' : "Today's history";
-  }
+  const label = historyMode ? '← Live' : "Today's history";
+  if (btn) { btn.classList.toggle('on', historyMode); btn.textContent = historyMode ? '← Live view' : "Today's history"; }
+  if (mobBtn) mobBtn.textContent = label;
 }
 
 function toggleHistory(tf) { toggleAllHistory(); }
@@ -1015,6 +1024,8 @@ updateCounts();
     <span class="mob-utc" id="mobUtcClock">UTC — —</span>
     <a class="mob-nav-btn" href="data.html">View data</a>
     <a class="mob-nav-btn" href="screener.html">Session timings</a>
+    <button class="mob-nav-btn" id="mobHistBtn" onclick="toggleAllHistory()" style="border:1px solid rgba(1,160,184,0.4);background:rgba(1,160,184,0.1);color:var(--teal);cursor:pointer">Today's history</button>
+    <button class="mob-nav-btn" id="mobBetaBtn" onclick="toggleBetaFilter()" style="border:1px solid rgba(255,183,0,0.35);background:rgba(255,183,0,0.08);color:#ffb700;cursor:pointer">⚡ Beta</button>
   </div>
   <div style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.07);padding:7px 16px;display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;flex-wrap:wrap">
     <span style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(234,253,252,0.35)">This week</span>
@@ -1026,22 +1037,27 @@ updateCounts();
   <div class="mob-tf-section">
     <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-1min"></span><span class="mob-tf-label">1 min</span><span class="mob-tf-count" id="mob-cnt-1min">waiting...</span></div>
     <div class="mob-cards-scroll" id="mob-list-1min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+    <div class="col-hist" id="mob-hist-1min" style="padding:8px;gap:6px;"></div>
   </div>
   <div class="mob-tf-section">
     <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-3min"></span><span class="mob-tf-label">3 min</span><span class="mob-tf-count" id="mob-cnt-3min">waiting...</span></div>
     <div class="mob-cards-scroll" id="mob-list-3min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+    <div class="col-hist" id="mob-hist-3min" style="padding:8px;gap:6px;"></div>
   </div>
   <div class="mob-tf-section">
     <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-5min"></span><span class="mob-tf-label">5 min</span><span class="mob-tf-count" id="mob-cnt-5min">waiting...</span></div>
     <div class="mob-cards-scroll" id="mob-list-5min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+    <div class="col-hist" id="mob-hist-5min" style="padding:8px;gap:6px;"></div>
   </div>
   <div class="mob-tf-section">
     <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-15min"></span><span class="mob-tf-label">15 min</span><span class="mob-tf-count" id="mob-cnt-15min">waiting...</span></div>
     <div class="mob-cards-scroll" id="mob-list-15min"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+    <div class="col-hist" id="mob-hist-15min" style="padding:8px;gap:6px;"></div>
   </div>
   <div class="mob-tf-section">
     <div class="mob-tf-header"><span class="mob-tf-dot" id="mob-dot-2hr"></span><span class="mob-tf-label">2 hr</span><span class="mob-tf-count" id="mob-cnt-2hr">waiting...</span></div>
     <div class="mob-cards-scroll" id="mob-list-2hr"><div class="mob-empty">No signals yet. Waiting for webhook alerts.</div></div>
+    <div class="col-hist" id="mob-hist-2hr" style="padding:8px;gap:6px;"></div>
   </div>
 
   <div class="mob-footer">
