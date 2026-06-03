@@ -572,7 +572,7 @@ async function updateWeeklyStrip() {
   try {
     const weekStart = getWeekStart();
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,outcome,closed_at,created_at&created_at=gte.' + weekStart + '&limit=2000',
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at&created_at=gte.' + weekStart + '&limit=2000',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) return;
@@ -581,10 +581,19 @@ async function updateWeeklyStrip() {
     rows.forEach(row => {
       const sigTime = new Date(row.created_at);
       const outcome = row.outcome || (!row.closed_at ? 'active' : 'closed');
-      if (!wasInSession(row.sym, row.tf, sigTime)) return;
+      if (!wasInSession(row.sym, row.tf, sigTime, outcome)) return;
       const score = getScore(row.sym, row.tf, sigTime);
       const fkey = score ? (score.type === 'score' ? 'S' + score.val : score.val[0]) : null;
       if (fkey && !activeFilters.has(fkey)) return;
+      // Beta filter — skip signals that would be hidden
+      if (betaMode && BETA_TFS.includes(row.tf)) {
+        const key = row.sym + '|' + row.tf + '|' + row.dir;
+        const s = signalStats[key];
+        if (s && s.trades >= MIN_TRADES_PF) {
+          const pf = s.losses > 0 ? (s.wins * 1.4) / s.losses : (s.wins > 0 ? 3.0 : 0);
+          if (pf < MIN_PF) return;
+        }
+      }
       if (outcome === 'tp') wins++;
       else if (outcome === 'sl') losses++;
       else if (outcome === 'active') active++;
