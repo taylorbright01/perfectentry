@@ -572,7 +572,7 @@ async function updateWeeklyStrip() {
   try {
     const weekStart = getWeekStart();
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at&created_at=gte.' + weekStart + '&limit=2000',
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at&created_at=gte.' + weekStart + '&order=created_at.desc&limit=5000',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) return;
