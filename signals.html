@@ -581,13 +581,12 @@ async function updateWeeklyStrip() {
     rows.forEach(row => {
       const outcome = row.outcome || (!row.closed_at ? 'active' : 'closed');
       const sigTime = new Date(row.created_at);
-      // Try to get score — if we can, apply score filters
-      // If score can't be derived, count it anyway (don't exclude valid trades)
+      // Must have a score — signals outside session windows don't count
       const score = getScore(row.sym, row.tf, sigTime);
-      if (score) {
-        const fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
-        if (!activeFilters.has(fkey)) return;
-      }
+      if (!score) return;
+      // Apply score filters
+      const fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
+      if (!activeFilters.has(fkey)) return;
       // Beta filter — skip signals that would be hidden
       if (betaMode && BETA_TFS.includes(row.tf)) {
         const key = row.sym + '|' + row.tf + '|' + row.dir;
