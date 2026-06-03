@@ -572,7 +572,7 @@ async function updateWeeklyStrip() {
   try {
     const weekStart = getWeekStart();
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at&created_at=gte.' + weekStart + '&order=created_at.desc&limit=5000',
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at,score&created_at=gte.' + weekStart + '&order=created_at.desc&limit=5000',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) return;
@@ -581,11 +581,18 @@ async function updateWeeklyStrip() {
     rows.forEach(row => {
       const outcome = row.outcome || (!row.closed_at ? 'active' : 'closed');
       const sigTime = new Date(row.created_at);
-      // Must have a score — signals outside session windows don't count
-      const score = getScore(row.sym, row.tf, sigTime);
-      if (!score) return;
-      // Apply score filters
-      const fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
+
+      // Derive fkey — use stored score first, fall back to calculated
+      let fkey = null;
+      if (row.score) {
+        // Stored: S1-S4 or H/M/L
+        fkey = row.score.startsWith('S') ? row.score : row.score;
+      } else {
+        const score = getScore(row.sym, row.tf, sigTime);
+        if (!score) return; // no score = exclude
+        fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
+      }
+      if (!fkey) return;
       if (!activeFilters.has(fkey)) return;
       // Beta filter — skip signals that would be hidden
       if (betaMode && BETA_TFS.includes(row.tf)) {
@@ -687,7 +694,14 @@ function connect(){
       if(msg.event==='postgres_changes'&&msg.payload?.data?.type==='INSERT'){
         const row=msg.payload.data.record;if(!row)return;
         const outcome = row.outcome || (row.closed_at ? 'closed' : 'active');
-        const score=getScore(row.sym,row.tf,new Date());
+        let score = null;
+        if(row.score){
+          if(row.score.startsWith('S')) score={type:'score',val:parseInt(row.score[1])};
+          else score={type:'conf',val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
+        } else {
+          score=getScore(row.sym,row.tf,new Date());
+        }
+        if(!score)return; // skip unscored realtime signals
         pushSignal({sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,outcome});
       }
     }catch(err){}
@@ -969,12 +983,22 @@ async function loadRecent(){
       byTF[tf].forEach(row=>{
         if(shown>=MAX)return;
         const sigTime=new Date(row.created_at);
-        // Must have fired during a valid session window
         let outcome=row.outcome||null;
         if(!outcome&&!row.closed_at)outcome='active';
         else if(!outcome&&row.closed_at)outcome='closed';
-        if(!wasInSession(row.sym,row.tf,sigTime,outcome))return;
-        const score=getScore(row.sym,row.tf,sigTime);
+        // Use stored score from DB if available, fall back to derived
+        let score=null;
+        if(row.score){
+          // Stored score: S1-S4 or H/M/L
+          if(row.score.startsWith('S')) score={type:'score',val:parseInt(row.score[1])};
+          else score={type:'conf',val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
+        } else {
+          score=getScore(row.sym,row.tf,sigTime);
+        }
+        // Must have a score to show
+        if(!score)return;
+        // Must pass session check for signals without stored score
+        if(!row.score&&!wasInSession(row.sym,row.tf,sigTime,outcome))return;
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
