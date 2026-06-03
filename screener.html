@@ -221,6 +221,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     details+details{margin-top:8px}
     summary{cursor:pointer;font-weight:800;outline:none}
     .note{font-size:12px;opacity:.82;margin-top:10px}
+    .dir-filter-badge{font-size:9px;font-weight:800;letter-spacing:0.04em;padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
+    .dir-sells{background:rgba(255,106,42,0.15);color:#FF9060;border:1px solid rgba(255,106,42,0.3)}
+    .dir-buys{background:rgba(0,200,150,0.15);color:#00e6aa;border:1px solid rgba(0,200,150,0.3)}
+    .dir-caution{background:rgba(255,183,0,0.12);color:#ffb700;border:1px solid rgba(255,183,0,0.28)}
+    #screenerBetaBtn{font-family:Inter,system-ui,sans-serif;font-size:11px;font-weight:800;letter-spacing:0.05em;
+      padding:5px 13px;border-radius:999px;border:1px solid rgba(255,183,0,0.35);
+      background:rgba(255,183,0,0.08);color:#ffb700;cursor:pointer;transition:all 0.2s;margin-left:auto}
+    #screenerBetaBtn.on{background:#ffb700;border-color:#ffb700;color:#0b0d10;box-shadow:0 0 12px rgba(255,183,0,0.4)}
     footer{margin-top:26px;padding:18px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#bcd}
 
     /* no-results */
@@ -589,6 +597,111 @@ TFS.forEach(tf => {
 // Init
 updateAll();
 setInterval(updateAll, 1000);
+
+// ── SCREENER BETA FILTER ──
+let screenerBeta = false;
+let screenerStats = {};
+
+async function loadScreenerStats() {
+  try {
+    const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome&outcome=not.is.null&order=created_at.desc&limit=10000',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
+    const buckets = {};
+    rows.forEach(row => {
+      const key = row.sym + '|' + row.tf + '|' + row.dir;
+      if (!buckets[key]) buckets[key] = { wins:0, losses:0, trades:0 };
+      if (buckets[key].trades < 500) {
+        if (row.outcome === 'tp') buckets[key].wins++;
+        else if (row.outcome === 'sl') buckets[key].losses++;
+        buckets[key].trades++;
+      }
+    });
+    screenerStats = buckets;
+  } catch(e) {}
+}
+
+function getPF(sym, tf, dir) {
+  const s = screenerStats[sym + '|' + tf + '|' + dir];
+  if (!s || s.trades < 30) return null;
+  return s.losses > 0 ? (s.wins * 1.4) / s.losses : (s.wins > 0 ? 3.0 : 0);
+}
+
+function getScreenerTF() {
+  // Get currently active TF tab
+  const active = document.querySelector('.tf-tab.active');
+  return active ? active.dataset.tf : '1min';
+}
+
+function applyScreenerBeta() {
+  if (!screenerBeta) {
+    // Remove all dir badges
+    document.querySelectorAll('.dir-filter-badge').forEach(el => el.remove());
+    return;
+  }
+  const tf = getScreenerTF();
+  // Only apply to 1min, 3min, 5min
+  if (!['1min','3min','5min'].includes(tf)) return;
+
+  // Apply to all active cards in current pane
+  const pane = document.getElementById(tf);
+  if (!pane) return;
+  pane.querySelectorAll('.card.active-card').forEach(card => {
+    const sym = card.querySelector('.symbol span')?.textContent?.trim();
+    if (!sym) return;
+
+    // Remove existing badge
+    card.querySelectorAll('.dir-filter-badge').forEach(el => el.remove());
+
+    const buyPF  = getPF(sym, tf, 'buy');
+    const sellPF = getPF(sym, tf, 'sell');
+    const MIN_PF = 1.05;
+
+    const buyOk  = buyPF  === null || buyPF  >= MIN_PF;
+    const sellOk = sellPF === null || sellPF >= MIN_PF;
+
+    let badge = null;
+    if (!buyOk && sellOk) {
+      badge = document.createElement('span');
+      badge.className = 'dir-filter-badge dir-sells';
+      badge.textContent = 'Sells only';
+    } else if (buyOk && !sellOk) {
+      badge = document.createElement('span');
+      badge.className = 'dir-filter-badge dir-buys';
+      badge.textContent = 'Buys only';
+    } else if (!buyOk && !sellOk) {
+      badge = document.createElement('span');
+      badge.className = 'dir-filter-badge dir-caution';
+      badge.textContent = 'Caution';
+    }
+    // If both ok — no badge needed, show normally
+
+    if (badge) {
+      const nameSpan = card.querySelector('.symbol span');
+      if (nameSpan) nameSpan.after(badge);
+    }
+  });
+}
+
+function toggleScreenerBeta() {
+  screenerBeta = !screenerBeta;
+  const btn = document.getElementById('screenerBetaBtn');
+  if (btn) btn.classList.toggle('on', screenerBeta);
+  applyScreenerBeta();
+}
+
+// Re-apply when TF tab changes
+document.getElementById('tfTabs').addEventListener('click', () => {
+  setTimeout(() => { if (screenerBeta) applyScreenerBeta(); }, 50);
+});
+
+// Load stats on startup
+loadScreenerStats();
 
 // Back button
 (function(){
