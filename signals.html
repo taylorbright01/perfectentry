@@ -98,6 +98,22 @@
   .sb-H{background:rgba(68,170,255,0.10);color:#7de3ff;border:1px solid rgba(68,170,255,0.2)}
   .sb-M{background:rgba(255,183,0,0.13);color:var(--amber);border:1px solid rgba(255,183,0,0.28)}
   .sb-L{background:rgba(255,255,255,0.05);color:#777;border:1px solid rgba(255,255,255,0.1)}
+
+  /* PROBABILITY BADGE */
+  .prob-badge { font-size:9px; font-weight:800; letter-spacing:0.03em; padding:2px 7px; border-radius:5px; }
+  .prob-high { background:rgba(0,200,150,0.15); color:#00e6aa; border:1px solid rgba(0,200,150,0.35); }
+  .prob-med  { background:rgba(255,183,0,0.13); color:var(--amber); border:1px solid rgba(255,183,0,0.28); }
+  .prob-low  { background:rgba(255,106,42,0.13); color:#FF9060; border:1px solid rgba(255,106,42,0.28); }
+
+  /* BETA FILTER BUTTON */
+  .beta-btn { font-family:'Inter',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.05em;
+    padding:4px 11px; border-radius:999px; border:1px solid rgba(255,183,0,0.35);
+    background:rgba(255,183,0,0.08); color:var(--amber); cursor:pointer; transition:all 0.15s; user-select:none; }
+  .beta-btn.on { background:rgba(255,183,0,0.2); border-color:var(--amber); color:#fff; }
+  .beta-btn:hover { background:rgba(255,183,0,0.18); }
+
+  /* Hide filtered signals */
+  .sig-card.beta-hidden { display:none !important; }
   .dir-badge{font-size:10px;font-weight:700;letter-spacing:0.05em;padding:2px 8px;border-radius:999px}
   .dir-badge.buy{background:var(--green-dim);color:#00e6aa;border:1px solid var(--green-border)}
   .dir-badge.sell{background:var(--orange-dim);color:#FF9060;border:1px solid var(--orange-border)}
@@ -325,6 +341,7 @@
     <span class="ftag on" data-f="L">LOW</span>
     <button class="clear-btn" id="clearBtn">Clear signals</button>
     <button class="ftag" id="histBtn" onclick="toggleAllHistory()">Today's history</button>
+    <button class="beta-btn" id="betaBtn" onclick="toggleBetaFilter()">⚡ BETA FILTER</button>
   </div>
 </div>
 
@@ -444,6 +461,10 @@ function makeCard(sig){
   const d=document.createElement('div');
   d.className=`sig-card ${dir} entering`;
   d.dataset.fkey=f||'';
+  d.dataset.sym=sig.sym;
+  d.dataset.tf=sig.tf;
+  d.dataset.dir=dir;
+  if(sc){ d.dataset.scoreType=sc.type; d.dataset.scoreVal=sc.val; }
   if(f&&!activeFilters.has(f))d.style.display='none';
   d.dataset.ts=ts.getTime();
   const obClass = sig.outcome==='tp'?'ob-win':sig.outcome==='sl'?'ob-loss':sig.outcome==='active'?'ob-active':'ob-closed';
@@ -483,6 +504,7 @@ function pushSignal(sig){
   updateMobileCounts();
   pushToMobile(sig, card);
   updateWeeklyStrip();
+  if(betaMode) applyBetaFilter();
   playChime();
 }
 
@@ -683,6 +705,168 @@ function toggleAllHistory() {
 
 let historyMode = false;
 
+// ── BETA FILTER & COMBINED SCORING ──
+let betaMode = false;
+let signalStats = {}; // keyed as "sym|tf|dir"
+const BETA_TFS = ['1min','3min','5min'];
+const MIN_TRADES_PF   = 30;    // PF filter kicks in at 30 trades
+const MIN_TRADES_Z    = 250;   // z-score kicks in at 250 trades
+const MIN_PF          = 1.05;  // minimum profit factor to show
+const BREAKEVEN_WR    = 0.417; // 1/(1+1.4) for 1.4RR
+const Z_THRESHOLD     = 1.645; // 90% confidence one-tailed
+
+// ── SCORING WEIGHTS ──
+// Final = session_historical(25%) + live_PF(40%) + statistical_confidence(35%)
+const W_HIST = 0.25;
+const W_PF   = 0.40;
+const W_ZCON = 0.35;
+
+// Map session score/conf to 0-1
+function sessionScoreToProb(sc) {
+  if (!sc) return 0.5;
+  if (sc.type === 'score') {
+    return {4:0.78, 3:0.67, 2:0.56, 1:0.44}[sc.val] || 0.5;
+  }
+  return {'HIGH':0.67,'MEDIUM':0.56,'LOW':0.47}[sc.val] || 0.5;
+}
+
+// Map PF to 0-1 score
+function pfToScore(pf) {
+  if (pf <= 0)    return 0;
+  if (pf < 1.05)  return 0.1 + (pf / 1.05) * 0.2;  // 0.1-0.3
+  if (pf < 1.5)   return 0.3 + ((pf - 1.05) / 0.45) * 0.4; // 0.3-0.7
+  return Math.min(0.7 + ((pf - 1.5) / 1.0) * 0.3, 1.0);    // 0.7-1.0
+}
+
+// Z-score for observed win rate vs breakeven
+function calcZScore(wins, trades) {
+  if (trades < MIN_TRADES_Z) return null;
+  const wr = wins / trades;
+  const se = Math.sqrt(BREAKEVEN_WR * (1 - BREAKEVEN_WR) / trades);
+  return (wr - BREAKEVEN_WR) / se;
+}
+
+// Map z-score to 0-1 confidence
+function zToConfidence(z) {
+  if (z === null) return null;
+  // Sigmoid-style mapping centred on 0
+  // z=-3 → ~0.05, z=0 → 0.5, z=+3 → ~0.95
+  return 1 / (1 + Math.exp(-z * 0.8));
+}
+
+// Full combined probability for a signal
+function compositeProb(sig) {
+  const key = sig.sym + '|' + sig.tf + '|' + sig.dir;
+  const s = signalStats[key];
+
+  const histScore = sessionScoreToProb(sig.score);
+
+  // Not enough live data yet — return null (show normal badge)
+  if (!s || s.trades < MIN_TRADES_PF) return null;
+
+  const pf = s.losses > 0 ? (s.wins * 1.4) / s.losses : (s.wins > 0 ? 3.0 : 0);
+  const pfScore = pfToScore(pf);
+
+  // Z-score confidence — only available at 250+ trades
+  const z = calcZScore(s.wins, s.trades);
+  const zConf = zToConfidence(z);
+
+  if (zConf !== null) {
+    // Full three-component score
+    return (histScore * W_HIST) + (pfScore * W_PF) + (zConf * W_ZCON);
+  } else {
+    // Two-component score (no z yet) — reweight between hist and PF only
+    return (histScore * (W_HIST / (W_HIST + W_PF))) + (pfScore * (W_PF / (W_HIST + W_PF)));
+  }
+}
+
+// Should this signal be hidden by beta filter?
+function betaHidden(sig) {
+  if (!betaMode) return false;
+  if (!BETA_TFS.includes(sig.tf)) return false;
+  const key = sig.sym + '|' + sig.tf + '|' + sig.dir;
+  const s = signalStats[key];
+  if (!s || s.trades < MIN_TRADES_PF) return false; // insufficient data — show
+  const pf = s.losses > 0 ? (s.wins * 1.4) / s.losses : (s.wins > 0 ? 3.0 : 0);
+  // At 250+ trades also require z-score > -1.0 (not statistically proven bad)
+  if (s.trades >= MIN_TRADES_Z) {
+    const z = calcZScore(s.wins, s.trades);
+    if (z !== null && z < -1.645) return true; // statistically bad — always hide
+  }
+  return pf < MIN_PF;
+}
+
+// Prob badge HTML — shows % and tier label
+function probBadgeHtml(prob) {
+  if (prob === null) return '';
+  const pct = Math.round(prob * 100);
+  const cls = pct >= 62 ? 'prob-high' : pct >= 50 ? 'prob-med' : 'prob-low';
+  return `<span class="prob-badge ${cls}">${pct}%</span>`;
+}
+
+async function loadSignalStats() {
+  try {
+    // Fetch enough trades to cover 500 per bucket — 29 pairs × 5 TFs × 2 dirs × 500 = too many
+    // So fetch last 10000 outcomes ordered newest first and bucket client-side (max 500 per key)
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome&outcome=not.is.null&order=created_at.desc&limit=10000',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
+    const buckets = {};
+    rows.forEach(row => {
+      const key = row.sym + '|' + row.tf + '|' + row.dir;
+      if (!buckets[key]) buckets[key] = { wins:0, losses:0, trades:0 };
+      if (buckets[key].trades < 500) {
+        if (row.outcome === 'tp') buckets[key].wins++;
+        else if (row.outcome === 'sl') buckets[key].losses++;
+        buckets[key].trades++;
+      }
+    });
+    signalStats = buckets;
+    console.log('Signal stats loaded:', Object.keys(signalStats).length, 'buckets');
+  } catch(e) { console.error('loadSignalStats error:', e); }
+}
+
+function toggleBetaFilter() {
+  betaMode = !betaMode;
+  const btn = document.getElementById('betaBtn');
+  if (btn) btn.classList.toggle('on', betaMode);
+  applyBetaFilter();
+}
+
+function applyBetaFilter() {
+  document.querySelectorAll('.sig-card').forEach(card => {
+    const sym = card.dataset.sym;
+    const tf  = card.dataset.tf;
+    const dir = card.dataset.dir;
+    if (!sym || !tf || !dir) return;
+    const scoreType = card.dataset.scoreType;
+    const scoreVal  = card.dataset.scoreVal;
+    const sc = scoreType ? { type:scoreType, val: isNaN(scoreVal) ? scoreVal : parseInt(scoreVal) } : null;
+    const sig = { sym, tf, dir, score:sc };
+
+    // Apply/remove beta-hidden
+    card.classList.toggle('beta-hidden', betaHidden(sig));
+
+    // Prob badge
+    const existingProb = card.querySelector('.prob-badge');
+    const prob = compositeProb(sig);
+    if (betaMode) {
+      const html = probBadgeHtml(prob);
+      if (existingProb) {
+        existingProb.outerHTML = html || '';
+      } else if (html) {
+        const left = card.querySelector('.sig-left');
+        if (left) left.insertAdjacentHTML('beforeend', html);
+      }
+    } else {
+      if (existingProb) existingProb.remove();
+    }
+  });
+}
+
 function toggleAllHistory() {
   historyMode = !historyMode;
   const btn = document.getElementById('histBtn');
@@ -783,6 +967,7 @@ async function loadRecent(){
     updateMobileCounts();
     updateWeeklyStrip();
     loadTodayHistory();
+    if(betaMode) applyBetaFilter();
     // Also populate mobile lists from loaded signals
     TFS.forEach(tf => {
       const mobList = document.getElementById('mob-list-' + tf);
@@ -803,7 +988,7 @@ async function loadRecent(){
   }catch(e){}
 }
 
-loadRecent();
+loadSignalStats().then(() => loadRecent());
 connect();
 updateCounts();
 </script>
