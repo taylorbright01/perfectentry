@@ -803,6 +803,9 @@ function currencyFilterStatus(sig) {
 
 function currencyFilterHidden(sig) {
   if (!betaMode) return false;
+  // Blackout 20:00-23:59 UTC — hide all S0 signals in this window
+  const now = new Date();
+  if (now.getUTCHours() >= 20) return true;
   const status = currencyFilterStatus(sig);
   // Hide if failed OR insufficient data
   // S0 signals require a definitive PASS — insufficient data = hide
@@ -1086,6 +1089,8 @@ async function loadTodayHistory() {
           // S0 — only show if Currency AI on, S0 toggled on, and passed currency filter
           if (!betaMode) return;
           if (!activeFilters.has('S0')) return;
+          // Blackout 20:00-23:59 UTC
+          if (sigTime.getUTCHours() >= 20) return;
           if (row.currency_ai_pass === false) return;
           if (row.currency_ai_pass === null || row.currency_ai_pass === undefined) return; // insufficient data
           score = {type:'score', val:0};
@@ -1139,9 +1144,13 @@ async function loadRecent(){
         // No score — only show if Currency AI is on and signal passes currency filter
         if(!score){
           if(!betaMode) return; // currency AI off — hide unscored
-          const tmpSig={sym:row.sym,tf:row.tf,dir:row.dir,score:null};
-          if(currencyFilterHidden(tmpSig)) return; // fails currency filter — hide
           if(!activeFilters.has('S0')) return; // user toggled S0 off — hide
+          if(sigTime.getUTCHours() >= 20) return; // blackout 20:00-23:59 UTC
+          if(row.currency_ai_pass === false) return;
+          if(row.currency_ai_pass === null || row.currency_ai_pass === undefined) {
+            const tmpSig={sym:row.sym,tf:row.tf,dir:row.dir,score:null};
+            if(currencyFilterHidden(tmpSig)) return;
+          }
           score={type:'score',val:0}; // assign S0
           isS0=true;
         }
