@@ -596,7 +596,7 @@ async function updateWeeklyStrip() {
 
     let wins = 0, losses = 0;
 
-    rows.forEach((row: any) => {
+    rows.forEach((row) => {
       const fkey = row.score;
       if (!fkey || !activeFilters.has(fkey)) return;
 
@@ -622,7 +622,7 @@ async function updateWeeklyStrip() {
     let active = 0;
     if (activeRes.ok) {
       const activeRows = await activeRes.json();
-      activeRows.forEach((row: any) => {
+      activeRows.forEach((row) => {
         const fkey = row.score || 'S0';
         if (!activeFilters.has(fkey)) return;
         if (fkey === 'S0' && !betaMode) return;
