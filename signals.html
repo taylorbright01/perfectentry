@@ -587,15 +587,13 @@ async function updateWeeklyStrip() {
       // Currency AI mode — must replay trades sequentially to build correct currency history
       // Fetch all tracked outcomes from before this week to seed the history,
       // then replay this week's trades in order
-      const [histRes, weekRes] = await Promise.all([
-        fetch(SUPABASE_URL + '/rest/v1/signals?select=sym,dir,outcome&outcome=not.is.null&created_at=lt.' + weekStart + '&order=created_at.asc&limit=5000',
-          { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }),
-        fetch(SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at,score&created_at=gte.' + weekStart + '&outcome=not.is.null&order=created_at.asc&limit=5000',
-          { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } })
-      ]);
-      if (!histRes.ok || !weekRes.ok) return;
-
-      const histRows = await histRes.json();
+      // Fetch all this week's tracked trades in chronological order
+      // No pre-week seed needed — history builds from trade 0 same as simulation
+      const weekRes = await fetch(
+        SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at,score&created_at=gte.' + weekStart + '&outcome=not.is.null&order=created_at.asc&limit=5000',
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+      );
+      if (!weekRes.ok) return;
       const weekRows = await weekRes.json();
 
       // Build currency history from pre-week data
@@ -625,10 +623,7 @@ async function updateWeeklyStrip() {
         return false;
       }
 
-      // Seed history with pre-week trades
-      histRows.forEach(r => addToCcyHist(r.sym, r.dir, r.outcome));
-
-      // Now replay this week in order
+      // Replay this week in order — history builds progressively from trade 0
       let wins = 0, losses = 0, active = 0;
       // Also count active signals (no outcome yet) from this week
       const activeRes = await fetch(
