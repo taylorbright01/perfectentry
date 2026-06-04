@@ -782,7 +782,6 @@ function getCurrencies(sym, dir) {
 }
 
 function getCcyWR(ccy, side) {
-  // side: 'long' or 'short'
   const key = ccy + '|' + side;
   const hist = currencyStats[key] || [];
   const recent = hist.slice(-CCY_LOOKBACK);
@@ -790,14 +789,24 @@ function getCcyWR(ccy, side) {
   return recent.filter(o => o === 'tp').length / recent.length;
 }
 
-function currencyFilterHidden(sig) {
-  if (!betaMode) return false;
+// Returns: 'pass' | 'fail' | 'insufficient'
+function currencyFilterStatus(sig) {
   const [longCcy, shortCcy] = getCurrencies(sig.sym, sig.dir);
   const longWR = getCcyWR(longCcy, 'long');
-  const shortWR = getCcyWR(shortCcy, 'long'); // short ccy's performance when held long
-  if (longWR !== null && longWR < CCY_WR_THRESHOLD) return true;
-  if (shortWR !== null && shortWR >= CCY_WR_THRESHOLD) return true;
-  return false;
+  const shortWR = getCcyWR(shortCcy, 'long');
+  // If either currency has insufficient data — can't make a decision
+  if (longWR === null || shortWR === null) return 'insufficient';
+  if (longWR < CCY_WR_THRESHOLD) return 'fail';
+  if (shortWR >= CCY_WR_THRESHOLD) return 'fail';
+  return 'pass';
+}
+
+function currencyFilterHidden(sig) {
+  if (!betaMode) return false;
+  const status = currencyFilterStatus(sig);
+  // Hide if failed OR insufficient data
+  // S0 signals require a definitive PASS — insufficient data = hide
+  return status !== 'pass';
 }
 
 async function loadCurrencyStats() {
@@ -1078,6 +1087,7 @@ async function loadTodayHistory() {
           if (!betaMode) return;
           if (!activeFilters.has('S0')) return;
           if (row.currency_ai_pass === false) return;
+          if (row.currency_ai_pass === null || row.currency_ai_pass === undefined) return; // insufficient data
           score = {type:'score', val:0};
         } else {
           // Normal scored signal — check session
