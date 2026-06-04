@@ -582,157 +582,59 @@ function renderWeeklyStrip(wins, losses, active) {
 async function updateWeeklyStrip() {
   try {
     const weekStart = getWeekStart();
+    // Monday of current week to Sunday
+    const weekStartDate = weekStart.slice(0,10);
+    const weekEnd = new Date(new Date(weekStart).getTime() + 7*24*60*60*1000).toISOString().slice(0,10);
 
-    if (betaMode) {
-      // Currency AI mode — must replay trades sequentially to build correct currency history
-      // Fetch all tracked outcomes from before this week to seed the history,
-      // then replay this week's trades in order
-      // Fetch all this week's tracked trades in chronological order
-      // No pre-week seed needed — history builds from trade 0 same as simulation
-      const weekRes = await fetch(
-        SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at,score&created_at=gte.' + weekStart + '&outcome=not.is.null&order=created_at.asc&limit=5000',
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
-      );
-      if (!weekRes.ok) return;
-      const weekRows = await weekRes.json();
+    // Fetch weekly_stats for this week
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/weekly_stats?stat_date=gte.' + weekStartDate + '&stat_date=lt.' + weekEnd + '&limit=100',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
 
-      // Build currency history from pre-week data
-      const ccyHist = {};
-      const SP = {XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
-      function getCcys(sym, dir) {
-        const sp = SP[sym]; const b = sp?sp[0]:sym.slice(0,3); const q = sp?sp[1]:sym.slice(3);
-        return dir==='buy'?[b,q]:[q,b];
+    let wins = 0, losses = 0;
+
+    rows.forEach((row: any) => {
+      const fkey = row.score;
+      if (!fkey || !activeFilters.has(fkey)) return;
+
+      if (betaMode) {
+        // Currency AI mode — use currency_ai_wins/losses
+        // S0 only counts when S0 filter is on
+        if (fkey === 'S0' && !activeFilters.has('S0')) return;
+        wins   += row.currency_ai_wins   || 0;
+        losses += row.currency_ai_losses || 0;
+      } else {
+        // Normal mode — use total wins/losses, exclude S0
+        if (fkey === 'S0') return;
+        wins   += row.wins   || 0;
+        losses += row.losses || 0;
       }
-      function addToCcyHist(sym, dir, outcome) {
-        const [lc, sc] = getCcys(sym, dir);
-        if (!ccyHist[lc]) ccyHist[lc] = [];
-        ccyHist[lc].push(outcome);
-        if (!ccyHist[sc]) ccyHist[sc] = [];
-        ccyHist[sc].push(outcome === 'tp' ? 'sl' : 'tp');
-      }
-      function ccyWR(ccy) {
-        const h = (ccyHist[ccy] || []).slice(-CCY_LOOKBACK);
-        if (h.length < CCY_MIN_HISTORY) return null;
-        return h.filter(o => o==='tp').length / h.length;
-      }
-      function ccyFiltered(sym, dir) {
-        const [lc, sc] = getCcys(sym, dir);
-        const lwr = ccyWR(lc); const swr = ccyWR(sc);
-        if (lwr !== null && lwr < CCY_WR_THRESHOLD) return true;
-        if (swr !== null && swr >= CCY_WR_THRESHOLD) return true;
-        return false;
-      }
+    });
 
-      // Replay this week in order — history builds progressively from trade 0
-      let wins = 0, losses = 0, active = 0;
-      // Also count active signals (no outcome yet) from this week
-      const activeRes = await fetch(
-        SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at,score&created_at=gte.' + weekStart + '&outcome=is.null&order=created_at.asc&limit=1000',
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
-      );
-
-      weekRows.forEach(row => {
-        const sigTime = new Date(row.created_at);
-        const outcome = row.outcome || 'active';
-
-        // Check currency filter at the time this signal fired
-        if (ccyFiltered(row.sym, row.dir)) {
-          // Still update history so future decisions are accurate
-          addToCcyHist(row.sym, row.dir, row.outcome);
-          return; // skip this trade
-        }
-
-        // Derive fkey
-        let fkey = null;
-        if (row.score) {
-          fkey = row.score.startsWith('S') ? row.score : row.score;
-        } else {
-          const score = getScore(row.sym, row.tf, sigTime);
-          if (score) {
-            fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
-          } else if (activeFilters.has('S0')) {
-            fkey = 'S0';
-          }
-        }
-        if (!fkey || !activeFilters.has(fkey)) {
-          addToCcyHist(row.sym, row.dir, row.outcome);
-          return;
-        }
-
-        // Pair AI filter
-        if (pairBetaMode && BETA_TFS.includes(row.tf)) {
-          const key = row.sym + '|' + row.tf + '|' + row.dir;
-          const s = signalStats[key];
-          if (s && s.trades >= MIN_TRADES_PF) {
-            const pf = s.losses > 0 ? (s.wins * 1.4) / s.losses : (s.wins > 0 ? 3.0 : 0);
-            if (pf < MIN_PF) { addToCcyHist(row.sym, row.dir, row.outcome); return; }
-          }
-        }
-
-        if (outcome === 'tp') wins++;
-        else if (outcome === 'sl') losses++;
-
-        // Update history after counting
-        addToCcyHist(row.sym, row.dir, row.outcome);
+    // Active signals — still count from live signals table
+    const activeRes = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,score,currency_ai_pass&outcome=is.null&created_at=gte.' + weekStart + '&limit=500',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    let active = 0;
+    if (activeRes.ok) {
+      const activeRows = await activeRes.json();
+      activeRows.forEach((row: any) => {
+        const fkey = row.score || 'S0';
+        if (!activeFilters.has(fkey)) return;
+        if (fkey === 'S0' && !betaMode) return;
+        if (betaMode && fkey === 'S0' && !activeFilters.has('S0')) return;
+        if (betaMode && row.currency_ai_pass === false) return;
+        active++;
       });
-
-      // Count active signals
-      if (activeRes.ok) {
-        const activeRows = await activeRes.json();
-        activeRows.forEach(row => {
-          if (!ccyFiltered(row.sym, row.dir)) {
-            let fkey = null;
-            if (row.score) fkey = row.score.startsWith('S') ? row.score : row.score;
-            else {
-              const score = getScore(row.sym, row.tf, new Date(row.created_at));
-              if (score) fkey = score.type==='score'?'S'+score.val:score.val[0];
-              else if (activeFilters.has('S0')) fkey = 'S0';
-            }
-            if (fkey && activeFilters.has(fkey)) active++;
-          }
-        });
-      }
-
-      renderWeeklyStrip(wins, losses, active);
-
-    } else {
-      // Non-currency-AI mode — simple batch count
-      const res = await fetch(
-        SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome,closed_at,created_at,score&created_at=gte.' + weekStart + '&score=not.is.null&order=created_at.desc&limit=5000',
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
-      );
-      if (!res.ok) return;
-      const rows = await res.json();
-      let wins = 0, losses = 0, active = 0;
-      rows.forEach(row => {
-        const outcome = row.outcome || (!row.closed_at ? 'active' : 'closed');
-        const sigTime = new Date(row.created_at);
-        let fkey = null;
-        if (row.score) {
-          fkey = row.score.startsWith('S') ? row.score : row.score;
-        } else {
-          const score = getScore(row.sym, row.tf, sigTime);
-          if (!score) return;
-          fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
-        }
-        if (!fkey || !activeFilters.has(fkey)) return;
-        if (pairBetaMode && BETA_TFS.includes(row.tf)) {
-          const key = row.sym + '|' + row.tf + '|' + row.dir;
-          const s = signalStats[key];
-          if (s && s.trades >= MIN_TRADES_PF) {
-            const pf = s.losses > 0 ? (s.wins * 1.4) / s.losses : (s.wins > 0 ? 3.0 : 0);
-            if (pf < MIN_PF) return;
-          }
-        }
-        if (outcome === 'tp') wins++;
-        else if (outcome === 'sl') losses++;
-        else if (outcome === 'active') active++;
-      });
-      renderWeeklyStrip(wins, losses, active);
     }
+
+    renderWeeklyStrip(wins, losses, active);
   } catch(e) { console.error('updateWeeklyStrip error:', e); }
 }
-
 setInterval(updateWeeklyStrip, 60000);
 
 // Push to mobile layout too
@@ -1141,7 +1043,7 @@ async function loadTodayHistory() {
     const todayStart = new Date(now);
     todayStart.setUTCHours(0,0,0,0);
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=*&created_at=gte.' + todayStart.toISOString() + '&order=created_at.desc&limit=1000',
+      SUPABASE_URL + '/rest/v1/signals?select=*,currency_ai_pass&created_at=gte.' + todayStart.toISOString() + '&order=created_at.desc&limit=1000',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) return;
