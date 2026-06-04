@@ -95,6 +95,7 @@
   .sb-3{background:rgba(68,170,255,0.10);color:#7de3ff;border:1px solid rgba(68,170,255,0.2)}
   .sb-2{background:rgba(255,183,0,0.13);color:var(--amber);border:1px solid rgba(255,183,0,0.28)}
   .sb-1{background:rgba(255,255,255,0.05);color:#777;border:1px solid rgba(255,255,255,0.1)}
+  .sb-0{background:rgba(255,183,0,0.12);color:var(--amber);border:1px solid rgba(255,183,0,0.3)}
   .sb-H{background:rgba(68,170,255,0.10);color:#7de3ff;border:1px solid rgba(68,170,255,0.2)}
   .sb-M{background:rgba(255,183,0,0.13);color:var(--amber);border:1px solid rgba(255,183,0,0.28)}
   .sb-L{background:rgba(255,255,255,0.05);color:#777;border:1px solid rgba(255,255,255,0.1)}
@@ -105,13 +106,16 @@
   .prob-med  { background:rgba(255,183,0,0.13); color:var(--amber); border:1px solid rgba(255,183,0,0.28); }
   .prob-low  { background:rgba(255,106,42,0.13); color:#FF9060; border:1px solid rgba(255,106,42,0.28); }
 
-  /* BETA FILTER BUTTON */
+  /* BETA FILTER BUTTONS */
   .beta-btn { font-family:'Inter',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.05em;
     padding:4px 11px; border-radius:999px; border:1px solid rgba(255,183,0,0.35);
     background:rgba(255,183,0,0.08); color:var(--amber); cursor:pointer; transition:all 0.2s; user-select:none; }
   .beta-btn.on { background:var(--amber); border-color:var(--amber); color:#0b0d10;
     box-shadow:0 0 12px rgba(255,183,0,0.45); }
   .beta-btn:hover { background:rgba(255,183,0,0.2); }
+  #betaPairBtn { border-color:rgba(100,200,255,0.35); background:rgba(100,200,255,0.06); color:#7de3ff; }
+  #betaPairBtn.on { background:#7de3ff; border-color:#7de3ff; color:#0b0d10; box-shadow:0 0 12px rgba(100,200,255,0.4); }
+  #betaPairBtn:hover { background:rgba(100,200,255,0.15); }
 
   /* Hide filtered signals */
   .sig-card.beta-hidden { display:none !important; }
@@ -335,6 +339,7 @@
     <span class="ftag on" data-f="S3">S3</span>
     <span class="ftag on" data-f="S2">S2</span>
     <span class="ftag on" data-f="S1">S1</span>
+    <span class="ftag on" data-f="S0" id="s0tag" style="display:none">S0</span>
     <div class="filter-sep"></div>
     <span class="filter-label">Conf <span style="font-weight:500;opacity:0.55;font-size:9px">15m·2h</span></span>
     <span class="ftag on" data-f="H">HIGH</span>
@@ -342,7 +347,8 @@
     <span class="ftag on" data-f="L">LOW</span>
     <button class="clear-btn" id="clearBtn">Clear signals</button>
     <button class="ftag" id="histBtn" onclick="toggleAllHistory()">Today's history</button>
-    <button class="beta-btn" id="betaBtn" onclick="toggleBetaFilter()">⚡ BETA FILTER</button>
+    <button class="beta-btn" id="betaBtn" onclick="toggleBetaFilter()">⚡ Currency AI</button>
+    <button class="beta-btn" id="betaPairBtn" onclick="togglePairFilter()">🎯 Pair AI</button>
   </div>
 </div>
 
@@ -384,7 +390,7 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const SESSION_DATA={"1min":[{"sym":"AUDCAD","day_windows":[{"day":"Tue","window":"01:00-05:59","score":3},{"day":"Wed","window":"03:00-07:59","score":1},{"day":"Thu","window":"00:00-07:59","score":3},{"day":"Fri","window":"00:00-04:59","score":1}]},{"sym":"AUDCHF","day_windows":[{"day":"Mon","window":"01:00-14:59","score":2},{"day":"Tue","window":"08:00-10:59","score":1},{"day":"Wed","window":"01:00-05:59","score":1},{"day":"Thu","window":"00:00-07:59","score":1},{"day":"Fri","window":"11:00-14:59","score":2}]},{"sym":"AUDNZD","day_windows":[{"day":"Mon","window":"00:00-10:59","score":1},{"day":"Tue","window":"00:00-12:59","score":2},{"day":"Fri","window":"00:00-10:59","score":2}]},{"sym":"AUDUSD","day_windows":[{"day":"Thu","window":"13:00-16:59","score":1},{"day":"Fri","window":"00:00-05:59","score":2}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"01:00-10:59","score":2},{"day":"Tue","window":"03:00-05:59","score":1},{"day":"Wed","window":"03:00-11:59","score":3},{"day":"Fri","window":"02:00-09:59","score":1},{"day":"Sat","window":"10:00-14:59","score":2},{"day":"Sun","window":"08:00-17:59","score":3}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"01:00-07:59","score":1},{"day":"Tue","window":"00:00-07:59","score":1},{"day":"Thu","window":"00:00-07:59","score":2},{"day":"Fri","window":"01:00-08:59","score":2}]},{"sym":"CHFJPY","day_windows":[{"day":"Tue","window":"00:00-07:59","score":2},{"day":"Wed","window":"07:00-11:59","score":2},{"day":"Thu","window":"10:00-15:59","score":2},{"day":"Fri","window":"13:00-17:59","score":1}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"00:00-07:59","score":3},{"day":"Tue","window":"00:00-05:59","score":2},{"day":"Wed","window":"06:00-12:59","score":1},{"day":"Thu","window":"06:00-14:59","score":1},{"day":"Fri","window":"07:00-14:59","score":1},{"day":"Sat","window":"00:00-16:59","score":2},{"day":"Sun","window":"00:00-13:59","score":1}]},{"sym":"EURAUD","day_windows":[{"day":"Thu","window":"10:00-15:59","score":1},{"day":"Fri","window":"00:00-13:59","score":2}]},{"sym":"EURCAD","day_windows":[{"day":"Mon","window":"00:00-13:59","score":2},{"day":"Wed","window":"13:00-18:59","score":1},{"day":"Fri","window":"11:00-15:59","score":1}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"13:00-16:59","score":1},{"day":"Tue","window":"00:00-07:59","score":2},{"day":"Wed","window":"05:00-09:59","score":1},{"day":"Thu","window":"00:00-04:59","score":2},{"day":"Fri","window":"02:00-07:59","score":2}]},{"sym":"EURNZD","day_windows":[{"day":"Wed","window":"12:00-19:59","score":2},{"day":"Thu","window":"08:00-15:59","score":2},{"day":"Fri","window":"00:00-04:59","score":1}]},{"sym":"EURUSD","day_windows":[{"day":"Mon","window":"00:00-06:59","score":2},{"day":"Tue","window":"10:00-15:59","score":2},{"day":"Wed","window":"13:00-18:59","score":1}]},{"sym":"GBPAUD","day_windows":[{"day":"Tue","window":"00:00-05:59","score":2},{"day":"Wed","window":"00:00-09:59","score":2},{"day":"Thu","window":"00:00-06:59","score":2},{"day":"Fri","window":"01:00-05:59","score":1}]},{"sym":"GBPCAD","day_windows":[{"day":"Tue","window":"00:00-07:59","score":2},{"day":"Thu","window":"13:00-16:59","score":1}]},{"sym":"GBPCHF","day_windows":[{"day":"Wed","window":"11:00-15:59","score":1}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"00:00-09:59","score":1},{"day":"Tue","window":"10:00-15:59","score":1},{"day":"Thu","window":"09:00-18:59","score":1}]},{"sym":"GBPUSD","day_windows":[{"day":"Mon","window":"02:00-11:59","score":2},{"day":"Thu","window":"12:00-17:59","score":2}]},{"sym":"NAS100","day_windows":[{"day":"Mon","window":"13:00-16:59","score":3},{"day":"Tue","window":"01:00-08:59","score":1},{"day":"Wed","window":"00:00-06:59","score":1},{"day":"Thu","window":"10:00-15:59","score":2},{"day":"Fri","window":"00:00-08:59","score":1}]},{"sym":"NZDCAD","day_windows":[{"day":"Mon","window":"09:00-13:59","score":1},{"day":"Wed","window":"02:00-06:59","score":1}]},{"sym":"NZDCHF","day_windows":[{"day":"Wed","window":"12:00-19:59","score":2}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"06:00-11:59","score":2},{"day":"Tue","window":"01:00-15:59","score":3},{"day":"Wed","window":"04:00-12:59","score":1},{"day":"Thu","window":"05:00-12:59","score":2}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"00:00-05:59","score":1},{"day":"Fri","window":"00:00-06:59","score":1}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"00:00-09:59","score":2},{"day":"Tue","window":"09:00-13:59","score":1},{"day":"Wed","window":"06:00-12:59","score":3},{"day":"Thu","window":"00:00-06:59","score":3},{"day":"Fri","window":"10:00-16:59","score":2}]},{"sym":"USDCHF","day_windows":[{"day":"Mon","window":"07:00-10:59","score":2},{"day":"Wed","window":"14:00-17:59","score":1},{"day":"Fri","window":"06:00-16:59","score":2}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"10:00-15:59","score":1},{"day":"Tue","window":"05:00-13:59","score":2},{"day":"Wed","window":"00:00-09:59","score":1}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"00:00-08:59","score":1},{"day":"Tue","window":"02:00-08:59","score":2},{"day":"Wed","window":"00:00-10:59","score":2},{"day":"Fri","window":"00:00-14:59","score":3}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"12:00-18:59","score":2},{"day":"Tue","window":"04:00-17:59","score":3},{"day":"Wed","window":"00:00-07:59","score":3},{"day":"Thu","window":"02:00-15:59","score":1},{"day":"Fri","window":"10:00-16:59","score":2}]}],"3min":[{"sym":"AUDCAD","day_windows":[{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Tue","window":"14:00-15:59","score":1},{"day":"Tue","window":"00:00-01:59","score":1},{"day":"Tue","window":"11:00-12:59","score":1},{"day":"Wed","window":"02:00-03:59","score":2},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Fri","window":"01:00-02:59","score":1}]},{"sym":"AUDCHF","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Tue","window":"12:00-13:59","score":2},{"day":"Tue","window":"03:00-04:59","score":1},{"day":"Wed","window":"01:00-02:59","score":2},{"day":"Wed","window":"12:00-13:59","score":1},{"day":"Thu","window":"00:00-01:59","score":1},{"day":"Thu","window":"16:00-17:59","score":1}]},{"sym":"AUDNZD","day_windows":[{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"13:00-14:59","score":1},{"day":"Thu","window":"06:00-07:59","score":1},{"day":"Thu","window":"10:00-11:59","score":1},{"day":"Fri","window":"07:00-08:59","score":1}]},{"sym":"AUDUSD","day_windows":[{"day":"Mon","window":"12:00-13:59","score":1},{"day":"Tue","window":"14:00-15:59","score":2},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Tue","window":"01:00-02:59","score":1},{"day":"Wed","window":"13:00-14:59","score":1},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"11:00-12:59","score":2},{"day":"Thu","window":"08:00-09:59","score":1}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"01:00-02:59","score":3},{"day":"Mon","window":"11:00-12:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Tue","window":"01:00-02:59","score":1},{"day":"Wed","window":"13:00-14:59","score":2},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Thu","window":"15:00-16:59","score":1},{"day":"Thu","window":"04:00-05:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1},{"day":"Sun","window":"10:00-11:59","score":2},{"day":"Sun","window":"00:00-01:59","score":1}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Mon","window":"05:00-06:59","score":1},{"day":"Mon","window":"08:00-09:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"01:00-02:59","score":2},{"day":"Tue","window":"04:00-05:59","score":2},{"day":"Wed","window":"17:00-18:59","score":1},{"day":"Wed","window":"12:00-13:59","score":1},{"day":"Thu","window":"05:00-06:59","score":2},{"day":"Thu","window":"12:00-13:59","score":1},{"day":"Fri","window":"15:00-16:59","score":2},{"day":"Fri","window":"08:00-09:59","score":1}]},{"sym":"CHFJPY","day_windows":[{"day":"Mon","window":"08:00-09:59","score":2},{"day":"Mon","window":"12:00-13:59","score":1},{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Tue","window":"08:00-09:59","score":3},{"day":"Tue","window":"04:00-05:59","score":2},{"day":"Tue","window":"16:00-17:59","score":1},{"day":"Wed","window":"06:00-07:59","score":2},{"day":"Wed","window":"11:00-12:59","score":1},{"day":"Thu","window":"06:00-07:59","score":2},{"day":"Thu","window":"00:00-01:59","score":1},{"day":"Fri","window":"07:00-08:59","score":2},{"day":"Fri","window":"10:00-11:59","score":1},{"day":"Fri","window":"14:00-15:59","score":1}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"02:00-03:59","score":2},{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"00:00-01:59","score":1},{"day":"Tue","window":"18:00-19:59","score":1},{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Wed","window":"15:00-16:59","score":1},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Thu","window":"03:00-04:59","score":1},{"day":"Thu","window":"12:00-13:59","score":1},{"day":"Fri","window":"14:00-15:59","score":2},{"day":"Fri","window":"06:00-07:59","score":1},{"day":"Sun","window":"12:00-13:59","score":2},{"day":"Sun","window":"09:00-10:59","score":1},{"day":"Sun","window":"16:00-17:59","score":1}]},{"sym":"EURAUD","day_windows":[{"day":"Tue","window":"14:00-15:59","score":2},{"day":"Tue","window":"09:00-10:59","score":2},{"day":"Tue","window":"01:00-02:59","score":1},{"day":"Wed","window":"15:00-16:59","score":2},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"13:00-14:59","score":1},{"day":"Thu","window":"17:00-18:59","score":1}]},{"sym":"EURCAD","day_windows":[{"day":"Mon","window":"08:00-09:59","score":1},{"day":"Tue","window":"14:00-15:59","score":2},{"day":"Wed","window":"17:00-18:59","score":3},{"day":"Fri","window":"13:00-14:59","score":1}]},{"sym":"EURGBP","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"00:00-01:59","score":1},{"day":"Tue","window":"15:00-16:59","score":1},{"day":"Wed","window":"14:00-15:59","score":2},{"day":"Wed","window":"09:00-10:59","score":1},{"day":"Fri","window":"13:00-14:59","score":2},{"day":"Fri","window":"06:00-07:59","score":2}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"08:00-09:59","score":2},{"day":"Mon","window":"00:00-01:59","score":1},{"day":"Mon","window":"04:00-05:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"04:00-05:59","score":2},{"day":"Tue","window":"18:00-19:59","score":1},{"day":"Wed","window":"10:00-11:59","score":1},{"day":"Wed","window":"07:00-08:59","score":1},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Fri","window":"03:00-04:59","score":1},{"day":"Fri","window":"06:00-07:59","score":1}]},{"sym":"EURNZD","day_windows":[{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Mon","window":"12:00-13:59","score":1},{"day":"Tue","window":"00:00-01:59","score":2},{"day":"Tue","window":"08:00-09:59","score":2},{"day":"Tue","window":"13:00-14:59","score":2},{"day":"Wed","window":"02:00-03:59","score":1},{"day":"Wed","window":"11:00-12:59","score":1},{"day":"Thu","window":"03:00-04:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1}]},{"sym":"EURUSD","day_windows":[{"day":"Mon","window":"06:00-07:59","score":2},{"day":"Mon","window":"15:00-16:59","score":1},{"day":"Mon","window":"18:00-19:59","score":1},{"day":"Tue","window":"16:00-17:59","score":2},{"day":"Tue","window":"13:00-14:59","score":2},{"day":"Tue","window":"05:00-06:59","score":1},{"day":"Wed","window":"04:00-05:59","score":1},{"day":"Wed","window":"14:00-15:59","score":1},{"day":"Wed","window":"09:00-10:59","score":1},{"day":"Thu","window":"10:00-11:59","score":3},{"day":"Fri","window":"08:00-09:59","score":1}]},{"sym":"GBPAUD","day_windows":[{"day":"Tue","window":"03:00-04:59","score":2},{"day":"Tue","window":"14:00-15:59","score":1},{"day":"Tue","window":"09:00-10:59","score":1},{"day":"Wed","window":"02:00-03:59","score":1},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Thu","window":"15:00-16:59","score":1}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"14:00-15:59","score":1},{"day":"Tue","window":"13:00-14:59","score":2},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Wed","window":"18:00-19:59","score":1},{"day":"Thu","window":"18:00-19:59","score":1},{"day":"Fri","window":"13:00-14:59","score":2}]},{"sym":"GBPCHF","day_windows":[{"day":"Mon","window":"09:00-10:59","score":2},{"day":"Tue","window":"13:00-14:59","score":3},{"day":"Wed","window":"18:00-19:59","score":1},{"day":"Thu","window":"09:00-10:59","score":1},{"day":"Fri","window":"11:00-12:59","score":2}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"12:00-13:59","score":1},{"day":"Tue","window":"16:00-17:59","score":1},{"day":"Wed","window":"08:00-09:59","score":2},{"day":"Wed","window":"02:00-03:59","score":1},{"day":"Wed","window":"13:00-14:59","score":1},{"day":"Thu","window":"07:00-08:59","score":1},{"day":"Thu","window":"12:00-13:59","score":1},{"day":"Thu","window":"15:00-16:59","score":1},{"day":"Fri","window":"12:00-13:59","score":1}]},{"sym":"GBPUSD","day_windows":[{"day":"Mon","window":"10:00-11:59","score":2},{"day":"Mon","window":"15:00-16:59","score":1},{"day":"Tue","window":"12:00-13:59","score":2},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Wed","window":"16:00-17:59","score":2},{"day":"Wed","window":"13:00-14:59","score":2},{"day":"Wed","window":"09:00-10:59","score":1},{"day":"Thu","window":"12:00-13:59","score":3},{"day":"Thu","window":"09:00-10:59","score":1},{"day":"Thu","window":"05:00-06:59","score":1}]},{"sym":"NAS100","day_windows":[{"day":"Mon","window":"08:00-09:59","score":1},{"day":"Mon","window":"15:00-16:59","score":1},{"day":"Tue","window":"11:00-12:59","score":3},{"day":"Tue","window":"16:00-17:59","score":2},{"day":"Tue","window":"08:00-09:59","score":1},{"day":"Wed","window":"14:00-15:59","score":2},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Thu","window":"14:00-15:59","score":2},{"day":"Thu","window":"08:00-09:59","score":1},{"day":"Fri","window":"15:00-16:59","score":3}]},{"sym":"NZDCAD","day_windows":[{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Mon","window":"01:00-02:59","score":1},{"day":"Mon","window":"16:00-17:59","score":1},{"day":"Tue","window":"08:00-09:59","score":1},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Wed","window":"17:00-18:59","score":1},{"day":"Thu","window":"13:00-14:59","score":1}]},{"sym":"NZDCHF","day_windows":[{"day":"Mon","window":"11:00-12:59","score":1},{"day":"Tue","window":"02:00-03:59","score":1},{"day":"Wed","window":"12:00-13:59","score":2},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Thu","window":"02:00-03:59","score":1},{"day":"Thu","window":"17:00-18:59","score":1},{"day":"Fri","window":"13:00-14:59","score":1},{"day":"Fri","window":"07:00-08:59","score":1}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"08:00-09:59","score":2},{"day":"Tue","window":"03:00-04:59","score":1},{"day":"Tue","window":"16:00-17:59","score":1},{"day":"Tue","window":"09:00-10:59","score":1},{"day":"Wed","window":"14:00-15:59","score":1},{"day":"Thu","window":"05:00-06:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1},{"day":"Fri","window":"01:00-02:59","score":1},{"day":"Fri","window":"05:00-06:59","score":1}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"04:00-05:59","score":1},{"day":"Mon","window":"17:00-18:59","score":1},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Tue","window":"04:00-05:59","score":1},{"day":"Wed","window":"14:00-15:59","score":1},{"day":"Thu","window":"13:00-14:59","score":2},{"day":"Thu","window":"03:00-04:59","score":1}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"14:00-15:59","score":3},{"day":"Mon","window":"09:00-10:59","score":1},{"day":"Tue","window":"07:00-08:59","score":2},{"day":"Tue","window":"17:00-18:59","score":1},{"day":"Wed","window":"14:00-15:59","score":2},{"day":"Wed","window":"08:00-09:59","score":1},{"day":"Wed","window":"05:00-06:59","score":1},{"day":"Thu","window":"11:00-12:59","score":2},{"day":"Thu","window":"15:00-16:59","score":2},{"day":"Fri","window":"15:00-16:59","score":2},{"day":"Fri","window":"12:00-13:59","score":1}]},{"sym":"USDCHF","day_windows":[{"day":"Mon","window":"02:00-03:59","score":1},{"day":"Tue","window":"14:00-15:59","score":4},{"day":"Tue","window":"07:00-08:59","score":1},{"day":"Tue","window":"00:00-01:59","score":1},{"day":"Wed","window":"17:00-18:59","score":2},{"day":"Wed","window":"01:00-02:59","score":1},{"day":"Wed","window":"11:00-12:59","score":1},{"day":"Thu","window":"11:00-12:59","score":3},{"day":"Thu","window":"00:00-01:59","score":2}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"13:00-14:59","score":1},{"day":"Mon","window":"18:00-19:59","score":1},{"day":"Tue","window":"03:00-04:59","score":3},{"day":"Tue","window":"12:00-13:59","score":2},{"day":"Tue","window":"00:00-01:59","score":2},{"day":"Wed","window":"08:00-09:59","score":2},{"day":"Wed","window":"00:00-01:59","score":1},{"day":"Wed","window":"12:00-13:59","score":1},{"day":"Thu","window":"03:00-04:59","score":1},{"day":"Fri","window":"04:00-05:59","score":1},{"day":"Fri","window":"15:00-16:59","score":1}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"00:00-08:59","score":1},{"day":"Tue","window":"02:00-08:59","score":2},{"day":"Wed","window":"00:00-10:59","score":2},{"day":"Fri","window":"00:00-14:59","score":3}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"12:00-18:59","score":2},{"day":"Tue","window":"04:00-17:59","score":3},{"day":"Wed","window":"00:00-07:59","score":3},{"day":"Thu","window":"02:00-15:59","score":1},{"day":"Fri","window":"10:00-16:59","score":2}]}],"5min":[{"sym":"AUDCAD","day_windows":[{"day":"Tue","window":"09:00-14:59","conf":"LOW"},{"day":"Wed","window":"01:00-05:59","conf":"LOW"}]},{"sym":"AUDCHF","day_windows":[{"day":"Tue","window":"08:00-11:59","conf":"HIGH"},{"day":"Thu","window":"12:00-16:59","conf":"LOW"}]},{"sym":"AUDNZD","day_windows":[{"day":"Tue","window":"01:00-03:59","conf":"HIGH"},{"day":"Wed","window":"00:00-01:59","conf":"LOW"}]},{"sym":"AUDUSD","day_windows":[{"day":"Tue","window":"06:00-10:59","conf":"LOW"}]},{"sym":"BTCUSD","day_windows":[{"day":"Tue","window":"02:00-03:59","conf":"HIGH"},{"day":"Wed","window":"04:00-15:59","conf":"HIGH"},{"day":"Thu","window":"06:00-16:59","conf":"HIGH"},{"day":"Fri","window":"07:00-17:59","conf":"LOW"}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"00:00-02:59","conf":"LOW"},{"day":"Tue","window":"00:00-04:59","conf":"LOW"},{"day":"Wed","window":"00:00-03:59","conf":"MEDIUM"},{"day":"Thu","window":"00:00-05:59","conf":"LOW"},{"day":"Fri","window":"03:00-09:59","conf":"HIGH"}]},{"sym":"CHFJPY","day_windows":[{"day":"Mon","window":"02:00-05:59","conf":"LOW"},{"day":"Tue","window":"03:00-07:59","conf":"LOW"}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"00:00-03:59","conf":"LOW"},{"day":"Fri","window":"05:00-16:59","conf":"HIGH"},{"day":"Sat","window":"05:00-12:59","conf":"LOW"}]},{"sym":"EURAUD","day_windows":[{"day":"Mon","window":"10:00-15:59","conf":"LOW"},{"day":"Tue","window":"08:00-11:59","conf":"HIGH"},{"day":"Wed","window":"05:00-13:59","conf":"LOW"},{"day":"Thu","window":"10:00-12:59","conf":"LOW"}]},{"sym":"EURCAD","day_windows":[{"day":"Mon","window":"00:00-06:59","conf":"HIGH"},{"day":"Wed","window":"14:00-18:59","conf":"LOW"}]},{"sym":"EURGBP","day_windows":[{"day":"Wed","window":"07:00-07:59","conf":"LOW"},{"day":"Thu","window":"01:00-02:59","conf":"HIGH"},{"day":"Fri","window":"02:00-18:59","conf":"HIGH"}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"01:00-10:59","conf":"HIGH"},{"day":"Tue","window":"01:00-06:59","conf":"LOW"},{"day":"Wed","window":"00:00-05:59","conf":"HIGH"},{"day":"Thu","window":"14:00-16:59","conf":"LOW"},{"day":"Fri","window":"05:00-07:59","conf":"LOW"}]},{"sym":"EURNZD","day_windows":[{"day":"Tue","window":"00:00-08:59","conf":"HIGH"},{"day":"Thu","window":"00:00-09:59","conf":"LOW"}]},{"sym":"EURUSD","day_windows":[{"day":"Mon","window":"00:00-06:59","conf":"HIGH"},{"day":"Tue","window":"07:00-09:59","conf":"HIGH"},{"day":"Wed","window":"09:00-18:59","conf":"LOW"},{"day":"Thu","window":"09:00-12:59","conf":"HIGH"}]},{"sym":"GBPAUD","day_windows":[{"day":"Tue","window":"09:00-12:00","conf":"HIGH"},{"day":"Fri","window":"07:00-12:00","conf":"HIGH"}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"00:00-06:00","conf":"LOW"},{"day":"Fri","window":"15:00-20:00","conf":"LOW"}]},{"sym":"GBPCHF","day_windows":[{"day":"Tue","window":"12:00-20:00","conf":"LOW"},{"day":"Thu","window":"08:00-12:00","conf":"LOW"},{"day":"Fri","window":"08:00-14:00","conf":"HIGH"}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"08:00-09:00","conf":"LOW"},{"day":"Tue","window":"06:00-09:00","conf":"LOW"},{"day":"Wed","window":"03:00-05:00","conf":"LOW"},{"day":"Fri","window":"02:00-09:00","conf":"LOW"}]},{"sym":"GBPUSD","day_windows":[{"day":"Tue","window":"09:00-10:00","conf":"LOW"},{"day":"Wed","window":"09:00-15:00","conf":"LOW"}]},{"sym":"NAS100","day_windows":[{"day":"Fri","window":"10:00-15:00","conf":"LOW"}]},{"sym":"NZDCAD","day_windows":[{"day":"Mon","window":"14:00-17:00","conf":"LOW"},{"day":"Fri","window":"03:00-09:00","conf":"HIGH"}]},{"sym":"NZDCHF","day_windows":[{"day":"Tue","window":"09:00-11:00","conf":"HIGH"},{"day":"Wed","window":"13:00-14:00","conf":"LOW"},{"day":"Fri","window":"13:00-19:00","conf":"LOW"}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"02:00-04:00","conf":"HIGH"},{"day":"Tue","window":"04:00-09:00","conf":"HIGH"},{"day":"Thu","window":"11:00-19:00","conf":"LOW"},{"day":"Fri","window":"11:00-14:00","conf":"LOW"}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"10:00-14:00","conf":"HIGH"},{"day":"Tue","window":"08:00-10:00","conf":"LOW"},{"day":"Wed","window":"00:00-03:00","conf":"HIGH"},{"day":"Thu","window":"10:00-12:00","conf":"LOW"},{"day":"Fri","window":"14:00-17:00","conf":"HIGH"}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"12:00-18:00","conf":"LOW"},{"day":"Tue","window":"06:00-12:00","conf":"HIGH"},{"day":"Thu","window":"10:00-16:00","conf":"HIGH"},{"day":"Fri","window":"13:00-14:00","conf":"LOW"}]},{"sym":"USDCHF","day_windows":[{"day":"Mon","window":"09:00-13:00","conf":"LOW"},{"day":"Tue","window":"06:00-09:00","conf":"LOW"},{"day":"Thu","window":"10:00-13:00","conf":"LOW"}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"11:00-15:00","conf":"LOW"},{"day":"Tue","window":"01:00-03:00","conf":"HIGH"}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"01:00-02:00","conf":"LOW"}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"00:00-03:00","conf":"LOW"},{"day":"Tue","window":"02:00-06:00","conf":"LOW"},{"day":"Thu","window":"15:00-18:00","conf":"LOW"},{"day":"Fri","window":"05:00-07:00","conf":"LOW"}]}],"15min":[{"sym":"AUDCAD","day_windows":[{"day":"Mon","window":"05:00-06:59","conf":"LOW"},{"day":"Tue","window":"00:00-03:59","conf":"LOW"},{"day":"Wed","window":"10:00-13:59","conf":"LOW"}]},{"sym":"AUDCHF","day_windows":[{"day":"Mon","window":"12:00-15:59","conf":"LOW"}]},{"sym":"AUDNZD","day_windows":[{"day":"Wed","window":"00:00-02:59","conf":"LOW"},{"day":"Thu","window":"04:00-06:59","conf":"LOW"},{"day":"Fri","window":"04:00-06:59","conf":"LOW"}]},{"sym":"AUDUSD","day_windows":[{"day":"Tue","window":"00:00-08:59","conf":"LOW"}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"04:00-11:59","conf":"HIGH"},{"day":"Tue","window":"04:00-06:59","conf":"LOW"},{"day":"Wed","window":"06:00-12:59","conf":"HIGH"},{"day":"Thu","window":"04:00-17:59","conf":"HIGH"},{"day":"Fri","window":"00:00-06:59","conf":"LOW"},{"day":"Sun","window":"06:00-13:59","conf":"LOW"}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"00:00-04:59","conf":"LOW"},{"day":"Tue","window":"00:00-05:59","conf":"LOW"},{"day":"Fri","window":"00:00-06:59","conf":"LOW"}]},{"sym":"CHFJPY","day_windows":[{"day":"Mon","window":"13:00-17:59","conf":"LOW"},{"day":"Tue","window":"07:00-10:59","conf":"LOW"},{"day":"Thu","window":"12:00-15:59","conf":"LOW"}]},{"sym":"ETHUSD","day_windows":[{"day":"Mon","window":"13:00-13:59","conf":"LOW"},{"day":"Tue","window":"12:00-18:59","conf":"LOW"},{"day":"Thu","window":"07:00-15:59","conf":"LOW"},{"day":"Sat","window":"02:00-14:59","conf":"HIGH"},{"day":"Sun","window":"06:00-10:59","conf":"HIGH"}]},{"sym":"EURAUD","day_windows":[{"day":"Tue","window":"15:00-16:59","conf":"LOW"},{"day":"Wed","window":"04:00-13:59","conf":"LOW"},{"day":"Fri","window":"11:00-13:59","conf":"LOW"}]},{"sym":"EURCAD","day_windows":[{"day":"Wed","window":"13:00-14:59","conf":"LOW"}]},{"sym":"EURGBP","day_windows":[{"day":"Tue","window":"06:00-09:59","conf":"HIGH"},{"day":"Fri","window":"02:00-13:59","conf":"HIGH"}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"17:00-19:59","conf":"LOW"}]},{"sym":"EURNZD","day_windows":[{"day":"Mon","window":"14:00-16:59","conf":"LOW"},{"day":"Wed","window":"01:00-15:59","conf":"HIGH"},{"day":"Thu","window":"09:00-13:59","conf":"LOW"}]},{"sym":"EURUSD","day_windows":[{"day":"Wed","window":"10:00-12:59","conf":"LOW"}]},{"sym":"GBPAUD","day_windows":[{"day":"Mon","window":"04:00-10:00","conf":"LOW"},{"day":"Thu","window":"10:00-11:00","conf":"LOW"}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"02:00-06:00","conf":"HIGH"},{"day":"Tue","window":"06:00-14:00","conf":"LOW"},{"day":"Wed","window":"00:00-07:00","conf":"LOW"}]},{"sym":"GBPCHF","day_windows":[{"day":"Mon","window":"11:00-15:00","conf":"LOW"},{"day":"Fri","window":"09:00-17:00","conf":"LOW"}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"12:00-18:00","conf":"HIGH"}]},{"sym":"GBPUSD","day_windows":[{"day":"Wed","window":"11:00-14:00","conf":"LOW"},{"day":"Fri","window":"10:00-15:00","conf":"HIGH"}]},{"sym":"NAS100","day_windows":[{"day":"Mon","window":"16:00-20:00","conf":"LOW"},{"day":"Tue","window":"11:00-19:00","conf":"LOW"},{"day":"Wed","window":"11:00-15:00","conf":"LOW"},{"day":"Fri","window":"07:00-12:00","conf":"LOW"}]},{"sym":"NZDCHF","day_windows":[{"day":"Wed","window":"00:00-04:00","conf":"HIGH"}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"08:00-11:00","conf":"LOW"},{"day":"Wed","window":"00:00-04:00","conf":"LOW"},{"day":"Thu","window":"13:00-17:00","conf":"LOW"}]},{"sym":"NZDUSD","day_windows":[{"day":"Wed","window":"00:00-04:00","conf":"HIGH"},{"day":"Fri","window":"09:00-14:00","conf":"LOW"}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"06:00-08:00","conf":"HIGH"},{"day":"Tue","window":"14:00-16:00","conf":"LOW"},{"day":"Thu","window":"10:00-18:00","conf":"LOW"},{"day":"Fri","window":"13:00-16:00","conf":"LOW"}]},{"sym":"USDCHF","day_windows":[{"day":"Tue","window":"05:00-08:00","conf":"LOW"},{"day":"Thu","window":"01:00-07:00","conf":"HIGH"}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"03:00-07:00","conf":"LOW"},{"day":"Fri","window":"04:00-07:00","conf":"LOW"}]},{"sym":"XAGUSD","day_windows":[{"day":"Tue","window":"14:00-16:00","conf":"LOW"},{"day":"Wed","window":"13:00-17:00","conf":"HIGH"},{"day":"Thu","window":"14:00-19:00","conf":"HIGH"},{"day":"Fri","window":"07:00-15:00","conf":"LOW"}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"10:00-14:00","conf":"LOW"},{"day":"Tue","window":"14:00-17:00","conf":"LOW"},{"day":"Wed","window":"10:00-16:00","conf":"LOW"},{"day":"Thu","window":"13:00-18:00","conf":"HIGH"},{"day":"Fri","window":"12:00-13:00","conf":"LOW"}]}],"2hr":[{"sym":"AUDCAD","day_windows":[{"day":"Thu","window":"04:00-07:59","conf":"LOW"},{"day":"Fri","window":"08:00-11:59","conf":"HIGH"}]},{"sym":"AUDCHF","day_windows":[{"day":"Tue","window":"11:00-15:59","conf":"HIGH"},{"day":"Wed","window":"09:00-16:59","conf":"HIGH"}]},{"sym":"AUDNZD","day_windows":[{"day":"Mon","window":"10:00-14:59","conf":"HIGH"},{"day":"Tue","window":"06:00-09:59","conf":"LOW"},{"day":"Wed","window":"00:00-01:59","conf":"LOW"},{"day":"Thu","window":"01:00-06:59","conf":"LOW"},{"day":"Fri","window":"08:00-14:59","conf":"LOW"}]},{"sym":"AUDUSD","day_windows":[{"day":"Wed","window":"10:00-14:59","conf":"LOW"},{"day":"Fri","window":"00:00-06:59","conf":"LOW"}]},{"sym":"BTCUSD","day_windows":[{"day":"Mon","window":"07:00-16:59","conf":"LOW"},{"day":"Tue","window":"13:00-16:59","conf":"LOW"},{"day":"Wed","window":"07:00-16:59","conf":"LOW"},{"day":"Thu","window":"11:00-14:59","conf":"LOW"},{"day":"Fri","window":"00:00-12:59","conf":"LOW"}]},{"sym":"CADJPY","day_windows":[{"day":"Mon","window":"14:00-17:59","conf":"HIGH"},{"day":"Wed","window":"04:00-08:59","conf":"HIGH"}]},{"sym":"CHFJPY","day_windows":[{"day":"Wed","window":"09:00-10:59","conf":"LOW"},{"day":"Fri","window":"09:00-12:59","conf":"LOW"}]},{"sym":"ETHUSD","day_windows":[{"day":"Thu","window":"00:00-08:59","conf":"HIGH"},{"day":"Sat","window":"01:00-08:59","conf":"HIGH"},{"day":"Sun","window":"01:00-08:59","conf":"HIGH"}]},{"sym":"EURAUD","day_windows":[{"day":"Tue","window":"04:00-05:59","conf":"MEDIUM"},{"day":"Wed","window":"02:00-12:59","conf":"HIGH"},{"day":"Thu","window":"14:00-16:59","conf":"LOW"},{"day":"Fri","window":"04:00-06:59","conf":"LOW"}]},{"sym":"EURCAD","day_windows":[{"day":"Thu","window":"09:00-13:59","conf":"HIGH"},{"day":"Fri","window":"04:00-10:59","conf":"HIGH"}]},{"sym":"EURGBP","day_windows":[{"day":"Thu","window":"09:00-14:59","conf":"HIGH"},{"day":"Fri","window":"05:00-07:59","conf":"HIGH"}]},{"sym":"EURJPY","day_windows":[{"day":"Mon","window":"16:00-19:59","conf":"HIGH"},{"day":"Tue","window":"04:00-05:59","conf":"LOW"},{"day":"Wed","window":"08:00-14:59","conf":"LOW"},{"day":"Thu","window":"16:00-17:59","conf":"LOW"},{"day":"Fri","window":"04:00-11:59","conf":"HIGH"}]},{"sym":"EURNZD","day_windows":[{"day":"Mon","window":"11:00-16:59","conf":"HIGH"},{"day":"Tue","window":"02:00-05:59","conf":"HIGH"},{"day":"Fri","window":"04:00-15:59","conf":"HIGH"}]},{"sym":"EURUSD","day_windows":[{"day":"Thu","window":"15:00-15:59","conf":"LOW"},{"day":"Fri","window":"00:00-13:59","conf":"LOW"}]},{"sym":"GBPAUD","day_windows":[{"day":"Wed","window":"09:00-12:00","conf":"HIGH"},{"day":"Thu","window":"10:00-11:00","conf":"LOW"},{"day":"Fri","window":"00:00-05:00","conf":"HIGH"}]},{"sym":"GBPCAD","day_windows":[{"day":"Mon","window":"10:00-13:00","conf":"HIGH"},{"day":"Tue","window":"02:00-08:00","conf":"LOW"}]},{"sym":"GBPCHF","day_windows":[{"day":"Mon","window":"11:00-14:00","conf":"HIGH"},{"day":"Wed","window":"08:00-10:00","conf":"LOW"},{"day":"Fri","window":"12:00-15:00","conf":"LOW"}]},{"sym":"GBPJPY","day_windows":[{"day":"Mon","window":"14:00-16:00","conf":"LOW"},{"day":"Tue","window":"08:00-12:00","conf":"LOW"},{"day":"Wed","window":"09:00-11:00","conf":"HIGH"},{"day":"Thu","window":"10:00-14:00","conf":"HIGH"}]},{"sym":"GBPUSD","day_windows":[{"day":"Tue","window":"13:00-16:00","conf":"HIGH"},{"day":"Wed","window":"03:00-06:00","conf":"HIGH"},{"day":"Fri","window":"06:00-09:00","conf":"HIGH"}]},{"sym":"NAS100","day_windows":[{"day":"Tue","window":"05:00-09:00","conf":"LOW"},{"day":"Thu","window":"08:00-10:00","conf":"LOW"},{"day":"Fri","window":"07:00-13:00","conf":"LOW"}]},{"sym":"NZDCAD","day_windows":[{"day":"Tue","window":"05:00-07:00","conf":"LOW"},{"day":"Thu","window":"14:00-15:00","conf":"HIGH"}]},{"sym":"NZDCHF","day_windows":[{"day":"Mon","window":"03:00-06:00","conf":"LOW"},{"day":"Tue","window":"12:00-17:00","conf":"HIGH"},{"day":"Wed","window":"10:00-15:00","conf":"LOW"},{"day":"Thu","window":"07:00-12:00","conf":"HIGH"}]},{"sym":"NZDJPY","day_windows":[{"day":"Mon","window":"07:00-10:00","conf":"LOW"},{"day":"Tue","window":"12:00-14:00","conf":"HIGH"},{"day":"Wed","window":"10:00-15:00","conf":"LOW"},{"day":"Fri","window":"08:00-09:00","conf":"HIGH"}]},{"sym":"NZDUSD","day_windows":[{"day":"Mon","window":"04:00-08:00","conf":"HIGH"},{"day":"Tue","window":"00:00-04:00","conf":"LOW"},{"day":"Fri","window":"12:00-14:00","conf":"LOW"}]},{"sym":"USDCAD","day_windows":[{"day":"Mon","window":"13:00-16:00","conf":"LOW"},{"day":"Tue","window":"12:00-16:00","conf":"LOW"},{"day":"Wed","window":"10:00-13:00","conf":"HIGH"},{"day":"Thu","window":"13:00-14:00","conf":"HIGH"},{"day":"Fri","window":"06:00-10:00","conf":"LOW"}]},{"sym":"USDCHF","day_windows":[{"day":"Wed","window":"02:00-10:00","conf":"LOW"},{"day":"Fri","window":"04:00-08:00","conf":"HIGH"}]},{"sym":"USDJPY","day_windows":[{"day":"Mon","window":"01:00-05:00","conf":"HIGH"},{"day":"Wed","window":"03:00-06:00","conf":"HIGH"}]},{"sym":"XAGUSD","day_windows":[{"day":"Mon","window":"10:00-11:00","conf":"LOW"},{"day":"Wed","window":"06:00-09:00","conf":"LOW"},{"day":"Fri","window":"14:00-18:00","conf":"LOW"}]},{"sym":"XAUUSD","day_windows":[{"day":"Mon","window":"01:00-08:00","conf":"HIGH"},{"day":"Tue","window":"14:00-16:00","conf":"LOW"},{"day":"Thu","window":"15:00-20:00","conf":"HIGH"},{"day":"Fri","window":"01:00-06:00","conf":"HIGH"}]}]};
 const PIP={EURUSD:0.0001,GBPUSD:0.0001,AUDUSD:0.0001,NZDUSD:0.0001,USDCAD:0.0001,USDCHF:0.0001,EURGBP:0.0001,EURAUD:0.0001,EURCAD:0.0001,EURNZD:0.0001,EURJPY:0.01,GBPJPY:0.01,USDJPY:0.01,CADJPY:0.01,CHFJPY:0.01,AUDJPY:0.01,NZDJPY:0.01,AUDCAD:0.0001,AUDCHF:0.0001,AUDNZD:0.0001,GBPAUD:0.0001,GBPCAD:0.0001,GBPCHF:0.0001,GBPNZD:0.0001,NZDCAD:0.0001,NZDCHF:0.0001,XAUUSD:0.01,XAGUSD:0.01,NAS100:0.01,BTCUSD:1,ETHUSD:0.01};
 const TFS=['1min','3min','5min','15min','2hr'],MAX=5,DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const signals={},activeFilters=new Set(['S4','S3','S2','S1','H','M','L']);
+const signals={},activeFilters=new Set(['S4','S3','S2','S1','S0','H','M','L']);
 TFS.forEach(tf=>signals[tf]=[]);
 function pad(n){return String(n).padStart(2,'0')}
 
@@ -585,17 +591,28 @@ async function updateWeeklyStrip() {
       // Derive fkey — use stored score first, fall back to calculated
       let fkey = null;
       if (row.score) {
-        // Stored: S1-S4 or H/M/L
         fkey = row.score.startsWith('S') ? row.score : row.score;
       } else {
         const score = getScore(row.sym, row.tf, sigTime);
-        if (!score) return; // no score = exclude
-        fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
+        if (!score) {
+          // S0 — only count when currency AI is on and passes filter
+          if (!betaMode) return;
+          const tmpSig = {sym:row.sym, tf:row.tf, dir:row.dir, score:null};
+          if (currencyFilterHidden(tmpSig)) return;
+          fkey = 'S0';
+        } else {
+          fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
+        }
       }
       if (!fkey) return;
       if (!activeFilters.has(fkey)) return;
-      // Beta filter — skip signals that would be hidden
-      if (betaMode && BETA_TFS.includes(row.tf)) {
+      // Currency AI filter
+      if (betaMode) {
+        const sig = { sym: row.sym, tf: row.tf, dir: row.dir };
+        if (currencyFilterHidden(sig)) return;
+      }
+      // Pair AI filter
+      if (pairBetaMode && BETA_TFS.includes(row.tf)) {
         const key = row.sym + '|' + row.tf + '|' + row.dir;
         const s = signalStats[key];
         if (s && s.trades >= MIN_TRADES_PF) {
@@ -732,14 +749,82 @@ function toggleAllHistory() {
 let historyMode = false;
 
 // ── BETA FILTER & COMBINED SCORING ──
-let betaMode = false;
-let signalStats = {}; // keyed as "sym|tf|dir"
+let betaMode = false;        // Currency Strength AI
+let pairBetaMode = false;    // Pair Trend AI
+let signalStats = {};        // keyed as "sym|tf|dir" — for pair filter
+let currencyStats = {};      // keyed as "CCY|long" or "CCY|short" — for currency filter
 const BETA_TFS = ['1min','3min','5min'];
 const MIN_TRADES_PF   = 30;    // PF filter kicks in at 30 trades
 const MIN_TRADES_Z    = 250;   // z-score kicks in at 250 trades
 const MIN_PF          = 1.05;  // minimum profit factor to show
 const BREAKEVEN_WR    = 0.417; // 1/(1+1.4) for 1.4RR
 const Z_THRESHOLD     = 1.645; // 90% confidence one-tailed
+
+// ── CURRENCY STRENGTH FILTER ──
+const CCY_LOOKBACK = 30;
+const CCY_MIN_HISTORY = 10;
+const CCY_WR_THRESHOLD = 0.429; // breakeven at 1.4RR
+const SPECIAL_PAIRS = {XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],
+  BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
+
+function getCurrencies(sym, dir) {
+  const sp = SPECIAL_PAIRS[sym];
+  const base = sp ? sp[0] : sym.slice(0,3);
+  const quote = sp ? sp[1] : sym.slice(3);
+  return dir === 'buy' ? [base, quote] : [quote, base]; // [longCcy, shortCcy]
+}
+
+function getCcyWR(ccy, side) {
+  // side: 'long' or 'short'
+  const key = ccy + '|' + side;
+  const hist = currencyStats[key] || [];
+  const recent = hist.slice(-CCY_LOOKBACK);
+  if (recent.length < CCY_MIN_HISTORY) return null;
+  return recent.filter(o => o === 'tp').length / recent.length;
+}
+
+function currencyFilterHidden(sig) {
+  if (!betaMode) return false;
+  const [longCcy, shortCcy] = getCurrencies(sig.sym, sig.dir);
+  const longWR = getCcyWR(longCcy, 'long');
+  const shortWR = getCcyWR(shortCcy, 'long'); // short ccy's performance when held long
+  if (longWR !== null && longWR < CCY_WR_THRESHOLD) return true;
+  if (shortWR !== null && shortWR >= CCY_WR_THRESHOLD) return true;
+  return false;
+}
+
+async function loadCurrencyStats() {
+  try {
+    // Fetch last 10000 outcomes to build currency rolling history
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=sym,dir,outcome&outcome=not.is.null&order=created_at.asc&limit=10000',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
+    const hist = {};
+    rows.forEach(row => {
+      const sp = SPECIAL_PAIRS[row.sym];
+      const base = sp ? sp[0] : row.sym.slice(0,3);
+      const quote = sp ? sp[1] : row.sym.slice(3);
+      const [longCcy, shortCcy] = row.dir === 'buy' ? [base, quote] : [quote, base];
+      // Long currency history
+      const lk = longCcy + '|long';
+      if (!hist[lk]) hist[lk] = [];
+      hist[lk].push(row.outcome);
+      // Short currency (tracked as its performance when held long)
+      const sk = shortCcy + '|long';
+      if (!hist[sk]) hist[sk] = [];
+      hist[sk].push(row.outcome === 'tp' ? 'sl' : 'tp'); // invert — winning short = losing long
+    });
+    // Keep only last CCY_LOOKBACK per key
+    currencyStats = {};
+    Object.entries(hist).forEach(([k, v]) => {
+      currencyStats[k] = v.slice(-CCY_LOOKBACK * 4); // keep more for reactivity
+    });
+    console.log('Currency stats loaded:', Object.keys(currencyStats).length, 'currency buckets');
+  } catch(e) { console.error('loadCurrencyStats error:', e); }
+}
 
 // ── SCORING WEIGHTS ──
 // Final = session_historical(25%) + live_PF(40%) + statistical_confidence(35%)
@@ -806,20 +891,29 @@ function compositeProb(sig) {
   }
 }
 
-// Should this signal be hidden by beta filter?
+// Should this signal be hidden by CURRENCY filter?
 function betaHidden(sig) {
   if (!betaMode) return false;
+  return currencyFilterHidden(sig);
+}
+
+// Should this signal be hidden by PAIR filter?
+function pairBetaHidden(sig) {
+  if (!pairBetaMode) return false;
   if (!BETA_TFS.includes(sig.tf)) return false;
   const key = sig.sym + '|' + sig.tf + '|' + sig.dir;
   const s = signalStats[key];
   if (!s || s.trades < MIN_TRADES_PF) return false; // insufficient data — show
   const pf = s.losses > 0 ? (s.wins * 1.4) / s.losses : (s.wins > 0 ? 3.0 : 0);
-  // At 250+ trades also require z-score > -1.0 (not statistically proven bad)
   if (s.trades >= MIN_TRADES_Z) {
     const z = calcZScore(s.wins, s.trades);
-    if (z !== null && z < -1.645) return true; // statistically bad — always hide
+    if (z !== null && z < -1.645) return true;
   }
   return pf < MIN_PF;
+}
+
+function eitherBetaHidden(sig) {
+  return betaHidden(sig) || pairBetaHidden(sig);
 }
 
 // Prob badge HTML — shows % and tier label
@@ -857,7 +951,25 @@ function toggleBetaFilter() {
     mobBtn.style.background = betaMode ? '#ffb700' : 'rgba(255,183,0,0.08)';
     mobBtn.style.color = betaMode ? '#0b0d10' : '#ffb700';
   }
+  // Show/hide S0 filter button
+  const s0tag = document.getElementById('s0tag');
+  if (s0tag) s0tag.style.display = betaMode ? '' : 'none';
+  // Reload signals to include/exclude S0
+  TFS.forEach(tf => {
+    signals[tf] = [];
+    const list = document.getElementById('list-' + tf);
+    if (list) list.innerHTML = '<div class="empty-msg">Refreshing...</div>';
+  });
+  loadRecent().then(() => { loadTodayHistory(); applyBetaFilter(); });
+  updateWeeklyStrip();
+}
+
+function togglePairFilter() {
+  pairBetaMode = !pairBetaMode;
+  const btn = document.getElementById('betaPairBtn');
+  if (btn) btn.classList.toggle('on', pairBetaMode);
   applyBetaFilter();
+  updateWeeklyStrip();
 }
 
 function applyBetaFilter() {
@@ -872,7 +984,7 @@ function applyBetaFilter() {
     const sig = { sym, tf, dir, score:sc };
 
     // Apply/remove beta-hidden
-    card.classList.toggle('beta-hidden', betaHidden(sig));
+    card.classList.toggle('beta-hidden', eitherBetaHidden(sig));
 
     // Prob badge
     const existingProb = card.querySelector('.prob-badge');
@@ -981,17 +1093,23 @@ async function loadRecent(){
         else if(!outcome&&row.closed_at)outcome='closed';
         // Use stored score from DB if available, fall back to derived
         let score=null;
+        let isS0=false;
         if(row.score){
-          // Stored score: S1-S4 or H/M/L
           if(row.score.startsWith('S')) score={type:'score',val:parseInt(row.score[1])};
           else score={type:'conf',val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
         } else {
           score=getScore(row.sym,row.tf,sigTime);
         }
-        // Must have a score to show
-        if(!score)return;
-        // Must pass session check for signals without stored score
-        if(!row.score&&!wasInSession(row.sym,row.tf,sigTime,outcome))return;
+        // No score — only show if Currency AI is on and signal passes currency filter
+        if(!score){
+          if(!betaMode) return; // currency AI off — hide unscored
+          const tmpSig={sym:row.sym,tf:row.tf,dir:row.dir,score:null};
+          if(currencyFilterHidden(tmpSig)) return; // fails currency filter — hide
+          if(!activeFilters.has('S0')) return; // user toggled S0 off — hide
+          score={type:'score',val:0}; // assign S0
+          isS0=true;
+        }
+        if(!isS0&&!row.score&&!wasInSession(row.sym,row.tf,sigTime,outcome))return;
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
@@ -1026,7 +1144,7 @@ async function loadRecent(){
   }catch(e){}
 }
 
-loadSignalStats().then(() => loadRecent());
+Promise.all([loadSignalStats(), loadCurrencyStats()]).then(() => loadRecent());
 connect();
 updateCounts();
 </script>
