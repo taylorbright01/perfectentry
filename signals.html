@@ -832,25 +832,18 @@ function probBadgeHtml(prob) {
 
 async function loadSignalStats() {
   try {
-    // Fetch enough trades to cover 500 per bucket — 29 pairs × 5 TFs × 2 dirs × 500 = too many
-    // So fetch last 10000 outcomes ordered newest first and bucket client-side (max 500 per key)
+    // Read directly from signal_stats table — pre-aggregated, always accurate
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome&outcome=not.is.null&order=created_at.desc&limit=10000',
+      SUPABASE_URL + '/rest/v1/signal_stats?select=sym,tf,dir,wins,losses,trades&limit=1000',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) return;
     const rows = await res.json();
-    const buckets = {};
+    signalStats = {};
     rows.forEach(row => {
       const key = row.sym + '|' + row.tf + '|' + row.dir;
-      if (!buckets[key]) buckets[key] = { wins:0, losses:0, trades:0 };
-      if (buckets[key].trades < 500) {
-        if (row.outcome === 'tp') buckets[key].wins++;
-        else if (row.outcome === 'sl') buckets[key].losses++;
-        buckets[key].trades++;
-      }
+      signalStats[key] = { wins: row.wins, losses: row.losses, trades: row.trades };
     });
-    signalStats = buckets;
     console.log('Signal stats loaded:', Object.keys(signalStats).length, 'buckets');
   } catch(e) { console.error('loadSignalStats error:', e); }
 }
