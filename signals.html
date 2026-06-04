@@ -1063,8 +1063,27 @@ async function loadTodayHistory() {
         if (!outcome && !row.closed_at) outcome = 'active';
         else if (!outcome && row.closed_at) outcome = 'closed';
         const sigTime = new Date(row.created_at);
-        if (!wasInSession(row.sym, tf, sigTime, outcome)) return;
-        const score = getScore(row.sym, tf, sigTime);
+
+        // Determine score
+        let score = null;
+        if (row.score) {
+          if (row.score.startsWith('S')) score = {type:'score', val:parseInt(row.score[1])};
+          else score = {type:'conf', val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
+        } else {
+          score = getScore(row.sym, tf, sigTime);
+        }
+
+        if (!score) {
+          // S0 — only show if Currency AI on, S0 toggled on, and passed currency filter
+          if (!betaMode) return;
+          if (!activeFilters.has('S0')) return;
+          if (row.currency_ai_pass === false) return;
+          score = {type:'score', val:0};
+        } else {
+          // Normal scored signal — check session
+          if (!wasInSession(row.sym, tf, sigTime, outcome)) return;
+        }
+
         const sig = { sym:row.sym, tf, dir:row.dir, entry:parseFloat(row.entry), sl:parseFloat(row.sl), tp:parseFloat(row.tp), score, created_at:row.created_at, outcome };
         const card = makeCard(sig);
         card.classList.remove('entering');
