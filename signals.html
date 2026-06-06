@@ -961,12 +961,20 @@ function currencyFilterStatus(sig) {
 
 function currencyFilterHidden(sig) {
   if (!betaMode) return false;
-  // Blackout 20:00-23:59 UTC — hide all S0 signals in this window
+  // Scored signals (S1-S4/H/M/L) are never hidden by currency filter
+  // Currency filter only gates S0 (unscored) signals
+  if (sig.score && sig.score.type !== undefined && sig.score.val !== 0) return false;
+  if (sig.score && sig.score.val === 0) {
+    // S0 signal — check currency filter
+    const now = new Date();
+    if (now.getUTCHours() >= 20) return true; // blackout
+    const status = currencyFilterStatus(sig);
+    return status !== 'pass';
+  }
+  // No score — check currency filter
   const now = new Date();
   if (now.getUTCHours() >= 20) return true;
   const status = currencyFilterStatus(sig);
-  // Hide if failed OR insufficient data
-  // S0 signals require a definitive PASS — insufficient data = hide
   return status !== 'pass';
 }
 
@@ -1131,14 +1139,16 @@ function toggleBetaFilter() {
   // Show/hide S0 filter button
   const s0tag = document.getElementById('s0tag');
   if (s0tag) s0tag.style.display = betaMode ? '' : 'none';
-  // Reload signals to include/exclude S0
+  // Reload currency stats then signals
   TFS.forEach(tf => {
     signals[tf] = [];
     const list = document.getElementById('list-' + tf);
     if (list) list.innerHTML = '<div class="empty-msg">Refreshing...</div>';
   });
-  loadRecent().then(() => { loadTodayHistory(); applyBetaFilter(); });
-  updateWeeklyStrip();
+  loadCurrencyStats().then(() => {
+    loadRecent().then(() => { loadTodayHistory(); applyBetaFilter(); });
+    updateWeeklyStrip();
+  });
 }
 
 function togglePairFilter() {
