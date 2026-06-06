@@ -432,6 +432,24 @@
     </div>
   </div>
 </div>
+
+<!-- ACTIVE TRADES MODAL -->
+<div class="modal-overlay" id="activeModal" onclick="if(event.target===this)closeActiveModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Active Trades <span id="activeModalCount" style="color:var(--teal);margin-left:6px"></span></h3>
+      <button class="modal-close" onclick="closeActiveModal()">✕</button>
+    </div>
+    <div class="modal-body" id="activeModalBody">
+      <div class="modal-empty">Loading...</div>
+    </div>
+    <div class="modal-footer">
+      <span>Signals open &gt;4h shown in amber</span>
+      <button class="modal-refresh" onclick="loadActiveModal()">↻ Refresh</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL='https://nmfsqgqwjihpudiqnuwh.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
