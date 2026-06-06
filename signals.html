@@ -505,9 +505,9 @@ function getScore(sym,tf,now){
   return null;
 }
 // Check if a signal was valid — i.e. its timestamp falls within a known session window
-function wasInSession(sym,tf,signalDate){
-  // Check if the signal fired during a valid session window for this pair/tf
-  // Uses the signal's own timestamp — signals outside windows never show
+function wasInSession(sym,tf,signalDate,outcome){
+  // Completed trades always show regardless of whether window is still open
+  if(outcome==='tp'||outcome==='sl') return true;
   const data=SESSION_DATA[tf];if(!data)return false;
   const inst=data.find(i=>i.sym===sym);if(!inst)return false;
   const day=DAY[signalDate.getUTCDay()];
@@ -561,7 +561,7 @@ function pushSignal(sig){
   const list=document.getElementById('list-'+sig.tf);if(!list)return;
   // Only display if the signal fired during a valid session window
   const sigTime=sig.created_at?new Date(sig.created_at):new Date();
-  if(!wasInSession(sig.sym,sig.tf,sigTime))return;
+  if(!wasInSession(sig.sym,sig.tf,sigTime,sig.outcome))return;
   const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
   signals[sig.tf].unshift(sig);
   const card=makeCard(sig);
@@ -689,11 +689,16 @@ async function updateWeeklyStrip() {
     if (activeRes.ok) {
       const activeRows = await activeRes.json();
       activeRows.forEach((row) => {
-        const fkey = row.score || 'S0';
-        if (!activeFilters.has(fkey)) return;
-        if (fkey === 'S0' && !betaMode) return;
-        if (betaMode && fkey === 'S0' && !activeFilters.has('S0')) return;
-        if (betaMode && row.currency_ai_pass === false) return;
+        // Scored signals always count if filter matches
+        if (row.score) {
+          if (!activeFilters.has(row.score)) return;
+          active++;
+          return;
+        }
+        // S0 — only count when Currency AI on, S0 toggled, currency_ai_pass = true
+        if (!betaMode) return;
+        if (!activeFilters.has('S0')) return;
+        if (row.currency_ai_pass !== true) return;
         active++;
       });
     }
