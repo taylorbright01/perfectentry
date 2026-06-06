@@ -855,11 +855,15 @@ async function loadActiveModal() {
 
     // Filter by active score filters and currency AI
     const filtered = rows.filter(row => {
-      const fkey = row.score || (betaMode ? 'S0' : null);
-      if (!fkey) return false;
-      if (!activeFilters.has(fkey)) return false;
-      if (fkey === 'S0' && !betaMode) return false;
-      if (betaMode && fkey === 'S0' && row.currency_ai_pass !== true) return false;
+      // Scored signals always show if score filter matches
+      if (row.score) {
+        if (!activeFilters.has(row.score)) return false;
+        return true;
+      }
+      // S0 — only show when Currency AI on, S0 toggled, and passed filter
+      if (!betaMode) return false;
+      if (!activeFilters.has('S0')) return false;
+      if (row.currency_ai_pass !== true) return false;
       return true;
     });
 
