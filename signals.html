@@ -133,6 +133,53 @@
   .row-pip.tp{color:rgba(0,200,150,0.55)}
   .sig-time{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-mute);margin-top:6px;padding-top:5px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 
+  /* ACTIVE TRADES MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    width: min(540px, 94vw); max-height: 80vh;
+    background: #0f1216; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  .modal-header {
+    padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .modal-header h3 { font-size: 14px; font-weight: 800; }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.15);
+    background: none; color: var(--text-dim); font-size: 16px; cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .modal-body { overflow-y: auto; flex: 1; padding: 8px; }
+  .modal-empty { padding: 32px; text-align: center; color: var(--text-mute); font-size: 12px; }
+  .active-row {
+    display: grid; grid-template-columns: 90px 50px 44px 1fr 70px 60px;
+    align-items: center; gap: 8px;
+    padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02); margin-bottom: 6px; font-size: 11px;
+  }
+  .active-row:hover { background: rgba(255,255,255,0.05); }
+  .active-row .ar-sym { font-weight: 800; font-size: 12px; }
+  .active-row .ar-tf { color: var(--text-mute); font-size: 10px; }
+  .active-row .ar-dir { font-weight: 800; font-size: 10px; padding: 2px 7px; border-radius: 999px; text-align: center; }
+  .active-row .ar-dir.buy { background: rgba(1,160,184,0.15); color: var(--teal); border: 1px solid rgba(1,160,184,0.3); }
+  .active-row .ar-dir.sell { background: rgba(255,106,42,0.12); color: #FF9060; border: 1px solid rgba(255,106,42,0.25); }
+  .active-row .ar-entry { font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .active-row .ar-age { color: var(--text-mute); font-size: 10px; text-align: right; }
+  .active-row .ar-score { font-size: 9px; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
+    font-size: 11px; color: var(--text-mute); display: flex; justify-content: space-between; align-items: center; }
+  .modal-refresh { font-size: 10px; font-weight: 700; padding: 5px 12px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15); background: none; color: var(--text-dim); cursor: pointer; }
+  .modal-refresh:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
   /* WEEKLY STRIP */
   .weekly-strip{flex-shrink:0;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border);padding:7px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .weekly-inner{max-width:1600px;margin:0 auto;width:100%;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -315,6 +362,7 @@
       <a href="screener.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Screener</a>
       <a href="signals.html" style="color:#FF6A2A;text-decoration:none">Live Signals</a>
       <a href="data.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Data</a>
+      <a href="currencyai.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Currency AI</a>
     </div>
     <a href="https://whop.com/perfect-entry/" target="_blank" style="padding:5px 12px;border-radius:8px;border:2px solid #015662;background:rgba(1,86,98,0.15);color:#EAFDFC;font-weight:800;font-size:11px;text-decoration:none;white-space:nowrap">Join Now</a>
   </div>
@@ -339,7 +387,7 @@
     <span class="ftag on" data-f="S3">S3</span>
     <span class="ftag on" data-f="S2">S2</span>
     <span class="ftag on" data-f="S1">S1</span>
-    <span class="ftag on" data-f="S0" id="s0tag" style="display:none">S0</span>
+    <span class="ftag on" data-f="S0" id="s0tag">S0</span>
     <div class="filter-sep"></div>
     <span class="filter-label">Conf <span style="font-weight:500;opacity:0.55;font-size:9px">15m·2h</span></span>
     <span class="ftag on" data-f="H">HIGH</span>
@@ -347,7 +395,7 @@
     <span class="ftag on" data-f="L">LOW</span>
     <button class="clear-btn" id="clearBtn">Clear signals</button>
     <button class="ftag" id="histBtn" onclick="toggleAllHistory()">Today's history</button>
-    <button class="beta-btn" id="betaBtn" onclick="toggleBetaFilter()">⚡ Currency AI</button>
+    <button class="beta-btn on" id="betaBtn" onclick="toggleBetaFilter()">⚡ Currency AI</button>
     <button class="beta-btn" id="betaPairBtn" onclick="togglePairFilter()">🎯 Pair AI</button>
   </div>
 </div>
@@ -361,7 +409,7 @@
     <span class="weekly-sep">·</span>
     <span class="weekly-r zero" id="wkR">+0.0R</span>
     <span class="weekly-sep">·</span>
-    <span class="weekly-open" id="wkOpen">0 active</span>
+    <span class="weekly-open" id="wkOpen" onclick="openActiveModal()" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px" title="View active trades">0 active</span>
   </div>
 </div>
 
@@ -755,8 +803,84 @@ function toggleAllHistory() {
 
 let historyMode = false;
 
+// ── ACTIVE TRADES MODAL ──
+function openActiveModal() {
+  document.getElementById('activeModal').classList.add('open');
+  loadActiveModal();
+}
+
+function closeActiveModal() {
+  document.getElementById('activeModal').classList.remove('open');
+}
+
+async function loadActiveModal() {
+  const body = document.getElementById('activeModalBody');
+  const countEl = document.getElementById('activeModalCount');
+  if (!body) return;
+  body.innerHTML = '<div class="modal-empty">Loading...</div>';
+
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=id,sym,tf,dir,entry,sl,tp,score,created_at,currency_ai_pass&outcome=is.null&order=created_at.desc&limit=200',
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+    );
+    if (!res.ok) { body.innerHTML = '<div class="modal-empty">Failed to load.</div>'; return; }
+    const rows = await res.json();
+
+    if (rows.length === 0) {
+      body.innerHTML = '<div class="modal-empty">No active trades.</div>';
+      if (countEl) countEl.textContent = '';
+      return;
+    }
+
+    if (countEl) countEl.textContent = '(' + rows.length + ')';
+
+    const now = Date.now();
+    body.innerHTML = rows.map(row => {
+      const age = now - new Date(row.created_at).getTime();
+      const hrs = Math.floor(age / 3600000);
+      const mins = Math.floor((age % 3600000) / 60000);
+      const ageStr = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+
+      // Flag suspiciously old signals
+      const isStuck = age > 4 * 3600000; // older than 4 hours
+      const stuckStyle = isStuck ? 'border-color:rgba(255,183,0,0.4);background:rgba(255,183,0,0.04)' : '';
+
+      // Score label
+      let scoreLabel = '';
+      let scoreStyle = '';
+      if (row.score) {
+        scoreLabel = row.score;
+        scoreStyle = row.score.startsWith('S') ? 'background:rgba(68,170,255,0.15);color:#7de3ff;border:1px solid rgba(68,170,255,0.3)' : 'background:rgba(1,160,184,0.12);color:var(--teal);border:1px solid rgba(1,160,184,0.25)';
+      } else if (row.currency_ai_pass === true) {
+        scoreLabel = 'S0';
+        scoreStyle = 'background:rgba(255,183,0,0.12);color:#ffb700;border:1px solid rgba(255,183,0,0.3)';
+      }
+
+      const entry = parseFloat(row.entry);
+      const dp = ['BTCUSD'].includes(row.sym) ? 0 : ['XAUUSD','XAGUSD','NAS100','ETHUSD'].includes(row.sym) ? 2 : row.sym.includes('JPY') ? 3 : 5;
+
+      return \`<div class="active-row" style="\${stuckStyle}" onclick="navigator.clipboard.writeText('\${row.id}').catch(()=>{})" title="Click to copy ID: \${row.id}">
+        <span class="ar-sym">\${row.sym}</span>
+        <span class="ar-tf" style="color:var(--text-mute)">\${row.tf}</span>
+        <span class="ar-dir \${row.dir}">\${row.dir.toUpperCase()}</span>
+        <span class="ar-entry">\${entry.toFixed(dp)}</span>
+        <span class="ar-age\${isStuck ? '" style="color:#ffb700' : ''}">\${ageStr}\${isStuck ? ' ⚠' : ''}</span>
+        <span class="ar-score" style="\${scoreStyle};padding:2px 6px;border-radius:4px">\${scoreLabel}</span>
+      </div>\`;
+    }).join('');
+
+  } catch(e) {
+    body.innerHTML = '<div class="modal-empty">Error loading trades.</div>';
+  }
+}
+
+// Close on Escape key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeActiveModal(); });
+
+
 // ── BETA FILTER & COMBINED SCORING ──
-let betaMode = false;        // Currency Strength AI
+let betaMode = true;         // Currency Strength AI — on by default
 let pairBetaMode = false;    // Pair Trend AI
 let signalStats = {};        // keyed as "sym|tf|dir" — for pair filter
 let currencyStats = {};      // keyed as "CCY|long" or "CCY|short" — for currency filter

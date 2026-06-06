@@ -135,6 +135,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
       <a href="screener.html" class="active">Session Screener</a>
       <a href="signals.html">Live Signals</a>
       <a href="data.html">Data</a>
+      <a href="currencyai.html">Currency AI</a>
     </div>
     <a href="https://whop.com/perfect-entry/" target="_blank" class="site-nav-cta">Join Now</a>
   </div>
@@ -639,7 +640,7 @@ function getScreenerTF() {
 }
 
 function applyScreenerBeta() {
-  if (!screenerBeta) {
+  if (!screenerBeta && !screenerPairBeta) {
     // Remove all dir badges
     document.querySelectorAll('.dir-filter-badge').forEach(el => el.remove());
     return;
@@ -647,6 +648,7 @@ function applyScreenerBeta() {
   const tf = getScreenerTF();
   // Only apply to 1min, 3min, 5min
   if (!['1min','3min','5min'].includes(tf)) return;
+  if (!screenerBeta && !screenerPairBeta) return;
 
   // Apply to all active cards in current pane
   const pane = document.getElementById(tf);
@@ -666,18 +668,41 @@ function applyScreenerBeta() {
     const sellOk = sellPF === null || sellPF >= MIN_PF;
 
     let badge = null;
-    if (!buyOk && sellOk) {
-      badge = document.createElement('span');
-      badge.className = 'dir-filter-badge dir-sells';
-      badge.textContent = 'Sells only';
-    } else if (buyOk && !sellOk) {
-      badge = document.createElement('span');
-      badge.className = 'dir-filter-badge dir-buys';
-      badge.textContent = 'Buys only';
-    } else if (!buyOk && !sellOk) {
-      badge = document.createElement('span');
-      badge.className = 'dir-filter-badge dir-caution';
-      badge.textContent = 'Caution';
+    // Currency AI badge
+    if (screenerBeta) {
+      if (!buyOk && sellOk) {
+        badge = document.createElement('span');
+        badge.className = 'dir-filter-badge dir-sells';
+        badge.textContent = 'Sells only';
+      } else if (buyOk && !sellOk) {
+        badge = document.createElement('span');
+        badge.className = 'dir-filter-badge dir-buys';
+        badge.textContent = 'Buys only';
+      } else if (!buyOk && !sellOk) {
+        badge = document.createElement('span');
+        badge.className = 'dir-filter-badge dir-caution';
+        badge.textContent = 'Caution';
+      }
+    }
+    // Pair AI badge (only if currency badge not already shown)
+    if (!badge && screenerPairBeta) {
+      const buyPFPair = getPF(sym, tf, 'buy');
+      const sellPFPair = getPF(sym, tf, 'sell');
+      const buyPairOk = buyPFPair === null || buyPFPair >= MIN_PF;
+      const sellPairOk = sellPFPair === null || sellPFPair >= MIN_PF;
+      if (!buyPairOk && sellPairOk) {
+        badge = document.createElement('span');
+        badge.className = 'dir-filter-badge dir-sells';
+        badge.textContent = 'Sells only';
+      } else if (buyPairOk && !sellPairOk) {
+        badge = document.createElement('span');
+        badge.className = 'dir-filter-badge dir-buys';
+        badge.textContent = 'Buys only';
+      } else if (!buyPairOk && !sellPairOk) {
+        badge = document.createElement('span');
+        badge.className = 'dir-filter-badge dir-caution';
+        badge.textContent = 'Caution';
+      }
     }
     // If both ok — no badge needed, show normally
 
@@ -692,6 +717,17 @@ function toggleScreenerBeta() {
   screenerBeta = !screenerBeta;
   const btn = document.getElementById('screenerBetaBtn');
   if (btn) btn.classList.toggle('on', screenerBeta);
+  applyScreenerBeta();
+}
+
+let screenerPairBeta = false;
+function toggleScreenerPairBeta() {
+  screenerPairBeta = !screenerPairBeta;
+  const btn = document.getElementById('screenerPairBtn');
+  if (btn) {
+    btn.style.background = screenerPairBeta ? '#7de3ff' : 'rgba(100,200,255,0.06)';
+    btn.style.color = screenerPairBeta ? '#0b0d10' : '#7de3ff';
+  }
   applyScreenerBeta();
 }
 

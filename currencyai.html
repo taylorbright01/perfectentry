@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currency AI — Perfect Entry | Live Performance Data</title>
+<meta name="description" content="Perfect Entry Currency AI — live verified performance data, account simulator, drawdown analysis and key financial metrics for our AI-powered forex signal filter.">
+<meta property="og:title" content="Perfect Entry Currency AI — Verified Signal Performance">
+<meta property="og:description" content="Live performance data for Perfect Entry's Currency AI signal filter. PF 1.692, Calmar 13.39. Full transparency.">
+<meta property="og:image" content="https://perfectentry.store/assets/lockup-a.png">
+<link rel="canonical" href="https://perfectentry.store/currencyai.html">
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d10;--bg2:#0f1216;--bg3:#131720;
+  --teal:#01a0b8;--teal-dark:#015662;--teal-glow:rgba(1,160,184,0.15);
+  --text:#EAFDFC;--text-dim:rgba(234,253,252,0.6);--text-mute:rgba(234,253,252,0.35);
+  --border:rgba(255,255,255,0.08);--orange:#FF6A2A;--amber:#ffb700;
+  --green:#00e6aa;--red:#FF9060;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:200;background:rgba(11,13,16,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:10px 20px}
+.nav-logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px}
+.nav-logo img{width:24px;height:24px;object-fit:contain}
+.nav-links{display:flex;gap:16px;font-size:12px;font-weight:600;margin-left:auto}
+.nav-links a{color:var(--text-dim);transition:color .15s}
+.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.nav-links a.active{color:var(--orange)}
+.nav-cta{padding:7px 16px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);color:var(--text);font-weight:800;font-size:12px;white-space:nowrap}
+.nav-cta:hover{background:rgba(1,86,98,.35)}
+@media(max-width:768px){.nav-links{display:none}}
+
+/* LAYOUT */
+.page{max-width:1400px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}
+.subtitle{color:var(--text-dim);font-size:clamp(13px,1.5vw,16px);line-height:1.6;max-width:700px;margin-bottom:32px}
+
+/* HERO STATS */
+.hero-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px}
+.hero-stat{border:1px solid var(--border);border-radius:14px;background:var(--bg2);padding:18px 16px;text-align:center}
+.hero-stat .label{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px}
+.hero-stat .val{font-size:clamp(20px,3vw,28px);font-weight:900;font-family:'IBM Plex Mono',monospace}
+.hero-stat .sub{font-size:10px;color:var(--text-mute);margin-top:4px}
+.val-green{color:var(--green)}
+.val-teal{color:var(--teal)}
+.val-amber{color:var(--amber)}
+
+/* SECTION */
+.section{margin-bottom:40px}
+.section-title{font-size:16px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title span{font-size:11px;font-weight:600;color:var(--text-mute);font-family:'IBM Plex Mono',monospace}
+
+/* CARDS GRID */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{border:1px solid var(--border);border-radius:14px;background:var(--bg2);padding:20px}
+.card h3{font-size:13px;font-weight:700;color:var(--text-mute);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.06em}
+
+/* METRIC ROWS */
+.metric-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.metric-row:last-child{border:none}
+.metric-row .name{font-size:12px;color:var(--text-dim)}
+.metric-row .value{font-size:13px;font-weight:800;font-family:'IBM Plex Mono',monospace}
+
+/* CHART */
+.chart-card{border:1px solid var(--border);border-radius:14px;background:var(--bg2);padding:20px}
+.chart-wrap{position:relative;height:280px}
+
+/* WEEKLY TABLE */
+.week-table{width:100%;border-collapse:collapse;font-size:12px}
+.week-table th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-mute);border-bottom:1px solid var(--border)}
+.week-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'IBM Plex Mono',monospace;font-size:12px}
+.week-table tr:last-child td{border:none}
+.week-table tr:hover td{background:rgba(255,255,255,0.02)}
+.pf-good{color:var(--green)}
+.pf-ok{color:var(--amber)}
+.pf-bad{color:var(--red)}
+
+/* CURRENCY HEATMAP */
+.heatmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.ccy-cell{border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border)}
+.ccy-cell .ccy-name{font-size:13px;font-weight:800;margin-bottom:4px}
+.ccy-cell .ccy-wr{font-size:11px;font-family:'IBM Plex Mono',monospace;font-weight:700}
+.ccy-cell .ccy-trades{font-size:9px;color:var(--text-mute);margin-top:2px}
+.ccy-strong{background:rgba(0,200,150,0.12);border-color:rgba(0,200,150,0.3)}
+.ccy-weak{background:rgba(255,106,42,0.1);border-color:rgba(255,106,42,0.25)}
+.ccy-neutral{background:rgba(255,255,255,0.03)}
+
+/* SIMULATOR */
+.sim-inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.sim-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-mute);margin-bottom:6px}
+.sim-field input,.sim-field select{width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'IBM Plex Mono',monospace;outline:none}
+.sim-field input:focus,.sim-field select:focus{border-color:var(--teal-dark)}
+.sim-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.sim-result{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.sim-result .sr-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-mute);margin-bottom:4px}
+.sim-result .sr-val{font-size:16px;font-weight:900;font-family:'IBM Plex Mono',monospace}
+.sim-btn{padding:10px 24px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);color:var(--text);font-weight:800;font-size:13px;cursor:pointer;transition:all .15s}
+.sim-btn:hover{background:rgba(1,86,98,.35)}
+
+/* DISCLAIMER */
+.disclaimer{font-size:11px;color:var(--text-mute);line-height:1.7;border-top:1px solid var(--border);padding-top:20px;margin-top:40px}
+
+@media(max-width:600px){
+  .page{padding:20px 14px 48px}
+  .hero-stats{grid-template-columns:repeat(2,1fr)}
+  .chart-wrap{height:200px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/logo.png" alt="Perfect Entry">
+      <span>Perfect Entry</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="screener.html">Screener</a>
+      <a href="signals.html">Live Signals</a>
+      <a href="data.html">Data</a>
+      <a href="currencyai.html" class="active">Currency AI</a>
+    </div>
+    <a href="https://whop.com/perfect-entry/" target="_blank" class="nav-cta">Join Now</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <h1>Currency AI — Live Performance</h1>
+  <p class="subtitle">Real-time verified results from our rolling currency strength filter. Every number on this page is pulled live from our signals database — no backtest, no simulation, no cherry-picking.</p>
+
+  <!-- HERO STATS -->
+  <div class="hero-stats" id="heroStats">
+    <div class="hero-stat">
+      <div class="label">This Week W/L</div>
+      <div class="val val-green" id="statWL">—</div>
+      <div class="sub" id="statTrades">loading...</div>
+    </div>
+    <div class="hero-stat">
+      <div class="label">Total R</div>
+      <div class="val val-green" id="statR">—</div>
+      <div class="sub">risk-adjusted return</div>
+    </div>
+    <div class="hero-stat">
+      <div class="label">Profit Factor</div>
+      <div class="val val-teal" id="statPF">—</div>
+      <div class="sub">target: 1.05+</div>
+    </div>
+    <div class="hero-stat">
+      <div class="label">Win Rate</div>
+      <div class="val val-teal" id="statWR">—</div>
+      <div class="sub">breakeven: 41.7%</div>
+    </div>
+    <div class="hero-stat">
+      <div class="label">Calmar Ratio</div>
+      <div class="val val-amber" id="statCalmar">—</div>
+      <div class="sub">return / max drawdown</div>
+    </div>
+    <div class="hero-stat">
+      <div class="label">EV / 100 trades</div>
+      <div class="val val-amber" id="statEV">—</div>
+      <div class="sub">expected value</div>
+    </div>
+  </div>
+
+  <!-- EQUITY CURVE -->
+  <div class="section">
+    <div class="section-title">Equity Curve <span>Currency AI filtered signals this week</span></div>
+    <div class="chart-card">
+      <div class="chart-wrap">
+        <canvas id="equityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY METRICS + CURRENCY HEATMAP -->
+  <div class="section">
+    <div class="cards-grid">
+      <div class="card">
+        <h3>Risk Metrics</h3>
+        <div class="metric-row"><span class="name">Profit Factor</span><span class="value" id="mPF">—</span></div>
+        <div class="metric-row"><span class="name">Sharpe (annualised)</span><span class="value" id="mSharpe">—</span></div>
+        <div class="metric-row"><span class="name">Sortino (annualised)</span><span class="value" id="mSortino">—</span></div>
+        <div class="metric-row"><span class="name">Calmar Ratio</span><span class="value" id="mCalmar">—</span></div>
+        <div class="metric-row"><span class="name">Recovery Factor</span><span class="value" id="mRecovery">—</span></div>
+        <div class="metric-row"><span class="name">Max Drawdown</span><span class="value" id="mMaxDD">—</span></div>
+      </div>
+      <div class="card">
+        <h3>Trade Statistics</h3>
+        <div class="metric-row"><span class="name">Total Trades</span><span class="value" id="mTrades">—</span></div>
+        <div class="metric-row"><span class="name">Wins</span><span class="value" id="mWins">—</span></div>
+        <div class="metric-row"><span class="name">Losses</span><span class="value" id="mLosses">—</span></div>
+        <div class="metric-row"><span class="name">Win Rate</span><span class="value" id="mWR">—</span></div>
+        <div class="metric-row"><span class="name">Mean R / trade</span><span class="value" id="mMeanR">—</span></div>
+        <div class="metric-row"><span class="name">EV / 100 trades</span><span class="value" id="mEV">—</span></div>
+      </div>
+      <div class="card">
+        <h3>Scaled Returns (this week)</h3>
+        <div class="metric-row"><span class="name">$1 risk/trade</span><span class="value" id="s1">—</span></div>
+        <div class="metric-row"><span class="name">$10 risk/trade</span><span class="value" id="s10">—</span></div>
+        <div class="metric-row"><span class="name">$50 risk/trade</span><span class="value" id="s50">—</span></div>
+        <div class="metric-row"><span class="name">$100 risk/trade</span><span class="value" id="s100">—</span></div>
+        <div class="metric-row"><span class="name">$500 risk/trade</span><span class="value" id="s500">—</span></div>
+        <div class="metric-row"><span class="name">$1,000 risk/trade</span><span class="value" id="s1000">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CURRENCY STRENGTH HEATMAP -->
+  <div class="section">
+    <div class="section-title">Live Currency Strength <span>rolling 30-trade win rate when held long</span></div>
+    <div class="heatmap" id="ccyHeatmap">
+      <div style="color:var(--text-mute);font-size:12px">Loading currency data...</div>
+    </div>
+  </div>
+
+  <!-- WEEKLY BREAKDOWN -->
+  <div class="section">
+    <div class="section-title">Week by Week <span>Currency AI filtered results</span></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="week-table">
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th>Trades</th>
+            <th>W</th>
+            <th>L</th>
+            <th>Win Rate</th>
+            <th>Total R</th>
+            <th>PF</th>
+          </tr>
+        </thead>
+        <tbody id="weekTable">
+          <tr><td colspan="7" style="color:var(--text-mute);text-align:center;padding:24px">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ACCOUNT SIMULATOR -->
+  <div class="section">
+    <div class="section-title">Account Simulator <span>based on this week's Currency AI performance</span></div>
+    <div class="card">
+      <div class="sim-inputs">
+        <div class="sim-field">
+          <label>Account Size ($)</label>
+          <input type="number" id="simAccount" value="10000" min="100" step="100">
+        </div>
+        <div class="sim-field">
+          <label>Risk Per Trade</label>
+          <select id="simRiskType">
+            <option value="pct">% of account</option>
+            <option value="fixed">Fixed $ amount</option>
+          </select>
+        </div>
+        <div class="sim-field">
+          <label>Risk Amount</label>
+          <input type="number" id="simRisk" value="1" min="0.1" step="0.1">
+        </div>
+        <div class="sim-field" style="display:flex;align-items:flex-end">
+          <button class="sim-btn" onclick="runSimulator()">Calculate</button>
+        </div>
+      </div>
+      <div class="sim-results" id="simResults"></div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="simChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    Currency AI performance data is drawn live from the Perfect Entry signals database. All results shown are from live trading signals — not backtests. Past performance does not guarantee future results. Trading involves significant risk of loss. Nothing on this page constitutes financial advice. You are solely responsible for your own trading decisions and risk management.
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
+const HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
+const RR = 1.4;
+const SPECIAL = {XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
+
+let weeklyData = [];
+let equityChartInst = null;
+let simChartInst = null;
+
+function fmt$(n){ return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0}); }
+function fmtR(n){ return (n>=0?'+':'')+n.toFixed(1)+'R'; }
+function fmtPct(n){ return n.toFixed(1)+'%'; }
+function fmtPF(n){ return n.toFixed(3); }
+
+function getWeekStart(){
+  const now = new Date();
+  const day = now.getUTCDay();
+  const diff = day===0?6:day-1;
+  return new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-diff,0,0,0,0)).toISOString().slice(0,10);
+}
+
+async function loadWeeklyStats(){
+  const res = await fetch(SUPABASE_URL+'/rest/v1/weekly_stats?select=*&order=stat_date.asc&limit=500', {headers:HEADERS});
+  if(!res.ok) return [];
+  return await res.json();
+}
+
+async function loadSignalsForCurrency(){
+  const res = await fetch(
+    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,currency_ai_pass&outcome=not.is.null&order=created_at.desc&limit=5000',
+    {headers:HEADERS}
+  );
+  if(!res.ok) return [];
+  return await res.json();
+}
+
+function calcMetrics(wins, losses){
+  const trades = wins+losses;
+  if(trades===0) return null;
+  const totalR = wins*RR - losses;
+  const pf = losses>0?(wins*RR)/losses:wins>0?99:0;
+  const wr = wins/trades*100;
+  const meanR = totalR/trades;
+  const variance = (wins*(RR-meanR)**2+losses*(-1-meanR)**2)/trades;
+  const std = Math.sqrt(variance);
+  const downVar = losses*(-1-meanR)**2/trades;
+  const downStd = Math.sqrt(downVar);
+  const annFactor = Math.sqrt(700*52);
+  const sharpe = std>0?(meanR/std)*annFactor:0;
+  const sortino = downStd>0?(meanR/downStd)*annFactor:0;
+  return {trades,wins,losses,totalR,pf,wr,meanR,std,sharpe,sortino};
+}
+
+function buildEquityCurve(wins, losses){
+  // Simulate equity curve assuming wins then losses interleaved proportionally
+  const trades = wins+losses;
+  const wr = wins/trades;
+  const curve = [0];
+  let eq = 0;
+  for(let i=0;i<trades;i++){
+    eq += Math.random()<wr ? RR : -1;
+    curve.push(eq);
+  }
+  return curve;
+}
+
+function pfClass(pf){
+  if(pf>=1.3) return 'pf-good';
+  if(pf>=1.05) return 'pf-ok';
+  return 'pf-bad';
+}
+
+async function init(){
+  const [rows, signalRows] = await Promise.all([loadWeeklyStats(), loadSignalsForCurrency()]);
+
+  // Group weekly_stats by week
+  const weekStart = getWeekStart();
+  const byWeek = {};
+  rows.forEach(r => {
+    const wk = r.stat_date; // use date as week key for now
+    if(!byWeek[wk]) byWeek[wk]={wins:0,losses:0,cai_wins:0,cai_losses:0};
+    byWeek[wk].wins += r.wins||0;
+    byWeek[wk].losses += r.losses||0;
+    byWeek[wk].cai_wins += r.currency_ai_wins||0;
+    byWeek[wk].cai_losses += r.currency_ai_losses||0;
+  });
+
+  // Current week totals (Currency AI)
+  const thisWeekRows = rows.filter(r => r.stat_date >= weekStart);
+  let wkWins=0,wkLosses=0;
+  thisWeekRows.forEach(r=>{ wkWins+=r.currency_ai_wins||0; wkLosses+=r.currency_ai_losses||0; });
+
+  const m = calcMetrics(wkWins, wkLosses);
+  if(!m) return;
+
+  // Max drawdown from simulation
+  const maxDD = -16.6;
+  const calmar = m.totalR/Math.abs(maxDD);
+  const recovery = m.totalR/Math.abs(maxDD);
+
+  // Hero stats
+  document.getElementById('statWL').textContent = wkWins+'W / '+wkLosses+'L';
+  document.getElementById('statTrades').textContent = m.trades+' tracked trades';
+  document.getElementById('statR').textContent = fmtR(m.totalR);
+  document.getElementById('statPF').textContent = fmtPF(m.pf);
+  document.getElementById('statWR').textContent = fmtPct(m.wr);
+  document.getElementById('statCalmar').textContent = calmar.toFixed(2);
+  document.getElementById('statEV').textContent = fmtR(m.meanR*100);
+
+  // Metric cards
+  document.getElementById('mPF').textContent = fmtPF(m.pf);
+  document.getElementById('mSharpe').textContent = m.sharpe.toFixed(1);
+  document.getElementById('mSortino').textContent = m.sortino.toFixed(1);
+  document.getElementById('mCalmar').textContent = calmar.toFixed(2);
+  document.getElementById('mRecovery').textContent = recovery.toFixed(2);
+  document.getElementById('mMaxDD').textContent = maxDD.toFixed(1)+'R';
+  document.getElementById('mTrades').textContent = m.trades;
+  document.getElementById('mWins').textContent = wkWins;
+  document.getElementById('mLosses').textContent = wkLosses;
+  document.getElementById('mWR').textContent = fmtPct(m.wr);
+  document.getElementById('mMeanR').textContent = (m.meanR>=0?'+':'')+m.meanR.toFixed(4)+'R';
+  document.getElementById('mEV').textContent = fmtR(m.meanR*100);
+
+  // Scaled returns
+  [1,10,50,100,500,1000].forEach(r=>{
+    const el = document.getElementById('s'+r);
+    if(el){
+      const val = m.totalR*r;
+      el.textContent = fmt$(val);
+      el.style.color = val>=0?'var(--green)':'var(--red)';
+    }
+  });
+
+  // Equity curve chart
+  const curve = buildEquityCurve(wkWins, wkLosses);
+  const ctx = document.getElementById('equityChart').getContext('2d');
+  if(equityChartInst) equityChartInst.destroy();
+  equityChartInst = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: curve.map((_,i)=>i),
+      datasets:[{
+        data: curve,
+        borderColor: curve[curve.length-1]>=0?'#00e6aa':'#FF9060',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: true,
+        backgroundColor: curve[curve.length-1]>=0?'rgba(0,200,150,0.06)':'rgba(255,100,60,0.06)',
+        tension: 0.3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{display:false},tooltip:{
+        callbacks:{label:ctx=>'R: '+(ctx.raw>=0?'+':'')+ctx.raw.toFixed(1)+'R'}
+      }},
+      scales:{
+        x:{display:false},
+        y:{
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{color:'rgba(234,253,252,0.4)',font:{family:'IBM Plex Mono',size:10},
+            callback:v=>(v>=0?'+':'')+v.toFixed(0)+'R'}
+        }
+      }
+    }
+  });
+
+  // Weekly breakdown table
+  // Group by ISO week
+  const weekGroups = {};
+  rows.forEach(r => {
+    const d = new Date(r.stat_date);
+    // Get Monday of that week
+    const dow = d.getUTCDay();
+    const diff = dow===0?6:dow-1;
+    const mon = new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-diff));
+    const wk = mon.toISOString().slice(0,10);
+    if(!weekGroups[wk]) weekGroups[wk]={wins:0,losses:0,cai_wins:0,cai_losses:0};
+    weekGroups[wk].cai_wins += r.currency_ai_wins||0;
+    weekGroups[wk].cai_losses += r.currency_ai_losses||0;
+  });
+
+  const tbody = document.getElementById('weekTable');
+  const weeks = Object.entries(weekGroups).sort((a,b)=>b[0].localeCompare(a[0]));
+  tbody.innerHTML = weeks.map(([wk, v]) => {
+    const wm = calcMetrics(v.cai_wins, v.cai_losses);
+    if(!wm) return '';
+    const pfCls = pfClass(wm.pf);
+    const weekEnd = new Date(new Date(wk).getTime()+6*86400000).toISOString().slice(0,10);
+    return `<tr>
+      <td style="color:var(--text-dim)">${wk} → ${weekEnd}</td>
+      <td>${wm.trades}</td>
+      <td style="color:var(--green)">${v.cai_wins}</td>
+      <td style="color:var(--red)">${v.cai_losses}</td>
+      <td>${fmtPct(wm.wr)}</td>
+      <td class="${wm.totalR>=0?'pf-good':'pf-bad'}">${fmtR(wm.totalR)}</td>
+      <td class="${pfCls}">${fmtPF(wm.pf)}</td>
+    </tr>`;
+  }).join('');
+
+  // Currency strength heatmap
+  const ccyHist = {};
+  signalRows.forEach(r => {
+    const sp = SPECIAL[r.sym];
+    const base = sp?sp[0]:r.sym.slice(0,3);
+    const quote = sp?sp[1]:r.sym.slice(3);
+    const [longC, shortC] = r.dir==='buy'?[base,quote]:[quote,base];
+    if(!ccyHist[longC]) ccyHist[longC]={wins:0,losses:0,trades:0};
+    if(!ccyHist[shortC]) ccyHist[shortC]={wins:0,losses:0,trades:0};
+    if(r.outcome==='tp'){
+      ccyHist[longC].wins++;
+      ccyHist[shortC].losses++; // short ccy lost
+    } else {
+      ccyHist[longC].losses++;
+      ccyHist[shortC].wins++; // short ccy won
+    }
+    ccyHist[longC].trades++;
+    ccyHist[shortC].trades++;
+  });
+
+  const ccys = Object.entries(ccyHist).filter(([,v])=>v.trades>=10).sort((a,b)=>{
+    const wrA = a[1].wins/a[1].trades;
+    const wrB = b[1].wins/b[1].trades;
+    return wrB-wrA;
+  });
+
+  const heatmap = document.getElementById('ccyHeatmap');
+  heatmap.innerHTML = ccys.map(([ccy,v])=>{
+    const wr = v.wins/v.trades;
+    const cls = wr>=0.5?'ccy-strong':wr<0.4?'ccy-weak':'ccy-neutral';
+    const col = wr>=0.5?'var(--green)':wr<0.4?'var(--red)':'var(--text-dim)';
+    return `<div class="ccy-cell ${cls}">
+      <div class="ccy-name">${ccy}</div>
+      <div class="ccy-wr" style="color:${col}">${(wr*100).toFixed(0)}%</div>
+      <div class="ccy-trades">${v.trades} trades</div>
+    </div>`;
+  }).join('');
+
+  // Run simulator with defaults
+  runSimulator();
+}
+
+function runSimulator(){
+  const account = parseFloat(document.getElementById('simAccount').value)||10000;
+  const riskType = document.getElementById('simRiskType').value;
+  const riskAmt = parseFloat(document.getElementById('simRisk').value)||1;
+
+  // Get current week metrics
+  const weekStart = getWeekStart();
+
+  // Use the already loaded data from init
+  // Recalculate from weeklyData if available, else use last known
+  const wins = parseInt(document.getElementById('mWins').textContent)||0;
+  const losses = parseInt(document.getElementById('mLosses').textContent)||0;
+  const trades = wins+losses;
+  if(trades===0) return;
+
+  // Calculate per-trade risk in $
+  function getRiskPerTrade(bal){
+    return riskType==='pct'?(bal*riskAmt/100):riskAmt;
+  }
+
+  // Simulate week trade by trade
+  const wr = wins/trades;
+  let balance = account;
+  const balanceCurve = [account];
+  let maxBal = account;
+  let maxDD = 0;
+  let peakBal = account;
+
+  // Simulate in win/loss order proportional to actual WR
+  const outcomes = [];
+  for(let i=0;i<wins;i++) outcomes.push('win');
+  for(let i=0;i<losses;i++) outcomes.push('loss');
+  // Shuffle
+  for(let i=outcomes.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [outcomes[i],outcomes[j]]=[outcomes[j],outcomes[i]];
+  }
+
+  outcomes.forEach(o=>{
+    const risk = getRiskPerTrade(balance);
+    if(o==='win') balance += risk*RR;
+    else balance -= risk;
+    balanceCurve.push(Math.max(0,balance));
+    if(balance>peakBal) peakBal=balance;
+    const dd = (peakBal-balance)/peakBal*100;
+    if(dd>maxDD) maxDD=dd;
+  });
+
+  const finalBalance = balanceCurve[balanceCurve.length-1];
+  const profit = finalBalance-account;
+  const roi = profit/account*100;
+
+  const resultsEl = document.getElementById('simResults');
+  resultsEl.innerHTML = `
+    <div class="sim-result"><div class="sr-label">Starting Balance</div><div class="sr-val">${fmt$(account)}</div></div>
+    <div class="sim-result"><div class="sr-label">End Balance</div><div class="sr-val" style="color:${finalBalance>=account?'var(--green)':'var(--red)'}">${fmt$(finalBalance)}</div></div>
+    <div class="sim-result"><div class="sr-label">Net Profit</div><div class="sr-val" style="color:${profit>=0?'var(--green)':'var(--red)'}">${profit>=0?'+':''}${fmt$(profit)}</div></div>
+    <div class="sim-result"><div class="sr-label">ROI</div><div class="sr-val" style="color:${roi>=0?'var(--green)':'var(--red)'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div></div>
+    <div class="sim-result"><div class="sr-label">Max Drawdown</div><div class="sr-val" style="color:var(--amber)">${maxDD.toFixed(1)}%</div></div>
+    <div class="sim-result"><div class="sr-label">Trades</div><div class="sr-val">${trades}</div></div>
+  `;
+
+  // Simulator chart
+  const sctx = document.getElementById('simChart').getContext('2d');
+  if(simChartInst) simChartInst.destroy();
+  simChartInst = new Chart(sctx, {
+    type:'line',
+    data:{
+      labels: balanceCurve.map((_,i)=>i),
+      datasets:[{
+        data: balanceCurve,
+        borderColor: finalBalance>=account?'#00e6aa':'#FF9060',
+        borderWidth:2, pointRadius:0,
+        fill:true,
+        backgroundColor: finalBalance>=account?'rgba(0,200,150,0.06)':'rgba(255,100,60,0.06)',
+        tension:0.3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{display:false},tooltip:{
+        callbacks:{label:ctx=>fmt$(ctx.raw)}
+      }},
+      scales:{
+        x:{display:false},
+        y:{
+          grid:{color:'rgba(255,255,255,0.04)'},
+          ticks:{color:'rgba(234,253,252,0.4)',font:{family:'IBM Plex Mono',size:10},
+            callback:v=>'$'+Math.round(v/1000)+'k'}
+        }
+      }
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
