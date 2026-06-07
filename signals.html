@@ -89,8 +89,12 @@
   .card-exit-wrap { overflow:hidden; flex-shrink:0; transition:height 0.55s cubic-bezier(0.4,0,0.2,1),margin-bottom 0.55s cubic-bezier(0.4,0,0.2,1),opacity 0.55s ease; }
   .sig-head { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px; min-width:0; }
   .sig-left { display:flex; align-items:center; gap:6px; flex-shrink:0; }
-  .sig-right-scroll { display:flex; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; flex-shrink:1; justify-content:flex-end; }
-  .sig-right-scroll::-webkit-scrollbar { display:none; }
+  .sig-right-scroll { display:flex; align-items:center; gap:4px; flex-wrap:wrap; justify-content:flex-end; }
+  @media(max-width:600px) {
+    .sig-head { flex-wrap:wrap; }
+    .sig-left { width:100%; }
+    .sig-right-scroll { width:100%; justify-content:flex-start; }
+  }
   .sig-sym { font-size:13px; font-weight:800; letter-spacing:0.01em; color:var(--text); line-height:1; }
   .score-badge { font-size:9px; font-weight:700; letter-spacing:0.04em; padding:2px 6px; border-radius:5px; }
   .sb-4{background:rgba(68,170,255,0.18);color:#7de3ff;border:1px solid rgba(68,170,255,0.35)}
@@ -143,10 +147,17 @@
   }
   .modal-overlay.open { display: flex; }
   .modal-box {
-    width: min(540px, 94vw); max-height: 80vh;
+    width: min(540px, 96vw); max-height: 85vh;
     background: #0f1216; border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px; display: flex; flex-direction: column;
     box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  .modal-body { padding: 8px; }
+  @media(max-width:480px) {
+    .modal-body { padding: 6px; }
+    .active-row { padding: 8px 8px; gap: 4px; font-size: 10px; }
+    .ar-sym { font-size: 11px; }
+    .ar-tf { font-size: 9px; }
   }
   .modal-header {
     padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -162,19 +173,20 @@
   .modal-body { overflow-y: auto; flex: 1; padding: 8px; }
   .modal-empty { padding: 32px; text-align: center; color: var(--text-mute); font-size: 12px; }
   .active-row {
-    display: grid; grid-template-columns: 90px 50px 44px 1fr 70px 60px;
-    align-items: center; gap: 8px;
+    display: grid; grid-template-columns: 1fr auto auto auto auto;
+    align-items: center; gap: 6px;
     padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
     background: rgba(255,255,255,0.02); margin-bottom: 6px; font-size: 11px;
+    min-width: 0;
   }
   .active-row:hover { background: rgba(255,255,255,0.05); }
-  .active-row .ar-sym { font-weight: 800; font-size: 12px; }
+  .active-row .ar-sym { font-weight: 800; font-size: 11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .active-row .ar-tf { color: var(--text-mute); font-size: 10px; }
   .active-row .ar-dir { font-weight: 800; font-size: 10px; padding: 2px 7px; border-radius: 999px; text-align: center; }
   .active-row .ar-dir.buy { background: rgba(1,160,184,0.15); color: var(--teal); border: 1px solid rgba(1,160,184,0.3); }
   .active-row .ar-dir.sell { background: rgba(255,106,42,0.12); color: #FF9060; border: 1px solid rgba(255,106,42,0.25); }
-  .active-row .ar-entry { font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
-  .active-row .ar-age { color: var(--text-mute); font-size: 10px; text-align: right; }
+  .active-row .ar-entry { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .active-row .ar-age { color: var(--text-mute); font-size: 9px; text-align: right; white-space:nowrap; }
   .active-row .ar-score { font-size: 9px; }
   .modal-footer { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
     font-size: 11px; color: var(--text-mute); display: flex; justify-content: space-between; align-items: center; }
@@ -184,6 +196,7 @@
 
   /* WEEKLY STRIP */
   .weekly-strip{flex-shrink:0;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border);padding:7px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  @media(max-width:768px){.weekly-strip{display:none!important}}
   .weekly-inner{max-width:1600px;margin:0 auto;width:100%;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .weekly-label{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-mute)}
   .weekly-stat{font-size:12px;font-weight:800;font-family:'IBM Plex Mono',monospace}
@@ -1413,7 +1426,7 @@ updateCounts();
     <span style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(234,253,252,0.35)">This week</span>
     <span style="font-size:11px;font-weight:800"><span id="mob-wkWins" style="color:#00e6aa">0</span>W / <span id="mob-wkLosses" style="color:#FF9060">0</span>L</span>
     <span style="font-size:12px;font-weight:900" id="mob-wkR">0.0R</span>
-    <span style="font-size:10px;color:#7de3ff;font-weight:700" id="mob-wkOpen">0 active</span>
+    <span style="font-size:10px;color:#7de3ff;font-weight:700" id="mob-wkOpen" onclick="openActiveModal()" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px">0 active</span>
   </div>
 
   <div class="mob-tf-section">
