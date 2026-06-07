@@ -87,8 +87,10 @@
   @keyframes cardIn { from{opacity:0;transform:translateY(-16px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   .sig-card.fading { opacity:0; transform:translateY(10px) scale(0.97); transition:opacity 0.55s ease,transform 0.55s ease; pointer-events:none; }
   .card-exit-wrap { overflow:hidden; flex-shrink:0; transition:height 0.55s cubic-bezier(0.4,0,0.2,1),margin-bottom 0.55s cubic-bezier(0.4,0,0.2,1),opacity 0.55s ease; }
-  .sig-head { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px; }
-  .sig-left { display:flex; align-items:center; gap:6px; }
+  .sig-head { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:6px; min-width:0; }
+  .sig-left { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .sig-right-scroll { display:flex; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; flex-shrink:1; justify-content:flex-end; }
+  .sig-right-scroll::-webkit-scrollbar { display:none; }
   .sig-sym { font-size:13px; font-weight:800; letter-spacing:0.01em; color:var(--text); line-height:1; }
   .score-badge { font-size:9px; font-weight:700; letter-spacing:0.04em; padding:2px 6px; border-radius:5px; }
   .sb-4{background:rgba(68,170,255,0.18);color:#7de3ff;border:1px solid rgba(68,170,255,0.35)}
@@ -543,7 +545,7 @@ function makeCard(sig){
   const obClass = sig.outcome==='tp'?'ob-win':sig.outcome==='sl'?'ob-loss':sig.outcome==='active'?'ob-active':'ob-closed';
   const obLabel = sig.outcome==='tp'?'WIN':sig.outcome==='sl'?'LOSS':sig.outcome==='active'?'ACTIVE':'CLOSED';
   const showOb = sig.outcome !== undefined;
-  d.innerHTML=`<div class="sig-head"><div class="sig-left"><span class="sig-sym">${sig.sym}</span>${sc?`<span class="score-badge ${sbC(sc)}">${sbL(sc)}</span>`:''}</div><div style="display:flex;align-items:center;gap:4px">${showOb?`<span class="outcome-badge ${obClass}">${obLabel}</span>`:''}<span class="dir-badge ${dir}">${sig.dir.toUpperCase()}</span></div></div><div class="sig-rows"><div class="sig-row"><span class="row-label">Entry</span><div class="row-right"><span class="row-price entry">${fmtPrice(sig.sym,sig.entry)}</span></div></div><div class="sig-row"><span class="row-label">SL</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.sl)}</span><span class="row-pip sl">${pips(sig.sym,sig.entry,sig.sl)}p</span></div></div><div class="sig-row"><span class="row-label">TP</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.tp)}</span><span class="row-pip tp">${pips(sig.sym,sig.entry,sig.tp)}p</span></div></div></div><div class="sig-time"><span>${t}</span><span class="sig-ago"></span></div>`;
+  d.innerHTML=`<div class="sig-head"><div class="sig-left"><span class="sig-sym">${sig.sym}</span>${sc?`<span class="score-badge ${sbC(sc)}">${sbL(sc)}</span>`:''}</div><div class="sig-right-scroll">${showOb?`<span class="outcome-badge ${obClass}">${obLabel}</span>`:''}<span class="dir-badge ${dir}">${sig.dir.toUpperCase()}</span></div></div><div class="sig-rows"><div class="sig-row"><span class="row-label">Entry</span><div class="row-right"><span class="row-price entry">${fmtPrice(sig.sym,sig.entry)}</span></div></div><div class="sig-row"><span class="row-label">SL</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.sl)}</span><span class="row-pip sl">${pips(sig.sym,sig.entry,sig.sl)}p</span></div></div><div class="sig-row"><span class="row-label">TP</span><div class="row-right"><span class="row-price">${fmtPrice(sig.sym,sig.tp)}</span><span class="row-pip tp">${pips(sig.sym,sig.entry,sig.tp)}p</span></div></div></div><div class="sig-time"><span>${t}</span><span class="sig-ago"></span></div>`;
   return d;
 }
 
@@ -836,6 +838,20 @@ function closeActiveModal() {
   document.getElementById('activeModal').classList.remove('open');
 }
 
+function toggleActiveRow(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  // Close all others first
+  document.querySelectorAll('[id^="ar-"]').forEach(e => e.style.display = 'none');
+  document.querySelectorAll('.active-row').forEach(r => r.style.borderRadius = '10px');
+  if (!isOpen) {
+    el.style.display = 'block';
+    // Round top corners of row, keep bottom square
+    el.previousElementSibling.style.borderRadius = '10px 10px 0 0';
+  }
+}
+
 async function loadActiveModal() {
   const body = document.getElementById('activeModalBody');
   const countEl = document.getElementById('activeModalCount');
@@ -899,13 +915,26 @@ async function loadActiveModal() {
       const entry = parseFloat(row.entry);
       const dp = ['BTCUSD'].includes(row.sym) ? 0 : ['XAUUSD','XAGUSD','NAS100','ETHUSD'].includes(row.sym) ? 2 : row.sym.includes('JPY') ? 3 : 5;
 
-      return `<div class="active-row" style="${stuckStyle}" onclick="navigator.clipboard.writeText('${row.id}').catch(()=>{})" title="Click to copy ID: ${row.id}">
+      const sl = parseFloat(row.sl);
+      const tp = parseFloat(row.tp);
+      const rowId = 'ar-' + row.id.slice(0,8);
+
+      return `<div class="active-row" style="${stuckStyle};cursor:pointer" onclick="toggleActiveRow('${rowId}')">
         <span class="ar-sym">${row.sym}</span>
         <span class="ar-tf" style="color:var(--text-mute)">${row.tf}</span>
         <span class="ar-dir ${row.dir}">${row.dir.toUpperCase()}</span>
         <span class="ar-entry">${entry.toFixed(dp)}</span>
         <span class="ar-age${isStuck ? '" style="color:#ffb700' : ''}">${ageStr}${isStuck ? ' ⚠' : ''}</span>
         <span class="ar-score" style="${scoreStyle};padding:2px 6px;border-radius:4px">${scoreLabel}</span>
+      </div>
+      <div id="${rowId}" style="display:none;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-top:none;border-radius:0 0 10px 10px;padding:10px 12px;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div><div style="font-size:9px;color:var(--text-mute);margin-bottom:2px">ENTRY</div><div style="font-weight:700">${entry.toFixed(dp)}</div></div>
+          <div><div style="font-size:9px;color:var(--red);margin-bottom:2px">SL</div><div style="font-weight:700;color:var(--red)">${sl.toFixed(dp)}</div></div>
+          <div><div style="font-size:9px;color:var(--green);margin-bottom:2px">TP</div><div style="font-weight:700;color:var(--green)">${tp.toFixed(dp)}</div></div>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:var(--text-mute)">Opened ${new Date(row.created_at).toUTCString().slice(0,22)} UTC</div>
+        <div style="margin-top:4px;font-size:9px;color:rgba(255,255,255,0.2);cursor:pointer" onclick="event.stopPropagation();navigator.clipboard.writeText('${row.id}').catch(()=>{})">Copy ID</div>
       </div>`;
     }).join('');
 
