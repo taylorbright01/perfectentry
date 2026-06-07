@@ -418,12 +418,14 @@ async function init(){
   console.log('Curve final R:', curve[curve.length-1], 'from', curve.length-1, 'trades');
 
   // Calculate real max drawdown from actual curve
-  let peak = 0;
+  let ddPeak = curve[0];
+  let worstDD = 0;
   curve.forEach(v => {
-    if(v > peak) peak = v;
-    const dd = v - peak;
-    if(dd < maxDD) maxDD = dd;
+    if(v > ddPeak) ddPeak = v;
+    const dd = v - ddPeak;
+    if(dd < worstDD) worstDD = dd;
   });
+  maxDD = worstDD;
   calmar = maxDD !== 0 ? m.totalR / Math.abs(maxDD) : 0;
   recovery = maxDD !== 0 ? m.totalR / Math.abs(maxDD) : 0;
 
