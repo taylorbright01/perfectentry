@@ -379,16 +379,16 @@ async function init(){
   document.getElementById('statR').textContent = fmtR(m.totalR);
   document.getElementById('statPF').textContent = fmtPF(m.pf);
   document.getElementById('statWR').textContent = fmtPct(m.wr);
-  document.getElementById('statCalmar').textContent = calmar.toFixed(2);
+  document.getElementById('statCalmar').textContent = '...'; // updated after curve loads
   document.getElementById('statEV').textContent = fmtR(m.meanR*100);
 
   // Metric cards
   document.getElementById('mPF').textContent = fmtPF(m.pf);
   document.getElementById('mSharpe').textContent = m.sharpe.toFixed(1);
   document.getElementById('mSortino').textContent = m.sortino.toFixed(1);
-  document.getElementById('mCalmar').textContent = calmar.toFixed(2);
-  document.getElementById('mRecovery').textContent = recovery.toFixed(2);
-  document.getElementById('mMaxDD').textContent = (maxDD >= 0 ? '' : '') + maxDD.toFixed(1)+'R';
+  document.getElementById('mCalmar').textContent = '...'; // updated after curve loads
+  document.getElementById('mRecovery').textContent = '...';
+  document.getElementById('mMaxDD').textContent = '...';
   document.getElementById('mTrades').textContent = m.trades;
   document.getElementById('mWins').textContent = wkWins;
   document.getElementById('mLosses').textContent = wkLosses;
@@ -428,6 +428,12 @@ async function init(){
   maxDD = worstDD;
   calmar = maxDD !== 0 ? m.totalR / Math.abs(maxDD) : 0;
   recovery = maxDD !== 0 ? m.totalR / Math.abs(maxDD) : 0;
+
+  // Now update the displays that depend on maxDD
+  document.getElementById('statCalmar').textContent = calmar.toFixed(2);
+  document.getElementById('mCalmar').textContent = calmar.toFixed(2);
+  document.getElementById('mRecovery').textContent = recovery.toFixed(2);
+  document.getElementById('mMaxDD').textContent = maxDD.toFixed(1)+'R';
 
   const ctx = document.getElementById('equityChart').getContext('2d');
   if(equityChartInst) equityChartInst.destroy();
