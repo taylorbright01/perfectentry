@@ -160,8 +160,9 @@
     .ar-tf { font-size: 9px; }
   }
   .modal-header {
-    padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
     display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    box-sizing: border-box; min-width: 0;
   }
   .modal-header h3 { font-size: 14px; font-weight: 800; }
   .modal-close {
@@ -170,15 +171,20 @@
     display: grid; place-items: center;
   }
   .modal-close:hover { background: rgba(255,255,255,0.08); color: var(--text); }
-  .modal-body { overflow-y: auto; flex: 1; padding: 8px; }
+  .modal-body { overflow-y: auto; flex: 1; padding: 8px; box-sizing: border-box; overflow-x: hidden; }
   .modal-empty { padding: 32px; text-align: center; color: var(--text-mute); font-size: 12px; }
   .active-row {
-    display: grid; grid-template-columns: 1fr auto auto auto auto;
-    align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px;
     padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
     background: rgba(255,255,255,0.02); margin-bottom: 6px; font-size: 11px;
-    min-width: 0;
+    min-width: 0; box-sizing: border-box; width: 100%; overflow: hidden;
   }
+  .active-row .ar-sym { flex: 0 0 auto; min-width: 0; }
+  .active-row .ar-tf { flex: 0 0 auto; }
+  .active-row .ar-dir { flex: 0 0 auto; }
+  .active-row .ar-entry { flex: 1 1 auto; min-width: 0; text-align: right; }
+  .active-row .ar-age { flex: 0 0 auto; text-align: right; }
+  .active-row .ar-score { flex: 0 0 auto; }
   .active-row:hover { background: rgba(255,255,255,0.05); }
   .active-row .ar-sym { font-weight: 800; font-size: 11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .active-row .ar-tf { color: var(--text-mute); font-size: 10px; }
@@ -459,7 +465,7 @@
       <div class="modal-empty">Loading...</div>
     </div>
     <div class="modal-footer">
-      <span>Signals open &gt;4h shown in amber</span>
+      <span>Tap a row to see entry details · &gt;4h in amber</span>
       <button class="modal-refresh" onclick="loadActiveModal()">↻ Refresh</button>
     </div>
   </div>
@@ -855,13 +861,15 @@ function toggleActiveRow(id) {
   const el = document.getElementById(id);
   if (!el) return;
   const isOpen = el.style.display !== 'none';
-  // Close all others first
-  document.querySelectorAll('[id^="ar-"]').forEach(e => e.style.display = 'none');
+  // Close all others and reset chevrons
+  document.querySelectorAll('[id^="ar-"][id$="-chev"]').forEach(e => e.style.transform = '');
+  document.querySelectorAll('[id^="ar-"]').forEach(e => { if(!e.id.endsWith('-chev')) e.style.display = 'none'; });
   document.querySelectorAll('.active-row').forEach(r => r.style.borderRadius = '10px');
   if (!isOpen) {
     el.style.display = 'block';
-    // Round top corners of row, keep bottom square
     el.previousElementSibling.style.borderRadius = '10px 10px 0 0';
+    const chev = document.getElementById(id + '-chev');
+    if (chev) chev.style.transform = 'rotate(180deg)';
   }
 }
 
@@ -939,6 +947,7 @@ async function loadActiveModal() {
         <span class="ar-entry">${entry.toFixed(dp)}</span>
         <span class="ar-age${isStuck ? '" style="color:#ffb700' : ''}">${ageStr}${isStuck ? ' ⚠' : ''}</span>
         <span class="ar-score" style="${scoreStyle};padding:2px 6px;border-radius:4px">${scoreLabel}</span>
+        <span id="${rowId}-chev" style="color:var(--text-mute);font-size:10px;margin-left:auto;flex-shrink:0;transition:transform 0.2s">▾</span>
       </div>
       <div id="${rowId}" style="display:none;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-top:none;border-radius:0 0 10px 10px;padding:10px 12px;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
