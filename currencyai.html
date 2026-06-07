@@ -315,7 +315,7 @@ async function loadWeeklyStats(){
 
 async function loadSignalsForCurrency(){
   const res = await fetch(
-    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,currency_ai_pass&outcome=not.is.null&order=created_at.desc&limit=5000',
+    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,currency_ai_pass,created_at&outcome=not.is.null&order=created_at.asc&limit=5000',
     {headers:HEADERS}
   );
   if(!res.ok) return [];
@@ -339,18 +339,7 @@ function calcMetrics(wins, losses){
   return {trades,wins,losses,totalR,pf,wr,meanR,std,sharpe,sortino};
 }
 
-function buildEquityCurve(wins, losses){
-  // Simulate equity curve assuming wins then losses interleaved proportionally
-  const trades = wins+losses;
-  const wr = wins/trades;
-  const curve = [0];
-  let eq = 0;
-  for(let i=0;i<trades;i++){
-    eq += Math.random()<wr ? RR : -1;
-    curve.push(eq);
-  }
-  return curve;
-}
+// equity curve built from real sequential data in init()
 
 function pfClass(pf){
   if(pf>=1.3) return 'pf-good';
@@ -418,8 +407,14 @@ async function init(){
     }
   });
 
-  // Equity curve chart
-  const curve = buildEquityCurve(wkWins, wkLosses);
+  // Equity curve — real sequential outcomes in chronological order
+  const aiSignals = signalRows.filter(r => r.currency_ai_pass === true);
+  const curve = [0];
+  let eq = 0;
+  aiSignals.forEach(r => {
+    eq += r.outcome === 'tp' ? RR : -1.0;
+    curve.push(parseFloat(eq.toFixed(2)));
+  });
   const ctx = document.getElementById('equityChart').getContext('2d');
   if(equityChartInst) equityChartInst.destroy();
   equityChartInst = new Chart(ctx, {
@@ -523,6 +518,9 @@ async function init(){
     </div>`;
   }).join('');
 
+  // Store for simulator use
+  window._aiSignals = aiSignals;
+
   // Run simulator with defaults
   runSimulator();
 }
@@ -555,19 +553,11 @@ function runSimulator(){
   let maxDD = 0;
   let peakBal = account;
 
-  // Simulate in win/loss order proportional to actual WR
-  const outcomes = [];
-  for(let i=0;i<wins;i++) outcomes.push('win');
-  for(let i=0;i<losses;i++) outcomes.push('loss');
-  // Shuffle
-  for(let i=outcomes.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [outcomes[i],outcomes[j]]=[outcomes[j],outcomes[i]];
-  }
-
-  outcomes.forEach(o=>{
+  // Use real sequential outcomes
+  const aiSeq = window._aiSignals || [];
+  aiSeq.forEach(r => {
     const risk = getRiskPerTrade(balance);
-    if(o==='win') balance += risk*RR;
+    if(r.outcome==='tp') balance += risk*RR;
     else balance -= risk;
     balanceCurve.push(Math.max(0,balance));
     if(balance>peakBal) peakBal=balance;
