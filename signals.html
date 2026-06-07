@@ -50,7 +50,6 @@
     .filter-bar { padding: 9px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .filter-bar::-webkit-scrollbar { display: none; }
     .filter-bar-inner { flex-wrap: nowrap; min-width: max-content; }
-    .sig-card { min-width: calc(100vw - 80px); max-width: calc(100vw - 60px); }
   }
   .filter-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-mute); text-transform: uppercase; margin-right: 2px; }
   .ftag { font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.15s; user-select: none; }
@@ -378,20 +377,24 @@
 </script>
 </head>
 <body>
-<nav style="position:sticky;top:0;z-index:300;background:rgba(11,13,16,0.97);border-bottom:1px solid rgba(255,255,255,0.07);padding:0 24px">
-  <div style="max-width:1600px;margin:0 auto;display:flex;align-items:center;gap:14px;height:38px">
-    <a href="index.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:#EAFDFC;font-weight:800;font-size:12px">
+<style>
+  .nav-links-desktop { display:flex;gap:14px;font-size:11px;font-weight:600;margin-left:auto }
+  @media(max-width:768px){ .nav-links-desktop { display:none } }
+</style>
+<nav style="position:sticky;top:0;z-index:300;background:rgba(11,13,16,0.97);border-bottom:1px solid rgba(255,255,255,0.07);padding:0 16px;width:100%;box-sizing:border-box">
+  <div style="max-width:1600px;margin:0 auto;display:flex;align-items:center;gap:10px;height:44px">
+    <a href="index.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:#EAFDFC;font-weight:800;font-size:12px;flex-shrink:0">
       <img src="assets/logo.png" style="width:20px;height:20px;object-fit:contain" alt="Perfect Entry">
       <span>Perfect Entry</span>
     </a>
-    <div style="display:flex;gap:14px;font-size:11px;font-weight:600;margin-left:auto">
+    <div class="nav-links-desktop">
       <a href="index.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Home</a>
       <a href="screener.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Screener</a>
       <a href="signals.html" style="color:#FF6A2A;text-decoration:none">Live Signals</a>
       <a href="data.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Data</a>
       <a href="currencyai.html" style="color:rgba(234,253,252,0.6);text-decoration:none">Currency AI</a>
     </div>
-    <a href="https://whop.com/perfect-entry/" target="_blank" style="padding:5px 12px;border-radius:8px;border:2px solid #015662;background:rgba(1,86,98,0.15);color:#EAFDFC;font-weight:800;font-size:11px;text-decoration:none;white-space:nowrap">Join Now</a>
+    <a href="https://whop.com/perfect-entry/" target="_blank" style="margin-left:auto;padding:5px 12px;border-radius:8px;border:2px solid #015662;background:rgba(1,86,98,0.15);color:#EAFDFC;font-weight:800;font-size:11px;text-decoration:none;white-space:nowrap;flex-shrink:0">Join Now</a>
   </div>
 </nav>
 <header>
