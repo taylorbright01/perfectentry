@@ -46,6 +46,12 @@
   .conn-pill.err { color: #FF9060; border-color: rgba(255,106,42,0.3); background: rgba(255,106,42,0.08); }
   .filter-bar { flex-shrink: 0; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 9px 24px; }
   .filter-bar-inner { max-width: 1600px; margin: 0 auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  @media(max-width:768px){
+    .filter-bar { padding: 9px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-bar-inner { flex-wrap: nowrap; min-width: max-content; }
+    .sig-card { min-width: calc(100vw - 80px); max-width: calc(100vw - 60px); }
+  }
   .filter-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-mute); text-transform: uppercase; margin-right: 2px; }
   .ftag { font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.15s; user-select: none; }
   .ftag:hover { background: rgba(255,255,255,0.06); color: var(--text); }
