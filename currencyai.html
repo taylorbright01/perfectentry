@@ -142,7 +142,7 @@ h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}
   <!-- HERO STATS -->
   <div class="hero-stats" id="heroStats">
     <div class="hero-stat">
-      <div class="label">This Week W/L</div>
+      <div class="label">All Time W/L</div>
       <div class="val val-green" id="statWL">—</div>
       <div class="sub" id="statTrades">loading...</div>
     </div>
@@ -409,12 +409,14 @@ async function init(){
 
   // Equity curve — real sequential outcomes in chronological order
   const aiSignals = signalRows.filter(r => r.currency_ai_pass === true);
+  console.log('Currency AI signals for curve:', aiSignals.length, 'of', signalRows.length, 'total');
   const curve = [0];
   let eq = 0;
   aiSignals.forEach(r => {
     eq += r.outcome === 'tp' ? RR : -1.0;
     curve.push(parseFloat(eq.toFixed(2)));
   });
+  console.log('Curve final R:', curve[curve.length-1], 'from', curve.length-1, 'trades');
   const ctx = document.getElementById('equityChart').getContext('2d');
   if(equityChartInst) equityChartInst.destroy();
   equityChartInst = new Chart(ctx, {
@@ -439,6 +441,8 @@ async function init(){
       scales:{
         x:{display:false},
         y:{
+          min: Math.min(0, Math.min(...curve)),
+          max: Math.max(...curve) * 1.05,
           grid:{color:'rgba(255,255,255,0.04)'},
           ticks:{color:'rgba(234,253,252,0.4)',font:{family:'IBM Plex Mono',size:10},
             callback:v=>(v>=0?'+':'')+v.toFixed(0)+'R'}
