@@ -218,7 +218,7 @@ h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}
 
   <!-- CURRENCY STRENGTH HEATMAP -->
   <div class="section">
-    <div class="section-title">Live Currency Strength <span>rolling 30-trade win rate when held long</span></div>
+    <div class="section-title">Currency Strength <span>last 7 days — win rate when held long</span></div>
     <div class="heatmap" id="ccyHeatmap">
       <div style="color:var(--text-mute);font-size:12px">Loading currency data...</div>
     </div>
@@ -314,8 +314,9 @@ async function loadWeeklyStats(){
 }
 
 async function loadSignalsForCurrency(){
+  // Fetch only currency AI approved signals in chronological order
   const res = await fetch(
-    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,currency_ai_pass,created_at&outcome=not.is.null&order=created_at.asc&limit=5000',
+    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,created_at&outcome=not.is.null&currency_ai_pass=eq.true&order=created_at.asc&limit=5000',
     {headers:HEADERS}
   );
   if(!res.ok) return [];
@@ -408,7 +409,7 @@ async function init(){
   });
 
   // Equity curve — real sequential outcomes in chronological order
-  const aiSignals = signalRows.filter(r => r.currency_ai_pass === true);
+  const aiSignals = signalRows; // pre-filtered server-side
   console.log('Currency AI signals for curve:', aiSignals.length, 'of', signalRows.length, 'total');
   const curve = [0];
   let eq = 0;
@@ -486,7 +487,11 @@ async function init(){
 
   // Currency strength heatmap
   const ccyHist = {};
-  signalRows.forEach(r => {
+  // Use last 7 days for current momentum picture
+  const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+  const recentSignals = signalRows.filter(r => r.created_at >= sevenDaysAgo);
+  const heatmapSource = recentSignals.length >= 30 ? recentSignals : signalRows; // fall back to all-time if not enough recent data
+  heatmapSource.forEach(r => {
     const sp = SPECIAL[r.sym];
     const base = sp?sp[0]:r.sym.slice(0,3);
     const quote = sp?sp[1]:r.sym.slice(3);
@@ -495,10 +500,10 @@ async function init(){
     if(!ccyHist[shortC]) ccyHist[shortC]={wins:0,losses:0,trades:0};
     if(r.outcome==='tp'){
       ccyHist[longC].wins++;
-      ccyHist[shortC].losses++; // short ccy lost
+      ccyHist[shortC].losses++;
     } else {
       ccyHist[longC].losses++;
-      ccyHist[shortC].wins++; // short ccy won
+      ccyHist[shortC].wins++;
     }
     ccyHist[longC].trades++;
     ccyHist[shortC].trades++;
