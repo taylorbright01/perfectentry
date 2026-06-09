@@ -317,7 +317,7 @@ async function loadSignalsForCurrency(){
   // Fetch only currency AI approved signals in chronological order
   const res = await fetch(
     SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,created_at&outcome=not.is.null&currency_ai_pass=eq.true&order=created_at.asc&limit=5000',
-    {headers:HEADERS}
+    {headers:{...HEADERS, 'Range-Unit':'items', 'Range':'0-4999', 'Prefer':'count=exact'}}
   );
   if(!res.ok) return [];
   return await res.json();
