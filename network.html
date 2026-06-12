@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currency Network — Perfect Entry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080a0e;--bg2:#0d1017;--bg3:#121620;
+  --teal:#01a0b8;--green:#00e6aa;--red:#ff6a6a;--amber:#ffb700;
+  --text:#EAFDFC;--dim:rgba(234,253,252,0.5);--mute:rgba(234,253,252,0.25);
+  --border:rgba(255,255,255,0.07);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden}
+
+/* CANVAS */
+#canvas{position:fixed;inset:0;z-index:0}
+
+/* HEADER */
+header{position:fixed;top:0;left:0;right:0;z-index:10;padding:16px 24px;display:flex;align-items:center;gap:12px;background:linear-gradient(to bottom,rgba(8,10,14,0.95),transparent)}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text)}
+.logo img{width:22px;height:22px;object-fit:contain}
+.logo span{font-weight:800;font-size:13px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.live-pill{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--green);background:rgba(0,230,170,0.08);border:1px solid rgba(0,230,170,0.2);padding:4px 10px;border-radius:999px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.back-btn{font-size:11px;font-weight:600;color:var(--dim);text-decoration:none;border:1px solid var(--border);padding:5px 12px;border-radius:8px;transition:all .15s}
+.back-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.2)}
+
+/* LEGEND */
+.legend{position:fixed;bottom:24px;left:24px;z-index:10;display:flex;flex-direction:column;gap:8px}
+.legend-title{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--dim)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* TOOLTIP */
+.tooltip{position:fixed;z-index:20;background:rgba(13,16,23,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 16px;pointer-events:none;opacity:0;transition:opacity .15s;min-width:180px}
+.tt-sym{font-size:14px;font-weight:800;margin-bottom:8px}
+.tt-row{display:flex;justify-content:space-between;gap:16px;font-size:11px;margin-bottom:4px}
+.tt-label{color:var(--mute)}
+.tt-val{font-family:'IBM Plex Mono',monospace;font-weight:600}
+
+/* STATS BAR */
+.stats-bar{position:fixed;bottom:24px;right:24px;z-index:10;display:flex;flex-direction:column;gap:6px;text-align:right}
+.stats-item .s-label{font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute)}
+.stats-item .s-val{font-size:16px;font-weight:800;font-family:'IBM Plex Mono',monospace}
+
+/* TITLE */
+.page-title{position:fixed;top:64px;left:24px;z-index:10}
+.page-title h1{font-size:clamp(18px,2.5vw,28px);font-weight:900;line-height:1.1}
+.page-title p{font-size:11px;color:var(--dim);margin-top:4px;font-family:'IBM Plex Mono',monospace}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<header>
+  <a href="index.html" class="logo">
+    <img src="assets/logo.png" alt="Perfect Entry">
+    <span>Perfect Entry</span>
+  </a>
+  <div class="header-right">
+    <div class="live-pill"><span class="live-dot"></span>LIVE</div>
+    <a href="currencyai.html" class="back-btn">← Currency AI</a>
+  </div>
+</header>
+
+<div class="page-title">
+  <h1>Currency Network</h1>
+  <p>Rolling 30-trade win rate · node size = trade volume · edge = pair</p>
+</div>
+
+<div class="legend">
+  <div class="legend-title">Currency Strength</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#00e6aa"></div>Strong when long (&gt;50% WR)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ffb700"></div>Neutral (42–50% WR)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff6a6a"></div>Weak when long (&lt;42% WR)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.15)"></div>Insufficient data</div>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
+const HDR = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
+
+const SPECIAL = {XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
+const CCY_LOOKBACK = 30;
+const CCY_MIN = 10;
+
+// Currency nodes and their positions (will be force-directed)
+const CURRENCIES = ['USD','EUR','GBP','JPY','AUD','NZD','CAD','CHF','XAU','XAG','BTC','ETH'];
+
+// Pairs as edges
+const PAIRS = [
+  'EURUSD','GBPUSD','AUDUSD','NZDUSD','USDCAD','USDCHF','USDJPY',
+  'EURGBP','EURAUD','EURCAD','EURNZD','EURJPY','GBPAUD','GBPCAD',
+  'GBPCHF','GBPNZD','GBPJPY','AUDJPY','AUDCAD','AUDCHF','AUDNZD',
+  'NZDJPY','NZDCAD','NZDCHF','CADJPY','CHFJPY',
+  'XAUUSD','XAGUSD','BTCUSD','ETHUSD'
+];
+
+function getCcys(sym) {
+  const sp = SPECIAL[sym];
+  return sp ? [sp[0], sp[1]] : [sym.slice(0,3), sym.slice(3)];
+}
+
+// Canvas setup
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); layoutNodes(); });
+
+// Node physics
+const nodes = {};
+const edges = [];
+
+CURRENCIES.forEach(ccy => {
+  nodes[ccy] = {
+    id: ccy, x: W/2 + (Math.random()-0.5)*400,
+    y: H/2 + (Math.random()-0.5)*300,
+    vx: 0, vy: 0, r: 28,
+    wr: null, trades: 0, wins: 0, losses: 0,
+    longWins: 0, longTotal: 0
+  };
+});
+
+PAIRS.forEach(sym => {
+  const [a, b] = getCcys(sym);
+  if (nodes[a] && nodes[b]) edges.push({ sym, a, b, trades: 0 });
+});
+
+// Force-directed layout
+function layoutNodes() {
+  // Place nodes in a rough circle
+  const ccyList = Object.keys(nodes);
+  ccyList.forEach((ccy, i) => {
+    const angle = (i / ccyList.length) * Math.PI * 2 - Math.PI/2;
+    const r = Math.min(W, H) * 0.32;
+    nodes[ccy].x = W/2 + Math.cos(angle) * r;
+    nodes[ccy].y = H/2 + Math.sin(angle) * r;
+  });
+}
+layoutNodes();
+
+// Data loading
+let ccyStats = {};
+
+async function loadData() {
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/signals?select=sym,dir,outcome,currency_ai_pass&outcome=not.is.null&order=created_at.desc&limit=5000',
+    { headers: HDR }
+  );
+  if (!res.ok) return;
+  const rows = await res.json();
+
+  // Build currency stats
+  const hist = {};
+  const tradeCount = {};
+  const recent = {};
+
+  // Process oldest first for rolling window
+  const sorted = [...rows].reverse();
+  sorted.forEach(row => {
+    const [base, quote] = getCcys(row.sym);
+    const [longC, shortC] = row.dir === 'buy' ? [base, quote] : [quote, base];
+
+    // Count trades per pair for edge sizing
+    tradeCount[row.sym] = (tradeCount[row.sym] || 0) + 1;
+
+    // Long currency history
+    if (!hist[longC]) hist[longC] = [];
+    hist[longC].push(row.outcome);
+    if (!hist[shortC]) hist[shortC] = [];
+    // Short currency: wins when opponent loses
+    hist[shortC].push(row.outcome === 'tp' ? 'sl' : 'tp');
+  });
+
+  // Calculate rolling stats
+  Object.entries(hist).forEach(([ccy, h]) => {
+    if (!nodes[ccy]) return;
+    const recent = h.slice(-CCY_LOOKBACK);
+    nodes[ccy].longTotal = recent.length;
+    nodes[ccy].longWins = recent.filter(o => o === 'tp').length;
+    if (recent.length >= CCY_MIN) {
+      nodes[ccy].wr = nodes[ccy].longWins / recent.length;
+    } else {
+      nodes[ccy].wr = null;
+    }
+    nodes[ccy].trades = h.length;
+  });
+
+  // Update edge trade counts
+  edges.forEach(e => { e.trades = tradeCount[e.sym] || 0; });
+
+  // Update stats bar
+  const aiRows = rows.filter(r => r.currency_ai_pass === true);
+  const w = aiRows.filter(r => r.outcome === 'tp').length;
+  const l = aiRows.filter(r => r.outcome === 'sl').length;
+  const pf = l > 0 ? (w * 1.4 / l).toFixed(3) : '—';
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stats-item"><div class="s-label">Currency AI W/L</div><div class="s-val" style="color:var(--green)">${w}W / ${l}L</div></div>
+    <div class="stats-item"><div class="s-label">Profit Factor</div><div class="s-val" style="color:var(--teal)">${pf}</div></div>
+  `;
+}
+
+// Node color based on WR
+function nodeColor(wr, alpha = 1) {
+  if (wr === null) return `rgba(255,255,255,${alpha * 0.12})`;
+  if (wr >= 0.5) return `rgba(0,230,170,${alpha})`;
+  if (wr >= 0.417) return `rgba(255,183,0,${alpha})`;
+  return `rgba(255,106,106,${alpha})`;
+}
+
+function nodeGlow(wr) {
+  if (wr === null) return null;
+  if (wr >= 0.5) return 'rgba(0,230,170,0.25)';
+  if (wr >= 0.417) return 'rgba(255,183,0,0.2)';
+  return 'rgba(255,106,106,0.2)';
+}
+
+// Edge color
+function edgeColor(a, b) {
+  const wa = nodes[a]?.wr;
+  const wb = nodes[b]?.wr;
+  if (wa === null || wb === null) return 'rgba(255,255,255,0.04)';
+  const avg = (wa + wb) / 2;
+  if (avg >= 0.5) return 'rgba(0,230,170,0.15)';
+  if (avg >= 0.417) return 'rgba(255,183,0,0.1)';
+  return 'rgba(255,106,106,0.1)';
+}
+
+// Animation
+let frame = 0;
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background radial
+  const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.6);
+  grad.addColorStop(0, 'rgba(1,160,184,0.04)');
+  grad.addColorStop(1, 'rgba(8,10,14,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  frame++;
+
+  // Draw edges
+  edges.forEach(e => {
+    const a = nodes[e.a], b = nodes[e.b];
+    if (!a || !b) return;
+    const thickness = Math.max(0.5, Math.min(3, e.trades / 80));
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = edgeColor(e.a, e.b);
+    ctx.lineWidth = thickness;
+    ctx.stroke();
+  });
+
+  // Draw nodes
+  Object.values(nodes).forEach(n => {
+    const r = Math.max(18, Math.min(46, 18 + n.trades / 80));
+    n.r = r;
+
+    // Glow
+    const glow = nodeGlow(n.wr);
+    if (glow) {
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 2.5);
+      g.addColorStop(0, glow);
+      g.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(13,16,23,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = nodeColor(n.wr, 0.8);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Win rate arc if data available
+    if (n.wr !== null && n.longTotal >= CCY_MIN) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r + 4, -Math.PI/2, -Math.PI/2 + n.wr * Math.PI * 2);
+      ctx.strokeStyle = nodeColor(n.wr, 0.6);
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // Currency label
+    ctx.fillStyle = n.wr !== null ? nodeColor(n.wr, 0.95) : 'rgba(234,253,252,0.4)';
+    ctx.font = `800 ${Math.max(9, r * 0.42)}px Inter`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.id, n.x, n.y);
+
+    // WR label below
+    if (n.wr !== null) {
+      ctx.fillStyle = nodeColor(n.wr, 0.6);
+      ctx.font = `600 9px IBM Plex Mono`;
+      ctx.fillText((n.wr * 100).toFixed(0) + '%', n.x, n.y + r + 12);
+    }
+  });
+
+  requestAnimationFrame(draw);
+}
+
+// Tooltip on hover
+const tooltip = document.getElementById('tooltip');
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  let hit = null;
+  Object.values(nodes).forEach(n => {
+    const dx = mx - n.x, dy = my - n.y;
+    if (Math.sqrt(dx*dx + dy*dy) < n.r + 8) hit = n;
+  });
+
+  if (hit) {
+    const wrPct = hit.wr !== null ? (hit.wr * 100).toFixed(1) + '%' : 'Insufficient data';
+    const status = hit.wr === null ? 'No data' : hit.wr >= 0.5 ? 'Strong' : hit.wr >= 0.417 ? 'Neutral' : 'Weak';
+    const statusColor = hit.wr === null ? 'var(--mute)' : hit.wr >= 0.5 ? 'var(--green)' : hit.wr >= 0.417 ? 'var(--amber)' : 'var(--red)';
+
+    tooltip.innerHTML = `
+      <div class="tt-sym">${hit.id}</div>
+      <div class="tt-row"><span class="tt-label">Win rate (long)</span><span class="tt-val">${wrPct}</span></div>
+      <div class="tt-row"><span class="tt-label">Trades (rolling)</span><span class="tt-val">${hit.longTotal}</span></div>
+      <div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${statusColor}">${status}</span></div>
+      <div class="tt-row"><span class="tt-label">All-time trades</span><span class="tt-val">${hit.trades}</span></div>
+    `;
+
+    let tx = e.clientX + 16, ty = e.clientY - 80;
+    if (tx + 200 > window.innerWidth) tx = e.clientX - 216;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+    tooltip.style.opacity = '1';
+  } else {
+    tooltip.style.opacity = '0';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+
+// Init
+loadData();
+draw();
+setInterval(loadData, 30000); // refresh every 30s
+</script>
+</body>
+</html>
