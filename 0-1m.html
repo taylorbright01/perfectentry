@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfect Entry — From 0 to 1M</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F8FC;
+  --bg2:#EEF0F7;
+  --bg-teal:#E8F4F1;
+  --ink:#0D1420;
+  --ink-dim:#4A5568;
+  --ink-mute:#8896A8;
+  --teal:#006B5E;
+  --teal-light:#00927C;
+  --orange:#E85D04;
+  --orange-light:#FF6B35;
+  --green:#0A7250;
+  --red:#C0392B;
+  --rule:#D4DAE8;
+  --mono:'IBM Plex Mono',monospace;
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Inter',system-ui,sans-serif;
+}
+
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7;-webkit-font-smoothing:antialiased}
+
+/* PROGRESS BAR */
+#progress{position:fixed;top:0;left:0;height:3px;background:var(--teal);z-index:100;transition:width .1s linear;width:0%}
+
+/* NAV */
+nav{position:fixed;top:3px;left:0;right:0;z-index:90;padding:12px 32px;display:flex;align-items:center;justify-content:space-between;background:rgba(247,248,252,0.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.nav-name{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink)}
+.nav-links{display:flex;gap:24px}
+.nav-links a{font-size:12px;font-weight:500;color:var(--ink-dim);text-decoration:none;letter-spacing:0.02em;transition:color .15s}
+.nav-links a:hover{color:var(--teal)}
+@media(max-width:640px){.nav-links{display:none}}
+
+/* LAYOUT */
+.page{max-width:780px;margin:0 auto;padding:0 32px 120px}
+@media(max-width:640px){.page{padding:0 20px 80px}}
+
+/* TIMELINE SPINE */
+.timeline-wrap{position:relative;padding-left:32px;border-left:2px solid var(--rule);margin-left:8px}
+.timeline-wrap.thick{border-left-width:4px;border-left-color:var(--teal)}
+.chapter-dot{position:absolute;left:-9px;width:16px;height:16px;border-radius:50%;background:var(--bg);border:2px solid var(--rule);top:0}
+.chapter-dot.active{border-color:var(--teal);background:var(--teal)}
+.chapter-dot.orange{border-color:var(--orange);background:var(--orange)}
+
+/* HERO */
+.hero{padding:120px 0 80px;border-bottom:1px solid var(--rule);margin-bottom:72px}
+.hero-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:20px}
+.hero-title{font-family:var(--serif);font-size:clamp(36px,5vw,58px);font-weight:900;line-height:1.08;letter-spacing:-0.02em;margin-bottom:28px;color:var(--ink)}
+.hero-title em{font-style:italic;color:var(--teal)}
+.hero-sub{font-size:17px;color:var(--ink-dim);line-height:1.65;max-width:600px;margin-bottom:40px}
+.hero-meta{display:flex;gap:32px;flex-wrap:wrap}
+.hero-meta-item .label{font-family:var(--mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:4px}
+.hero-meta-item .value{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--ink)}
+
+/* SECTION */
+.section{margin-bottom:80px}
+.section-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+.section-title{font-family:var(--serif);font-size:clamp(24px,3vw,34px);font-weight:700;line-height:1.15;letter-spacing:-0.01em;margin-bottom:20px;color:var(--ink)}
+.section-body{font-size:16px;color:var(--ink-dim);line-height:1.75;margin-bottom:20px}
+.section-body p{margin-bottom:16px}
+.section-body p:last-child{margin-bottom:0}
+
+/* PLACEHOLDER TEXT */
+.placeholder{border:1.5px dashed var(--rule);border-radius:8px;padding:20px 24px;background:rgba(212,218,232,0.08);color:var(--ink-mute);font-size:14px;font-style:italic;margin-bottom:20px;cursor:text}
+.placeholder:focus{outline:2px solid var(--teal);background:white;color:var(--ink);font-style:normal}
+
+/* PHOTO COLLAGE */
+.photo-collage{display:grid;gap:8px;margin:28px 0;border-radius:12px;overflow:hidden}
+.photo-collage.grid-2{grid-template-columns:1fr 1fr;grid-template-rows:200px}
+.photo-collage.grid-3{grid-template-columns:2fr 1fr;grid-template-rows:180px 180px}
+.photo-collage.grid-3 .photo-slot:first-child{grid-row:1/3}
+.photo-slot{background:var(--bg2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--rule);border-radius:4px;cursor:pointer;position:relative;overflow:hidden;transition:background .15s}
+.photo-slot:hover{background:#E4E8F0}
+.photo-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-slot svg{color:var(--ink-mute);flex-shrink:0}
+.photo-slot span{font-size:11px;color:var(--ink-mute);font-weight:500}
+.photo-slot img{width:100%;height:100%;object-fit:cover;display:none}
+.photo-slot img.loaded{display:block}
+
+/* PULL QUOTE */
+.pull-quote{border-left:3px solid var(--teal);padding:16px 24px;margin:32px 0;background:var(--bg-teal);border-radius:0 8px 8px 0}
+.pull-quote p{font-family:var(--serif);font-size:18px;font-weight:300;font-style:italic;line-height:1.6;color:var(--ink)}
+
+/* DATA CARD */
+.data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:28px 0}
+.data-card{background:white;border:1px solid var(--rule);border-radius:10px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.data-card .dc-label{font-family:var(--mono);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:6px}
+.data-card .dc-val{font-family:var(--serif);font-size:clamp(20px,3vw,26px);font-weight:700}
+.data-card .dc-sub{font-size:10px;color:var(--ink-mute);margin-top:3px}
+.val-teal{color:var(--teal)}
+.val-orange{color:var(--orange)}
+.val-green{color:var(--green)}
+.val-red{color:var(--red)}
+
+/* INLINE CODE */
+.code-block{background:var(--ink);color:#A8D5C8;font-family:var(--mono);font-size:12px;border-radius:8px;padding:16px 20px;margin:20px 0;line-height:1.7;overflow-x:auto}
+.code-block .c-key{color:#7EC8E3}
+.code-block .c-str{color:#C3E88D}
+.code-block .c-num{color:#F78C6C}
+.code-block .c-comment{color:#546E7A}
+
+/* CHART */
+.chart-wrap{background:white;border:1px solid var(--rule);border-radius:12px;padding:20px;margin:28px 0;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+.chart-wrap h4{font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:16px}
+.chart-inner{height:220px;position:relative}
+
+/* TECH STACK */
+.stack-row{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.stack-pill{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;border:1px solid var(--rule);background:white;font-size:12px;font-weight:600;color:var(--ink-dim)}
+.stack-pill span.dot{width:8px;height:8px;border-radius:50%;background:var(--teal);display:inline-block}
+
+/* LEDGER DIAGRAM */
+.ledger-chain{display:flex;flex-direction:column;gap:0;margin:28px 0}
+.chain-block{display:flex;gap:16px;align-items:flex-start;padding:16px 0;border-bottom:1px solid var(--rule)}
+.chain-block:last-child{border:none}
+.chain-hash{font-family:var(--mono);font-size:9px;color:var(--ink-mute);background:var(--bg2);padding:3px 8px;border-radius:4px;flex-shrink:0;letter-spacing:0.05em;margin-top:2px}
+.chain-content{}
+.chain-type{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:4px}
+.chain-type.open{color:var(--teal)}
+.chain-type.close{color:var(--orange)}
+.chain-data{font-size:12px;color:var(--ink-dim);line-height:1.5}
+.chain-arrow{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-align:center;padding:4px 0}
+
+/* RESEARCH QUESTIONS */
+.rq-list{list-style:none;margin:20px 0}
+.rq-list li{padding:14px 0;border-bottom:1px solid var(--rule);display:flex;gap:16px;align-items:baseline}
+.rq-list li:last-child{border:none}
+.rq-num{font-family:var(--mono);font-size:10px;color:var(--ink-mute);flex-shrink:0;padding-top:2px}
+.rq-text{font-size:15px;color:var(--ink-dim);line-height:1.6}
+
+/* DIVIDER */
+.divider{border:none;border-top:1px solid var(--rule);margin:64px 0}
+
+/* FOOTNOTE */
+.footnote{font-size:12px;color:var(--ink-mute);border-top:1px solid var(--rule);padding-top:16px;margin-top:32px;font-family:var(--mono)}
+
+/* LOADING */
+.loading{font-family:var(--mono);font-size:11px;color:var(--ink-mute);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <div class="nav-name">Taylor Bright</div>
+  <div class="nav-links">
+    <a href="#origin">Origin</a>
+    <a href="#peak">The Peak</a>
+    <a href="#rebuild">Rebuild</a>
+    <a href="#currencyai">Currency AI</a>
+    <a href="#ledger">Ledger</a>
+    <a href="#forward">Forward</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">Perfect Entry · University of Essex · June 2026</div>
+    <h1 class="hero-title">From zero<br>to <em>£100,000</em> a month,<br>and what I built<br>losing it all.</h1>
+    <p class="hero-sub">A practitioner's account of building a systematic forex signal platform, the collapse that followed, and the AI infrastructure that emerged from the rebuild.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <div class="label">Founded</div>
+        <div class="value">2020</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Peak MRR</div>
+        <div class="value">£100k+</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Live signals</div>
+        <div class="value" id="heroTrades" style="color:var(--teal)">—</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Currency AI PF</div>
+        <div class="value" id="heroPF" style="color:var(--green)">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORIGIN -->
+  <div id="origin" class="section">
+    <div class="section-eyebrow">Chapter 1 · 2020</div>
+    <h2 class="section-title">How it started</h2>
+
+    <div class="photo-collage grid-2">
+      <div class="photo-slot">
+        <input type="file" accept="image/*" onchange="loadPhoto(this)">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        <span>Add photo</span>
+      </div>
+      <div class="photo-slot">
+        <input type="file" accept="image/*" onchange="loadPhoto(this)">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        <span>Add photo</span>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Write about how Perfect Entry started. Your background, what you were doing before, why forex, what the first version looked like — spreadsheets, manual signals, the early Discord...</div>
+    </div>
+
+    <div class="pull-quote">
+      <p>"I started with a spreadsheet and a Discord server. No infrastructure, no backtesting framework, no institutional knowledge — just a system I believed in and an audience willing to trust it."</p>
+    </div>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Write about the early growth. How you built the audience, what made people follow, the first paying members...</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- THE PEAK -->
+  <div id="peak" class="section">
+    <div class="section-eyebrow">Chapter 2 · 2021–2022</div>
+    <h2 class="section-title">The peak — and the fall</h2>
+
+    <div class="photo-collage grid-3">
+      <div class="photo-slot">
+        <input type="file" accept="image/*" onchange="loadPhoto(this)">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        <span>Add photo</span>
+      </div>
+      <div class="photo-slot">
+        <input type="file" accept="image/*" onchange="loadPhoto(this)">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        <span>Add photo</span>
+      </div>
+      <div class="photo-slot">
+        <input type="file" accept="image/*" onchange="loadPhoto(this)">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        <span>Add photo</span>
+      </div>
+    </div>
+
+    <div class="data-grid">
+      <div class="data-card">
+        <div class="dc-label">Peak MRR</div>
+        <div class="dc-val val-teal">£100k+</div>
+        <div class="dc-sub">monthly recurring</div>
+      </div>
+      <div class="data-card">
+        <div class="dc-label">Peak members</div>
+        <div class="dc-val val-teal">~2,000</div>
+        <div class="dc-sub">paying subscribers</div>
+      </div>
+      <div class="data-card">
+        <div class="dc-label">Team</div>
+        <div class="dc-val val-orange">Split</div>
+        <div class="dc-sub">2022 collapse</div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Write about the peak — what £100k MRR felt like, the team, the ambition, the Dubai period. Then the split — what happened, what the other partners did, how the brand was damaged. Be as honest as you want here, this is an academic room.</div>
+    </div>
+
+    <div class="pull-quote">
+      <p>"The company didn't fail because the product stopped working. It failed because of trust — between partners, between the brand and its customers. That's what I came back to fix."</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- THE REBUILD -->
+  <div id="rebuild" class="section">
+    <div class="section-eyebrow">Chapter 3 · 2023–2026</div>
+    <h2 class="section-title">The rebuild — doing it differently</h2>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Write about the decision to come back, the economics degree at Essex running in parallel, the dissertation on Fibonacci behavioural anchoring. How studying price theory and behavioural finance informed how you thought about rebuilding the system...</div>
+    </div>
+
+    <div class="section-body">
+      <p style="font-size:16px;color:var(--ink-dim)">The new architecture was built on three principles the original version lacked:</p>
+    </div>
+
+    <div style="display:grid;gap:12px;margin:20px 0">
+      <div style="display:flex;gap:16px;padding:16px;background:white;border:1px solid var(--rule);border-radius:10px;align-items:flex-start">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:0.08em;flex-shrink:0;padding-top:2px">01</div>
+        <div><div style="font-weight:700;font-size:15px;margin-bottom:4px">Transparency by default</div><div style="font-size:13px;color:var(--ink-dim)">Every number publicly auditable in real time. No PDFs, no screenshots, no monthly summaries selected after the fact.</div></div>
+      </div>
+      <div style="display:flex;gap:16px;padding:16px;background:white;border:1px solid var(--rule);border-radius:10px;align-items:flex-start">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:0.08em;flex-shrink:0;padding-top:2px">02</div>
+        <div><div style="font-weight:700;font-size:15px;margin-bottom:4px">Automated infrastructure</div><div style="font-size:13px;color:var(--ink-dim)">TradingView webhooks to Supabase Edge Functions. No manual signal posting, no human latency, no ability to selectively publish.</div></div>
+      </div>
+      <div style="display:flex;gap:16px;padding:16px;background:white;border:1px solid var(--rule);border-radius:10px;align-items:flex-start">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:0.08em;flex-shrink:0;padding-top:2px">03</div>
+        <div><div style="font-weight:700;font-size:15px;margin-bottom:4px">Regime-aware filtering</div><div style="font-size:13px;color:var(--ink-dim)">A rolling currency strength model that suppresses signals when market conditions work against the system — rather than trading blindly in all environments.</div></div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <p style="font-size:14px;color:var(--ink-mute);font-family:var(--mono)">Technical stack</p>
+    </div>
+    <div class="stack-row">
+      <div class="stack-pill"><span class="dot"></span>TradingView webhooks</div>
+      <div class="stack-pill"><span class="dot"></span>Supabase (Postgres + Edge Functions)</div>
+      <div class="stack-pill"><span class="dot"></span>Deno / TypeScript</div>
+      <div class="stack-pill"><span class="dot"></span>GitHub Pages</div>
+      <div class="stack-pill"><span class="dot"></span>Supabase Realtime (WebSocket)</div>
+      <div class="stack-pill"><span class="dot"></span>HMAC-SHA256 webhooks</div>
+    </div>
+    <div class="footnote">Infrastructure cost: £0/month. Signal latency: &lt;200ms from TradingView alert to member screen.</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- CURRENCY AI -->
+  <div id="currencyai" class="section">
+    <div class="section-eyebrow">The system · Currency AI</div>
+    <h2 class="section-title">Currency AI — a regime detection filter</h2>
+
+    <div class="section-body">
+      <p>The core signal system fires alerts across 29 currency pairs on five timeframes — 1 minute through 2 hour — validated against out-of-sample session windows built from 65,000+ historical trades. The system identifies trend continuation setups, not reversals.</p>
+      <p>The problem Currency AI solves is market regime. In consolidating markets the system performs well. In strongly trending markets — when capital flows are aggressively directional — trend-following signals on the wrong side of that move get destroyed regardless of session window quality. The system needed a way to detect regime in real time and suppress counter-regime signals automatically.</p>
+    </div>
+
+    <div class="pull-quote">
+      <p>"Each currency is treated as an agent in a network. The 26 forex pairs are edges. The rolling win rate filter is an emergent signal from the collective behaviour of those agents — not a rule I wrote, but a property of the system."</p>
+    </div>
+
+    <div class="section-body">
+      <p>For each currency, the system maintains a rolling 30-trade window tracking performance across all pairs in which that currency appears — both as base and quote, direction-adjusted. GBP's strength is calculated from every trade where GBP was held long: GBPUSD buys, EURGBP sells, GBPJPY buys.</p>
+      <p>Before any signal reaches a member's screen, two conditions must both be met:</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0">
+      <div style="padding:16px;background:var(--bg-teal);border:1px solid rgba(0,107,94,0.2);border-radius:10px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--teal);margin-bottom:8px;font-weight:600">CONDITION 1</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">Long currency is strong</div>
+        <div style="font-size:12px;color:var(--ink-dim)">Win rate when held long must exceed 42.9% (breakeven at 1.4R/R). Below this threshold → signal suppressed.</div>
+      </div>
+      <div style="padding:16px;background:var(--bg-teal);border:1px solid rgba(0,107,94,0.2);border-radius:10px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--teal);margin-bottom:8px;font-weight:600">CONDITION 2</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">Short currency is weak</div>
+        <div style="font-size:12px;color:var(--ink-dim)">The currency being sold must be losing when held long — indicating genuine weakness, not just noise.</div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <p>Minimum 10 trades of history are required before either condition is evaluated. Below this threshold, the signal is suppressed — not shown. When in doubt, exclude.</p>
+    </div>
+
+    <!-- LIVE DATA -->
+    <div class="data-grid" id="liveDataGrid">
+      <div class="data-card"><div class="dc-label">All-time W/L</div><div class="dc-val val-green loading" id="statWL">—</div><div class="dc-sub">currency AI filtered</div></div>
+      <div class="data-card"><div class="dc-label">Total R</div><div class="dc-val val-teal" id="statR">—</div><div class="dc-sub">risk-adjusted return</div></div>
+      <div class="data-card"><div class="dc-label">Profit Factor</div><div class="dc-val val-teal" id="statPF">—</div><div class="dc-sub">target: 1.05+</div></div>
+      <div class="data-card"><div class="dc-label">Win Rate</div><div class="dc-val" id="statWR">—</div><div class="dc-sub">breakeven: 41.7%</div></div>
+      <div class="data-card"><div class="dc-label">Calmar Ratio</div><div class="dc-val val-orange" id="statCalmar">—</div><div class="dc-sub">return / max drawdown</div></div>
+      <div class="data-card"><div class="dc-label">Tracked trades</div><div class="dc-val" id="statTrades">—</div><div class="dc-sub">live database</div></div>
+    </div>
+    <div class="footnote">All figures pulled live from the Perfect Entry signals database · perfectentry.store/currencyai</div>
+
+    <!-- EQUITY CHART -->
+    <div class="chart-wrap">
+      <h4>Currency AI equity curve — cumulative R, chronological</h4>
+      <div class="chart-inner"><canvas id="equityChart"></canvas></div>
+    </div>
+
+    <!-- WEEK BY WEEK -->
+    <div style="margin:28px 0">
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:12px">Week by week performance</div>
+      <div id="weekTable" style="font-size:13px"></div>
+    </div>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Add any additional context you want to give here about Currency AI — the Monday pattern, the consolidating vs trending market behaviour, what surprised you in the data...</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- IMMUTABLE LEDGER -->
+  <div id="ledger" class="section">
+    <div class="section-eyebrow">In development · The next layer</div>
+    <h2 class="section-title">An immutable trade ledger</h2>
+
+    <div class="section-body">
+      <p>The industry standard for signal verification — platforms like MyFXBook — has a well-documented vulnerability. Providers can pause tracking before bad trades and re-enable it after. The record only reflects what they chose to show. This is quietly exploited across the industry.</p>
+      <p>The current Perfect Entry system already improves on this significantly. Every Currency AI verdict is calculated and stored at the moment a signal opens — before the outcome is known — and cannot be changed after the fact. Every close source is recorded: automated, auto-close engine, or manual. The record is auditable even if not cryptographically sealed.</p>
+      <p>The next step is a cryptographic hash chain where each block hashes the previous. Any retroactive change breaks the chain from that point forward and is immediately detectable.</p>
+    </div>
+
+    <div class="ledger-chain">
+      <div class="chain-block">
+        <div class="chain-hash">0x00000000</div>
+        <div class="chain-content">
+          <div class="chain-type open">Genesis block</div>
+          <div class="chain-data">Sequential backfill · all trades from June 2026 · canonically signed</div>
+        </div>
+      </div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-block">
+        <div class="chain-hash">0x3a7f2c...</div>
+        <div class="chain-content">
+          <div class="chain-type open">Signal opened</div>
+          <div class="chain-data">GBPUSD · 1min · sell · entry 1.26543 · sl 1.26598 · tp 1.26466 · score S2 · currency_ai_pass true · network_state 5461473855336800...</div>
+        </div>
+      </div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-block">
+        <div class="chain-hash">0x91d4a1...</div>
+        <div class="chain-content">
+          <div class="chain-type close">Signal closed</div>
+          <div class="chain-data">open_block: 0x3a7f2c · outcome: tp · close: 1.26471 · source: whale_alert · network_state 5461483955226900...</div>
+        </div>
+      </div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-block">
+        <div class="chain-hash">0x2e8b77...</div>
+        <div class="chain-content">
+          <div class="chain-type open">Signal opened</div>
+          <div class="chain-data">EURUSD · 3min · buy · entry 1.16452 · sl 1.16398 · tp 1.16542 · score S3 · currency_ai_pass false · suppressed from display</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <p>Each block also encodes the full currency network state at that moment — the rolling win rate of all 12 tracked currencies compressed into a single integer. Over thousands of trades this becomes a continuous timestamped record of currency network topology: which currencies lead, which lag, how regime transitions propagate through the network.</p>
+    </div>
+
+    <div class="pull-quote">
+      <p>"This is not just a trading record. It is a time series dataset of multi-currency agent behaviour. The signal ledger and the network state database are the same object."</p>
+    </div>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Add any additional thoughts on the ledger here — the academic framing, the connection to distributed ledger theory, why a hash chain is sufficient without a full public blockchain...</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- RESEARCH QUESTIONS -->
+  <div class="section">
+    <div class="section-eyebrow">Open questions</div>
+    <h2 class="section-title">What I haven't solved yet</h2>
+
+    <ul class="rq-list">
+      <li>
+        <div class="rq-num">01</div>
+        <div class="rq-text">What is the optimal lookback window for the currency filter? The current 30-trade window was determined empirically. A formal optimisation over different market regimes would establish whether this is robust or overfitted to the current data period.</div>
+      </li>
+      <li>
+        <div class="rq-num">02</div>
+        <div class="rq-text">Should the weights between session score, currency strength, and pair-level profit factor be learned rather than specified? A logistic regression over 1,000+ trades per bucket would allow the system to discover the empirically optimal weighting.</div>
+      </li>
+      <li>
+        <div class="rq-num">03</div>
+        <div class="rq-text">Is win rate when held long the right proxy for currency strength, or does win rate when held short diverge in ways that encode additional information? Initial data suggests long + short WR does not always sum to 100%, which implies asymmetric information content.</div>
+      </li>
+      <li>
+        <div class="rq-num">04</div>
+        <div class="rq-text">The Monday underperformance pattern is consistent across two weeks of data. Is this a liquidity effect, a regime transition effect from weekend gaps, or something else? How should the system handle the first N hours of each trading week?</div>
+      </li>
+      <li>
+        <div class="rq-num">05</div>
+        <div class="rq-text">If the currency network state is timestamped at every signal event, can extreme divergences between long and short win rates serve as an early warning signal for currency stress events — a real-time stress indicator built from aggregate retail trader behaviour?</div>
+      </li>
+    </ul>
+  </div>
+
+  <hr class="divider">
+
+  <!-- FORWARD -->
+  <div id="forward" class="section">
+    <div class="section-eyebrow">Chapter 4 · Where next</div>
+    <h2 class="section-title">The commercial model and the longer vision</h2>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Write about where Perfect Entry is going commercially — the subscription tiers, the white label partnerships already in discussion, the Vantage IB structure, the copy trade account. Keep it factual and honest about where you are vs where you're going...</div>
+    </div>
+
+    <div class="data-grid">
+      <div class="data-card">
+        <div class="dc-label">Email subscribers</div>
+        <div class="dc-val val-teal">14,000</div>
+        <div class="dc-sub">built organically</div>
+      </div>
+      <div class="data-card">
+        <div class="dc-label">Discord members</div>
+        <div class="dc-val val-teal">15,000</div>
+        <div class="dc-sub">active community</div>
+      </div>
+      <div class="data-card">
+        <div class="dc-label">YouTube</div>
+        <div class="dc-val val-teal">16,300</div>
+        <div class="dc-sub">subscribers</div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      <div class="placeholder" contenteditable="true">Write the closing section — what you're asking for from this room, what the talk is really about. Keep it direct. You're not pitching, you're showing work and asking for input from people who know more than you about certain parts of it...</div>
+    </div>
+
+    <div class="pull-quote">
+      <p>"Retail trading has always had a trust problem. I want Perfect Entry to be the system that proves trust doesn't have to be assumed — it can be demonstrated, mathematically, in the record."</p>
+    </div>
+
+    <div class="footnote" style="margin-top:48px">
+      perfectentry.store · perfectentry.store/currencyai · perfectentry.store/signals<br>
+      Taylor Bright · BSc Economics · University of Essex · 2026
+    </div>
+  </div>
+
+</div><!-- end page -->
+
+<script>
+// Progress bar
+window.addEventListener('scroll', () => {
+  const d = document.documentElement;
+  const pct = (d.scrollTop / (d.scrollHeight - d.clientHeight)) * 100;
+  document.getElementById('progress').style.width = pct + '%';
+});
+
+// Photo upload handler
+function loadPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const slot = input.parentElement;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let img = slot.querySelector('img');
+    if (!img) { img = document.createElement('img'); slot.appendChild(img); }
+    img.src = e.target.result;
+    img.classList.add('loaded');
+    slot.querySelector('svg').style.display = 'none';
+    slot.querySelector('span').style.display = 'none';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// Data loading
+const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
+const H = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
+
+let equityChart = null;
+
+async function loadAll() {
+  // Weekly stats
+  const [wsRes, sigRes] = await Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/weekly_stats?select=*&order=stat_date.asc&limit=500', {headers:H}),
+    fetch(SUPABASE_URL + '/rest/v1/signals?select=sym,dir,outcome,created_at&outcome=not.is.null&currency_ai_pass=eq.true&order=created_at.asc&limit=5000',
+      {headers:{...H,'Range-Unit':'items','Range':'0-4999'}})
+  ]);
+
+  if (!wsRes.ok || !sigRes.ok) return;
+  const wsRows = await wsRes.json();
+  const sigRows = await sigRes.json();
+
+  // Totals
+  let totalW = 0, totalL = 0;
+  wsRows.forEach(r => { totalW += r.currency_ai_wins||0; totalL += r.currency_ai_losses||0; });
+  const totalR = totalW*1.4 - totalL;
+  const pf = totalL > 0 ? (totalW*1.4/totalL).toFixed(3) : '—';
+  const wr = totalW+totalL > 0 ? (totalW/(totalW+totalL)*100).toFixed(1)+'%' : '—';
+
+  // Max DD from equity curve
+  const curve = [0]; let eq = 0;
+  sigRows.forEach(r => { eq += r.outcome==='tp'?1.4:-1; curve.push(parseFloat(eq.toFixed(2))); });
+  let peak=0, maxDD=0;
+  curve.forEach(v => { if(v>peak)peak=v; if(v-peak<maxDD)maxDD=v-peak; });
+  const calmar = maxDD!==0 ? (totalR/Math.abs(maxDD)).toFixed(2) : '—';
+
+  // Update hero
+  document.getElementById('heroTrades').textContent = (totalW+totalL).toLocaleString();
+  document.getElementById('heroPF').textContent = pf;
+
+  // Update stats
+  document.getElementById('statWL').textContent = totalW+'W / '+totalL+'L';
+  document.getElementById('statWL').classList.remove('loading');
+  document.getElementById('statR').textContent = (totalR>=0?'+':'')+totalR.toFixed(1)+'R';
+  document.getElementById('statPF').textContent = pf;
+  document.getElementById('statWR').textContent = wr;
+  document.getElementById('statCalmar').textContent = calmar;
+  document.getElementById('statTrades').textContent = (totalW+totalL).toLocaleString();
+
+  // Equity chart
+  const ctx = document.getElementById('equityChart').getContext('2d');
+  if (equityChart) equityChart.destroy();
+  equityChart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:curve.map((_,i)=>i),
+      datasets:[{
+        data:curve,
+        borderColor: totalR>=0?'#006B5E':'#C0392B',
+        borderWidth:2, pointRadius:0,
+        fill:true,
+        backgroundColor: totalR>=0?'rgba(0,107,94,0.06)':'rgba(192,57,43,0.06)',
+        tension:0.3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'R: '+(ctx.raw>=0?'+':'')+ctx.raw.toFixed(1)+'R'}}},
+      scales:{
+        x:{display:false},
+        y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#8896A8',font:{family:'IBM Plex Mono',size:10},callback:v=>(v>=0?'+':'')+v.toFixed(0)+'R'}}
+      }
+    }
+  });
+
+  // Week by week table
+  const byWeek = {};
+  wsRows.forEach(r => {
+    const d = new Date(r.stat_date);
+    const dow = d.getUTCDay();
+    const diff = dow===0?6:dow-1;
+    const mon = new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-diff));
+    const wk = mon.toISOString().slice(0,10);
+    if(!byWeek[wk]) byWeek[wk]={w:0,l:0};
+    byWeek[wk].w += r.currency_ai_wins||0;
+    byWeek[wk].l += r.currency_ai_losses||0;
+  });
+
+  const weeks = Object.entries(byWeek).sort((a,b)=>b[0].localeCompare(a[0]));
+  document.getElementById('weekTable').innerHTML =
+    '<table style="width:100%;border-collapse:collapse;font-family:IBM Plex Mono,monospace;font-size:12px">' +
+    '<thead><tr style="border-bottom:2px solid #D4DAE8">' +
+    '<th style="text-align:left;padding:8px 0;color:#8896A8;font-weight:600;letter-spacing:0.06em;font-size:10px;text-transform:uppercase">Week</th>' +
+    '<th style="text-align:right;padding:8px 0;color:#8896A8;font-weight:600;letter-spacing:0.06em;font-size:10px;text-transform:uppercase">W</th>' +
+    '<th style="text-align:right;padding:8px 0;color:#8896A8;font-weight:600;letter-spacing:0.06em;font-size:10px;text-transform:uppercase">L</th>' +
+    '<th style="text-align:right;padding:8px 0;color:#8896A8;font-weight:600;letter-spacing:0.06em;font-size:10px;text-transform:uppercase">R</th>' +
+    '<th style="text-align:right;padding:8px 0;color:#8896A8;font-weight:600;letter-spacing:0.06em;font-size:10px;text-transform:uppercase">PF</th>' +
+    '</tr></thead><tbody>' +
+    weeks.map(([wk,v]) => {
+      const r = v.w*1.4-v.l;
+      const pf = v.l>0?(v.w*1.4/v.l).toFixed(3):'—';
+      const rCol = r>=0?'#0A7250':'#C0392B';
+      const pfCol = parseFloat(pf)>=1.05?'#006B5E':parseFloat(pf)>=1.0?'#E85D04':'#C0392B';
+      const end = new Date(new Date(wk).getTime()+6*86400000).toISOString().slice(5,10);
+      return `<tr style="border-bottom:1px solid #EEF0F7">
+        <td style="padding:10px 0;color:#4A5568">${wk.slice(5)} → ${end}</td>
+        <td style="text-align:right;padding:10px 0;color:#0A7250">${v.w}</td>
+        <td style="text-align:right;padding:10px 0;color:#C0392B">${v.l}</td>
+        <td style="text-align:right;padding:10px 0;color:${rCol};font-weight:600">${r>=0?'+':''}${r.toFixed(1)}R</td>
+        <td style="text-align:right;padding:10px 0;color:${pfCol};font-weight:600">${pf}</td>
+      </tr>`;
+    }).join('') +
+    '</tbody></table>';
+}
+
+loadAll();
+</script>
+
+</body>
+</html>
