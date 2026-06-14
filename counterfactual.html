@@ -234,29 +234,38 @@ function getWeekStart(dateStr) {
 let equityChart = null;
 
 async function loadAll() {
-  // Fetch all tracked signals with currency_ai_pass value
-  const res = await fetch(
-    SUPABASE_URL + '/rest/v1/signals?select=id,sym,tf,dir,outcome,currency_ai_pass,created_at&outcome=not.is.null&order=created_at.asc&limit=5000',
-    { headers: { ...HDR, 'Range-Unit':'items', 'Range':'0-4999' } }
-  );
-  if (!res.ok) return;
-  const rows = await res.json();
+  // Use pre-aggregated tables — scales to any number of signals
+  const [wsRes, deRes, psRes] = await Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/weekly_stats?select=*&order=stat_date.asc&limit=1000', {headers:HDR}),
+    fetch(SUPABASE_URL + '/rest/v1/daily_equity?select=*&order=trade_date.asc&limit=1000', {headers:HDR}),
+    fetch(SUPABASE_URL + '/rest/v1/pair_stats?select=*&limit=500', {headers:HDR}),
+  ]);
+  if (!wsRes.ok || !deRes.ok || !psRes.ok) return;
+  const wsRows = await wsRes.json();
+  const deRows = await deRes.json();
+  const psRows = await psRes.json();
 
-  const aiRows    = rows.filter(r => r.currency_ai_pass === true);
-  const rawRows   = rows; // all tracked
-  const suppRows  = rows.filter(r => r.currency_ai_pass === false);
+  // ── TOTALS from weekly_stats ──
+  let aiW=0, aiL=0, rawW=0, rawL=0;
+  wsRows.forEach(r => {
+    aiW  += r.currency_ai_wins   || 0;
+    aiL  += r.currency_ai_losses || 0;
+    rawW += r.wins  || 0;
+    rawL += r.losses || 0;
+  });
 
-  // ── TOTALS ──
-  function stats(arr) {
-    const w = arr.filter(r=>r.outcome==='tp').length;
-    const l = arr.filter(r=>r.outcome==='sl').length;
-    const r = w*RR - l;
-    const dd = maxDD(arr.map(r=>r.outcome));
-    return { w, l, r, pf: fmtPF(w,l), wr: fmtWR(w,l), dd };
+  function calcMaxDD(rows, aiMode) {
+    let eq=0, peak=0, dd=0;
+    rows.forEach(r => {
+      eq += aiMode ? (r.ai_r_delta||0) : (r.raw_r_delta||0);
+      if(eq>peak) peak=eq;
+      if(eq-peak<dd) dd=eq-peak;
+    });
+    return dd;
   }
 
-  const ai  = stats(aiRows);
-  const raw = stats(rawRows);
+  const ai  = { w:aiW,  l:aiL,  r:aiW*RR-aiL,  pf:fmtPF(aiW,aiL),  wr:fmtWR(aiW,aiL),  dd:calcMaxDD(deRows,true)  };
+  const raw = { w:rawW, l:rawL, r:rawW*RR-rawL, pf:fmtPF(rawW,rawL),wr:fmtWR(rawW,rawL), dd:calcMaxDD(deRows,false) };
 
   // Hero stats
   document.getElementById('ai-wl').textContent  = ai.w+'W / '+ai.l+'L';
@@ -288,15 +297,16 @@ async function loadAll() {
   document.getElementById('delta-dd').style.color       = deltaDD>=0?'var(--green)':'var(--amber)';
   document.getElementById('delta-filtered').textContent = filteredCount+' ('+filteredPct+'%)';
 
-  // ── EQUITY CURVES ──
-  const aiCurve  = [0]; let eq1=0;
-  aiRows.forEach(r => { eq1 += r.outcome==='tp'?RR:-1; aiCurve.push(parseFloat(eq1.toFixed(2))); });
-
-  const rawCurve = [0]; let eq2=0;
-  rawRows.forEach(r => { eq2 += r.outcome==='tp'?RR:-1; rawCurve.push(parseFloat(eq2.toFixed(2))); });
-
-  const maxLen = Math.max(aiCurve.length, rawCurve.length);
-  const labels = Array.from({length:maxLen},(_,i)=>i);
+  // ── EQUITY CURVES from daily_equity ──
+  const aiCurve=[0], rawCurve=[0], curveLabels=['Start'];
+  let eq1=0, eq2=0;
+  deRows.forEach(r => {
+    eq1 += r.ai_r_delta||0;  aiCurve.push(parseFloat(eq1.toFixed(2)));
+    eq2 += r.raw_r_delta||0; rawCurve.push(parseFloat(eq2.toFixed(2)));
+    curveLabels.push(r.trade_date?.slice(5)||'');
+  });
+  const maxLen = curveLabels.length;
+  const labels = curveLabels;
 
   const ctx = document.getElementById('equityChart').getContext('2d');
   if (equityChart) equityChart.destroy();
@@ -322,47 +332,56 @@ async function loadAll() {
     }
   });
 
-  // ── WEEK BY WEEK ──
+  // ── WEEK BY WEEK from weekly_stats ──
   const weekBuckets = {};
-  rows.forEach(r => {
-    const wk = getWeekStart(r.created_at);
-    if (!weekBuckets[wk]) weekBuckets[wk] = { ai:[], raw:[] };
-    weekBuckets[wk].raw.push(r.outcome);
-    if (r.currency_ai_pass === true) weekBuckets[wk].ai.push(r.outcome);
+  wsRows.forEach(r => {
+    const wk = getWeekStart(r.stat_date);
+    if (!weekBuckets[wk]) weekBuckets[wk] = {aiW:0,aiL:0,rawW:0,rawL:0};
+    weekBuckets[wk].aiW  += r.currency_ai_wins   || 0;
+    weekBuckets[wk].aiL  += r.currency_ai_losses || 0;
+    weekBuckets[wk].rawW += r.wins  || 0;
+    weekBuckets[wk].rawL += r.losses || 0;
   });
 
   const weekRows = Object.entries(weekBuckets).sort((a,b)=>b[0].localeCompare(a[0]));
   document.getElementById('weekBody').innerHTML = weekRows.map(([wk, d]) => {
-    const aiW = d.ai.filter(o=>o==='tp').length, aiL = d.ai.filter(o=>o==='sl').length;
-    const rawW = d.raw.filter(o=>o==='tp').length, rawL = d.raw.filter(o=>o==='sl').length;
-    const aiR = aiW*RR-aiL, rawR = rawW*RR-rawL;
-    const delta = aiR-rawR;
+    const aiR=d.aiW*RR-d.aiL, rawR=d.rawW*RR-d.rawL, delta=aiR-rawR;
     const end = new Date(new Date(wk).getTime()+6*86400000).toISOString().slice(5,10);
-    const aiPF = fmtPF(aiW,aiL), rawPF = fmtPF(rawW,rawL);
     return `<tr>
       <td>${wk.slice(5)} → ${end}</td>
       <td style="color:${aiR>=0?'var(--green)':'var(--red)'}">${fmtR(aiR)}</td>
       <td style="color:${rawR>=0?'#888':'var(--red)'}">${fmtR(rawR)}</td>
       <td style="color:${delta>=0?'var(--amber)':'var(--mute)'}"><b>${fmtR(delta)}</b></td>
-      <td>${aiPF}</td>
-      <td style="color:var(--mute)">${rawPF}</td>
-      <td>${fmtWR(aiW,aiL)}</td>
-      <td style="color:var(--mute)">${fmtWR(rawW,rawL)}</td>
+      <td>${fmtPF(d.aiW,d.aiL)}</td>
+      <td style="color:var(--mute)">${fmtPF(d.rawW,d.rawL)}</td>
+      <td>${fmtWR(d.aiW,d.aiL)}</td>
+      <td style="color:var(--mute)">${fmtWR(d.rawW,d.rawL)}</td>
     </tr>`;
   }).join('');
 
-  // ── SUPPRESSED BY PAIR ──
-  const symBuckets = {};
-  suppRows.forEach(r => {
-    if (!symBuckets[r.sym]) symBuckets[r.sym] = { w:0, l:0 };
-    r.outcome==='tp' ? symBuckets[r.sym].w++ : symBuckets[r.sym].l++;
-  });
+  // ── SUPPRESSED BY PAIR from pair_stats ──
+  // suppressed = wins - cai_wins, losses - cai_losses
+  const symList = psRows
+    .map(r => ({
+      sym: r.sym, tf: r.tf, dir: r.dir,
+      w: (r.wins||0) - (r.cai_wins||0),
+      l: (r.losses||0) - (r.cai_losses||0)
+    }))
+    .filter(r => r.w+r.l >= 10)
+    .sort((a,b) => (b.w*RR-b.l)-(a.w*RR-a.l));
 
-  const symList = Object.entries(symBuckets)
+  // Aggregate by sym across all TFs and dirs
+  const symAgg = {};
+  psRows.forEach(r => {
+    if (!symAgg[r.sym]) symAgg[r.sym] = {w:0,l:0};
+    symAgg[r.sym].w += (r.wins||0)-(r.cai_wins||0);
+    symAgg[r.sym].l += (r.losses||0)-(r.cai_losses||0);
+  });
+  const suppList = Object.entries(symAgg)
     .filter(([,v])=>v.w+v.l>=10)
     .sort((a,b)=>(b[1].w*RR-b[1].l)-(a[1].w*RR-a[1].l));
 
-  document.getElementById('suppressedBody').innerHTML = symList.length ? symList.map(([sym, v]) => {
+  document.getElementById('suppressedBody').innerHTML = suppList.length ? suppList.map(([sym, v]) => {
     const r = v.w*RR-v.l;
     const pf = fmtPF(v.w,v.l);
     const pfNum = parseFloat(pf)||0;
@@ -380,33 +399,33 @@ async function loadAll() {
     </tr>`;
   }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--mute);padding:16px;font-family:var(--mono)">Not enough suppressed trades per pair yet (need 10+)</td></tr>';
 
-  // ── DAY OF WEEK ──
+  // ── DAY OF WEEK from daily_equity ──
   const dowNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const dowBuckets = {};
-  rows.forEach(r => {
-    const d = new Date(r.created_at);
+  deRows.forEach(r => {
+    const d = new Date(r.trade_date+'T00:00:00Z');
     const dow = dowNames[(d.getUTCDay()+6)%7];
-    if (!dowBuckets[dow]) dowBuckets[dow] = { ai:[], raw:[], supp:0 };
-    dowBuckets[dow].raw.push(r.outcome);
-    if (r.currency_ai_pass===true) dowBuckets[dow].ai.push(r.outcome);
-    if (r.currency_ai_pass===false) dowBuckets[dow].supp++;
+    if (!dowBuckets[dow]) dowBuckets[dow] = {aiW:0,aiL:0,rawW:0,rawL:0};
+    dowBuckets[dow].aiW  += r.ai_wins   || 0;
+    dowBuckets[dow].aiL  += r.ai_losses || 0;
+    dowBuckets[dow].rawW += r.raw_wins  || 0;
+    dowBuckets[dow].rawL += r.raw_losses|| 0;
   });
 
   document.getElementById('dowBody').innerHTML = dowNames
     .filter(d=>dowBuckets[d])
     .map(day => {
       const d = dowBuckets[day];
-      const aiW=d.ai.filter(o=>o==='tp').length, aiL=d.ai.filter(o=>o==='sl').length;
-      const rawW=d.raw.filter(o=>o==='tp').length, rawL=d.raw.filter(o=>o==='sl').length;
-      const aiR=aiW*RR-aiL, rawR=rawW*RR-rawL, delta=aiR-rawR;
+      const aiR=d.aiW*RR-d.aiL, rawR=d.rawW*RR-d.rawL, delta=aiR-rawR;
+      const supp = (d.rawW+d.rawL) - (d.aiW+d.aiL);
       return `<tr>
         <td style="font-weight:700">${day}</td>
         <td style="color:${aiR>=0?'var(--green)':'var(--red)'}">${fmtR(aiR)}</td>
         <td style="color:${rawR>=0?'#888':'var(--red)'}">${fmtR(rawR)}</td>
         <td style="color:${delta>=0?'var(--amber)':'var(--mute)'}"><b>${fmtR(delta)}</b></td>
-        <td>${fmtPF(aiW,aiL)}</td>
-        <td style="color:var(--mute)">${fmtPF(rawW,rawL)}</td>
-        <td style="color:var(--mute)">${d.supp}</td>
+        <td>${fmtPF(d.aiW,d.aiL)}</td>
+        <td style="color:var(--mute)">${fmtPF(d.rawW,d.rawL)}</td>
+        <td style="color:var(--mute)">${supp}</td>
       </tr>`;
     }).join('');
 }
