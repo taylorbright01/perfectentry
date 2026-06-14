@@ -218,7 +218,7 @@ h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}
 
   <!-- CURRENCY STRENGTH HEATMAP -->
   <div class="section">
-    <div class="section-title">Currency Strength <span>last 7 days — win rate when held long</span></div>
+    <div class="section-title">Currency Strength <span>last 7 days — long &amp; short win rates · ∑ &gt;110% = trending · &lt;90% = mean reverting</span></div>
     <div class="heatmap" id="ccyHeatmap">
       <div style="color:var(--text-mute);font-size:12px">Loading currency data...</div>
     </div>
@@ -513,39 +513,56 @@ async function init(){
   const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
   const recentSignals = heatmapSignals.filter(r => r.created_at >= sevenDaysAgo);
   const heatmapSource = recentSignals.length >= 30 ? recentSignals : heatmapSignals;
+  // Track long and short history separately
+  const longHist = {}, shortHist = {};
   heatmapSource.forEach(r => {
     const sp = SPECIAL[r.sym];
     const base = sp?sp[0]:r.sym.slice(0,3);
     const quote = sp?sp[1]:r.sym.slice(3);
     const [longC, shortC] = r.dir==='buy'?[base,quote]:[quote,base];
-    if(!ccyHist[longC]) ccyHist[longC]={wins:0,losses:0,trades:0};
-    if(!ccyHist[shortC]) ccyHist[shortC]={wins:0,losses:0,trades:0};
-    if(r.outcome==='tp'){
-      ccyHist[longC].wins++;
-      ccyHist[shortC].losses++;
-    } else {
-      ccyHist[longC].losses++;
-      ccyHist[shortC].wins++;
-    }
-    ccyHist[longC].trades++;
-    ccyHist[shortC].trades++;
+    // Long currency WR when held long
+    if(!longHist[longC]) longHist[longC]={wins:0,losses:0};
+    r.outcome==='tp' ? longHist[longC].wins++ : longHist[longC].losses++;
+    // Short currency WR when held short (wins when long loses and vice versa)
+    if(!shortHist[shortC]) shortHist[shortC]={wins:0,losses:0};
+    r.outcome==='tp' ? shortHist[shortC].losses++ : shortHist[shortC].wins++;
   });
 
-  const ccys = Object.entries(ccyHist).filter(([,v])=>v.trades>=10).sort((a,b)=>{
-    const wrA = a[1].wins/a[1].trades;
-    const wrB = b[1].wins/b[1].trades;
-    return wrB-wrA;
-  });
+  // Merge into combined currency list
+  const allCcys = [...new Set([...Object.keys(longHist), ...Object.keys(shortHist)])];
+  const ccyData = allCcys.map(ccy => ({
+    ccy,
+    longWR:  longHist[ccy]  && (longHist[ccy].wins+longHist[ccy].losses)>=10
+               ? longHist[ccy].wins/(longHist[ccy].wins+longHist[ccy].losses) : null,
+    shortWR: shortHist[ccy] && (shortHist[ccy].wins+shortHist[ccy].losses)>=10
+               ? shortHist[ccy].wins/(shortHist[ccy].wins+shortHist[ccy].losses) : null,
+    longTrades:  (longHist[ccy]?.wins||0)+(longHist[ccy]?.losses||0),
+    shortTrades: (shortHist[ccy]?.wins||0)+(shortHist[ccy]?.losses||0),
+  })).filter(d=>d.longWR!==null||d.shortWR!==null)
+    .sort((a,b)=>(b.longWR||0)-(a.longWR||0));
+
+  function wrCol(wr){ return wr===null?'var(--text-mute)':wr>=0.5?'var(--green)':wr<0.417?'var(--red)':'var(--text-dim)'; }
+  function wrCls(wr){ return wr===null?'ccy-neutral':wr>=0.5?'ccy-strong':wr<0.417?'ccy-weak':'ccy-neutral'; }
 
   const heatmap = document.getElementById('ccyHeatmap');
-  heatmap.innerHTML = ccys.map(([ccy,v])=>{
-    const wr = v.wins/v.trades;
-    const cls = wr>=0.5?'ccy-strong':wr<0.4?'ccy-weak':'ccy-neutral';
-    const col = wr>=0.5?'var(--green)':wr<0.4?'var(--red)':'var(--text-dim)';
-    return `<div class="ccy-cell ${cls}">
-      <div class="ccy-name">${ccy}</div>
-      <div class="ccy-wr" style="color:${col}">${(wr*100).toFixed(0)}%</div>
-      <div class="ccy-trades">${v.trades} trades</div>
+  heatmap.innerHTML = ccyData.map(d=>{
+    const longPct  = d.longWR  !== null ? (d.longWR*100).toFixed(0)+'%'  : '—';
+    const shortPct = d.shortWR !== null ? (d.shortWR*100).toFixed(0)+'%' : '—';
+    // Asymmetry — sum above 100% = trending, below = mean reverting
+    const sum = (d.longWR!==null && d.shortWR!==null) ? ((d.longWR+d.shortWR)*100).toFixed(0)+'%' : null;
+    const sumCol = sum ? (parseFloat(sum)>110?'var(--green)':parseFloat(sum)<90?'var(--red)':'var(--text-mute)') : 'var(--text-mute)';
+    return `<div class="ccy-cell ${wrCls(d.longWR)}">
+      <div class="ccy-name">${d.ccy}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 2px">
+        <span style="font-size:8px;color:var(--text-mute)">LONG</span>
+        <span class="ccy-wr" style="color:${wrCol(d.longWR)}">${longPct}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+        <span style="font-size:8px;color:var(--text-mute)">SHORT</span>
+        <span class="ccy-wr" style="color:${wrCol(d.shortWR)}">${shortPct}</span>
+      </div>
+      ${sum?`<div style="font-size:8px;text-align:right;color:${sumCol};margin-top:2px">∑ ${sum}</div>`:''}
+      <div class="ccy-trades">${d.longTrades}L · ${d.shortTrades}S trades</div>
     </div>`;
   }).join('');
 
