@@ -245,6 +245,11 @@ async function loadAll() {
   const deRows = deRes.ok ? await deRes.json() : [];
   const psRows = psRes.ok ? await psRes.json() : [];
 
+  console.log('wsRows:', wsRows.length, 'deRows:', deRows.length, 'psRows:', psRows.length);
+  console.log('deRes.ok:', deRes.ok, 'psRes.ok:', psRes.ok);
+  if (deRows.length > 0) console.log('deRows sample:', JSON.stringify(deRows[0]));
+  if (psRows.length > 0) console.log('psRows sample:', JSON.stringify(psRows[0]));
+
   if (deRows.length === 0) {
     document.getElementById('equityChart').closest('.chart-section').querySelector('p').textContent =
       'Run aggregate_setup.sql in Supabase to enable this chart — daily_equity table not found or empty.';
@@ -313,7 +318,9 @@ async function loadAll() {
   const maxLen = curveLabels.length;
   const labels = curveLabels;
 
-  const ctx = document.getElementById('equityChart').getContext('2d');
+  const chartCanvas = document.getElementById('equityChart');
+  console.log('Curve lengths - ai:', aiCurve.length, 'raw:', rawCurve.length, 'labels:', labels.length);
+  const ctx = chartCanvas.getContext('2d');
   if (equityChart) equityChart.destroy();
   equityChart = new Chart(ctx, {
     type:'line',
@@ -383,7 +390,7 @@ async function loadAll() {
     symAgg[r.sym].l += (r.losses||0)-(r.cai_losses||0);
   });
   const suppList = Object.entries(symAgg)
-    .filter(([,v])=>v.w+v.l>=10)
+    .filter(([,v])=>v.w+v.l>=5)
     .sort((a,b)=>(b[1].w*RR-b[1].l)-(a[1].w*RR-a[1].l));
 
   document.getElementById('suppressedBody').innerHTML = suppList.length ? suppList.map(([sym, v]) => {
@@ -417,6 +424,7 @@ async function loadAll() {
     dowBuckets[dow].rawL += r.raw_losses|| 0;
   });
 
+  console.log('dowBuckets:', JSON.stringify(Object.keys(dowBuckets)));
   document.getElementById('dowBody').innerHTML = dowNames
     .filter(d=>dowBuckets[d])
     .map(day => {
