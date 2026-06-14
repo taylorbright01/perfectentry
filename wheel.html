@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fear & Greed Wheel — Perfect Entry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080a0e;--bg2:#0d1017;
+  --green:#00e6aa;--red:#FF6060;--amber:#ffb700;--teal:#01a0b8;
+  --text:#EAFDFC;--dim:rgba(234,253,252,0.5);--mute:rgba(234,253,252,0.2);
+  --border:rgba(255,255,255,0.07);--mono:'IBM Plex Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+nav{position:sticky;top:0;z-index:100;background:rgba(8,10,14,0.97);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:14px;height:44px}
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-weight:800;font-size:12px;flex-shrink:0}
+.nav-logo img{width:20px;height:20px;object-fit:contain}
+.nav-links{display:flex;gap:14px;font-size:11px;font-weight:600;margin-left:auto}
+.nav-links a{color:var(--dim);text-decoration:none}
+.nav-links a.active{color:var(--amber)}
+.nav-btn{padding:5px 12px;border-radius:8px;border:2px solid #015662;background:rgba(1,86,98,0.15);color:var(--text);font-weight:800;font-size:11px;text-decoration:none;white-space:nowrap;flex-shrink:0}
+
+.page{max-width:1200px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:clamp(20px,2.5vw,28px);font-weight:900;margin-bottom:6px}
+.subtitle{font-size:12px;color:var(--dim);font-family:var(--mono);margin-bottom:32px}
+
+/* MAIN LAYOUT */
+.wheel-layout{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start}
+@media(max-width:900px){.wheel-layout{grid-template-columns:1fr}}
+
+/* WHEEL CANVAS */
+.wheel-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;display:flex;flex-direction:column;align-items:center}
+#wheelCanvas{width:100%;max-width:500px;height:500px}
+
+/* NEEDLE READOUT */
+.needle-readout{text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);width:100%}
+.needle-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+.needle-val{font-size:clamp(28px,4vw,42px);font-weight:900;font-family:var(--mono);transition:color .5s}
+.needle-desc{font-size:12px;color:var(--dim);margin-top:4px}
+.last-updated{font-size:10px;color:var(--mute);font-family:var(--mono);margin-top:8px}
+
+/* SIDEBAR */
+.sidebar{display:flex;flex-direction:column;gap:12px}
+
+/* CURRENCY SCORES */
+.scores-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.scores-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
+.score-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.score-row:last-child{margin:0}
+.score-ccy{font-weight:800;font-size:12px;width:32px;flex-shrink:0}
+.score-bar-wrap{flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;position:relative}
+.score-bar{height:100%;border-radius:3px;transition:width .5s, background .5s}
+.score-center{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.15)}
+.score-num{font-family:var(--mono);font-size:11px;width:48px;text-align:right;flex-shrink:0}
+.score-type{font-size:9px;color:var(--mute);width:36px;flex-shrink:0}
+
+/* HISTORY CHART */
+.history-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.history-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
+#historyCanvas{width:100%;height:120px}
+
+/* SIGNAL CONFIRMATION */
+.confirm-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.confirm-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
+.confirm-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px}
+.confirm-row:last-child{margin:0}
+.confirm-label{color:var(--dim)}
+.confirm-val{font-family:var(--mono);font-weight:600}
+.badge{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:0.06em}
+.badge-g{background:rgba(0,230,170,0.12);color:var(--green)}
+.badge-r{background:rgba(255,96,96,0.12);color:var(--red)}
+.badge-a{background:rgba(255,183,0,0.12);color:var(--amber)}
+
+/* SNAPSHOT TABLE */
+.snap-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:24px}
+.snap-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:right;padding:6px 8px;font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);font-weight:600;border-bottom:1px solid var(--border)}
+th:first-child{text-align:left}
+td{text-align:right;padding:8px 8px;font-family:var(--mono);border-bottom:1px solid rgba(255,255,255,0.03)}
+td:first-child{text-align:left;font-family:'Inter',sans-serif;color:var(--dim)}
+tr:last-child td{border:none}
+
+.no-data{text-align:center;color:var(--mute);font-family:var(--mono);font-size:11px;padding:32px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="assets/logo.png" alt="Perfect Entry">
+    Perfect Entry
+  </a>
+  <div class="nav-links">
+    <a href="signals.html">Live Signals</a>
+    <a href="currencyai.html">Currency AI</a>
+    <a href="counterfactual.html">Counterfactual</a>
+    <a href="wheel.html" class="active">Fear & Greed</a>
+  </div>
+  <a href="https://whop.com/perfect-entry/" target="_blank" class="nav-btn">Join Now</a>
+</nav>
+
+<div class="page">
+  <h1>Fear & Greed Wheel</h1>
+  <p class="subtitle">Real-time currency flow direction · derived from price action + signal outcomes · updates every 30 minutes</p>
+
+  <div class="wheel-layout">
+
+    <!-- WHEEL -->
+    <div class="wheel-wrap">
+      <canvas id="wheelCanvas" width="500" height="500"></canvas>
+      <div class="needle-readout">
+        <div class="needle-label">Market Sentiment</div>
+        <div class="needle-val" id="needleVal">—</div>
+        <div class="needle-desc" id="needleDesc">Waiting for data...</div>
+        <div class="last-updated" id="lastUpdated"></div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- CURRENCY SCORES -->
+      <div class="scores-card">
+        <h3>Currency Flow Scores</h3>
+        <div id="scoreRows">
+          <div class="no-data">Waiting for first snapshot...</div>
+        </div>
+      </div>
+
+      <!-- SIGNAL CONFIRMATION -->
+      <div class="confirm-card">
+        <h3>Signal Confirmation</h3>
+        <div class="confirm-row">
+          <span class="confirm-label">Price flow source</span>
+          <span class="confirm-val" id="cfPrice">—</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Signal outcome source</span>
+          <span class="confirm-val" id="cfSignal">—</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Agreement</span>
+          <span id="cfAgreement">—</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Snapshots today</span>
+          <span class="confirm-val" id="cfSnaps">—</span>
+        </div>
+      </div>
+
+      <!-- FEAR/GREED HISTORY -->
+      <div class="history-card">
+        <h3>Fear / Greed — Last 24 Hours</h3>
+        <canvas id="historyCanvas" width="288" height="120"></canvas>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RECENT SNAPSHOTS TABLE -->
+  <div class="snap-card">
+    <h3>Recent Snapshots</h3>
+    <div id="snapTable"><div class="no-data">No snapshots yet.<br>Add the PE Flow Snapshot Pine Script to a EURUSD 30min chart<br>and set up the alert webhook to your receive-flow Edge Function.</div></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
+const HDR = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
+
+const CCYS = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','NZD'];
+const FEAR_CCY  = ['USD','JPY','CHF'];
+const GREED_CCY = ['AUD','NZD','CAD','GBP','EUR'];
+
+// Safe haven label
+const CCY_ROLE = {
+  USD:'Safe Haven', JPY:'Safe Haven', CHF:'Safe Haven',
+  AUD:'Risk On', NZD:'Risk On', CAD:'Risk On',
+  GBP:'Risk On', EUR:'Risk On'
+};
+
+let historyChart = null;
+let wheelAnimTarget = 0;
+let wheelAnimCurrent = 0;
+
+// ── WHEEL DRAWING ──
+const wheelCanvas = document.getElementById('wheelCanvas');
+const wctx = wheelCanvas.getContext('2d');
+const W = wheelCanvas.width, H = wheelCanvas.height;
+const CX = W/2, CY = H/2;
+
+const SEGMENTS = [
+  { label:'Extreme Fear',  color:'#C0392B', from:-1.00, to:-0.60 },
+  { label:'Fear',          color:'#E74C3C', from:-0.60, to:-0.30 },
+  { label:'Mild Fear',     color:'#E67E22', from:-0.30, to:-0.10 },
+  { label:'Neutral',       color:'#7F8C8D', from:-0.10, to: 0.10 },
+  { label:'Mild Greed',    color:'#27AE60', from: 0.10, to: 0.30 },
+  { label:'Greed',         color:'#2ECC71', from: 0.30, to: 0.60 },
+  { label:'Extreme Greed', color:'#00e6aa', from: 0.60, to: 1.00 },
+];
+
+function valToAngle(val) {
+  // -1.0 = -180deg (left), 0 = 0deg (top), +1.0 = 180deg (right)
+  // Semicircle: -π to +π mapped to -1 to +1
+  return (val * Math.PI) - Math.PI/2; // starts at top
+}
+
+function drawWheel(needleVal) {
+  wctx.clearRect(0, 0, W, H);
+
+  const outerR = 200, innerR = 110;
+
+  // Draw segments (semicircle, bottom half)
+  SEGMENTS.forEach(seg => {
+    const startAngle = Math.PI + (seg.from + 1) / 2 * Math.PI; // map -1..1 to π..2π
+    const endAngle   = Math.PI + (seg.to   + 1) / 2 * Math.PI;
+
+    wctx.beginPath();
+    wctx.moveTo(CX, CY);
+    wctx.arc(CX, CY, outerR, startAngle, endAngle);
+    wctx.arc(CX, CY, innerR, endAngle, startAngle, true);
+    wctx.closePath();
+    wctx.fillStyle = seg.color + 'cc';
+    wctx.fill();
+    wctx.strokeStyle = 'rgba(8,10,14,0.8)';
+    wctx.lineWidth = 2;
+    wctx.stroke();
+
+    // Labels
+    const midAngle = (startAngle + endAngle) / 2;
+    const labelR = (outerR + innerR) / 2;
+    const lx = CX + Math.cos(midAngle) * labelR;
+    const ly = CY + Math.sin(midAngle) * labelR;
+    wctx.save();
+    wctx.translate(lx, ly);
+    wctx.rotate(midAngle + Math.PI/2);
+    wctx.fillStyle = 'rgba(255,255,255,0.85)';
+    wctx.font = 'bold 9px Inter';
+    wctx.textAlign = 'center';
+    wctx.textBaseline = 'middle';
+    // Only show label if segment is wide enough
+    if (Math.abs(seg.to - seg.from) > 0.15) {
+      wctx.fillText(seg.label, 0, 0);
+    }
+    wctx.restore();
+  });
+
+  // Inner circle
+  wctx.beginPath();
+  wctx.arc(CX, CY, innerR - 4, 0, Math.PI * 2);
+  wctx.fillStyle = '#0d1017';
+  wctx.fill();
+
+  // Centre readout
+  wctx.fillStyle = needleVal > 0.1 ? '#00e6aa' : needleVal < -0.1 ? '#FF6060' : '#7F8C8D';
+  wctx.font = 'bold 32px IBM Plex Mono';
+  wctx.textAlign = 'center';
+  wctx.textBaseline = 'middle';
+  const displayVal = needleVal !== null ? (needleVal > 0 ? '+' : '') + (needleVal * 100).toFixed(0) : '—';
+  wctx.fillText(displayVal, CX, CY - 10);
+  wctx.fillStyle = 'rgba(234,253,252,0.3)';
+  wctx.font = '10px Inter';
+  wctx.fillText('SENTIMENT', CX, CY + 16);
+
+  // Needle
+  if (needleVal !== null) {
+    const needleAngle = Math.PI + (needleVal + 1) / 2 * Math.PI;
+    const needleLen = outerR - 8;
+    const nx = CX + Math.cos(needleAngle) * needleLen;
+    const ny = CY + Math.sin(needleAngle) * needleLen;
+
+    wctx.beginPath();
+    wctx.moveTo(CX, CY);
+    wctx.lineTo(nx, ny);
+    wctx.strokeStyle = '#ffffff';
+    wctx.lineWidth = 3;
+    wctx.lineCap = 'round';
+    wctx.stroke();
+
+    // Needle base dot
+    wctx.beginPath();
+    wctx.arc(CX, CY, 8, 0, Math.PI * 2);
+    wctx.fillStyle = '#ffffff';
+    wctx.fill();
+  }
+
+  // Scale ticks
+  for (let v = -1; v <= 1; v += 0.25) {
+    const angle = Math.PI + (v + 1) / 2 * Math.PI;
+    const t1x = CX + Math.cos(angle) * (outerR + 8);
+    const t1y = CY + Math.sin(angle) * (outerR + 8);
+    const t2x = CX + Math.cos(angle) * (outerR + 2);
+    const t2y = CY + Math.sin(angle) * (outerR + 2);
+    wctx.beginPath();
+    wctx.moveTo(t1x, t1y);
+    wctx.lineTo(t2x, t2y);
+    wctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    wctx.lineWidth = 1;
+    wctx.stroke();
+  }
+
+  // FEAR / GREED labels
+  wctx.fillStyle = '#FF6060';
+  wctx.font = 'bold 11px Inter';
+  wctx.textAlign = 'right';
+  wctx.fillText('FEAR', CX - outerR - 12, CY + 4);
+  wctx.fillStyle = '#00e6aa';
+  wctx.textAlign = 'left';
+  wctx.fillText('GREED', CX + outerR + 12, CY + 4);
+}
+
+// ── SCORE BARS ──
+function renderScores(scores) {
+  const rows = CCYS.map(ccy => {
+    const score = scores[ccy] ?? 0;
+    const pct = Math.abs(score) * 50; // 0-50% of half bar
+    const isPos = score >= 0;
+    const col = isPos ? 'var(--green)' : 'var(--red)';
+    const role = CCY_ROLE[ccy];
+    const roleCol = FEAR_CCY.includes(ccy) ? 'var(--red)' : 'var(--green)';
+    return `<div class="score-row">
+      <span class="score-ccy">${ccy}</span>
+      <div class="score-bar-wrap">
+        <div class="score-center"></div>
+        <div class="score-bar" style="
+          width:${pct}%;
+          background:${col};
+          margin-left:${isPos?'50%':'auto'};
+          margin-right:${isPos?'auto':'calc('+(50-pct)+'% + 0px)'};
+          ${!isPos ? 'margin-left:calc(50% - '+pct+'%);' : ''}
+        "></div>
+      </div>
+      <span class="score-num" style="color:${col}">${score>=0?'+':''}${(score*100).toFixed(0)}</span>
+      <span class="score-type" style="color:${roleCol}">${role}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('scoreRows').innerHTML = rows;
+}
+
+// ── SENTIMENT LABEL ──
+function sentimentLabel(val) {
+  if (val === null) return { label: '—', desc: 'No data', color: 'var(--mute)' };
+  if (val <= -0.6) return { label: 'Extreme Fear', desc: 'Strong flight to safe havens', color: '#C0392B' };
+  if (val <= -0.3) return { label: 'Fear',         desc: 'Risk-off sentiment dominant', color: '#E74C3C' };
+  if (val <= -0.1) return { label: 'Mild Fear',    desc: 'Cautious market conditions', color: '#E67E22' };
+  if (val <=  0.1) return { label: 'Neutral',      desc: 'Balanced flow, no clear bias', color: '#7F8C8D' };
+  if (val <=  0.3) return { label: 'Mild Greed',   desc: 'Slight risk-on appetite', color: '#27AE60' };
+  if (val <=  0.6) return { label: 'Greed',        desc: 'Risk-on sentiment building', color: '#2ECC71' };
+  return               { label: 'Extreme Greed', desc: 'Strong appetite for risk assets', color: '#00e6aa' };
+}
+
+// ── HISTORY MINI CHART ──
+function drawHistory(rows) {
+  const canvas = document.getElementById('historyCanvas');
+  const ctx = canvas.getContext('2d');
+  const cw = canvas.width, ch = canvas.height;
+  ctx.clearRect(0, 0, cw, ch);
+
+  if (!rows.length) return;
+
+  const vals = rows.map(r => r.fear_greed);
+  const midY = ch / 2;
+
+  // Zero line
+  ctx.beginPath();
+  ctx.moveTo(0, midY);
+  ctx.lineTo(cw, midY);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Fill areas
+  const step = cw / (vals.length - 1 || 1);
+  ctx.beginPath();
+  ctx.moveTo(0, midY);
+  vals.forEach((v, i) => {
+    ctx.lineTo(i * step, midY - v * midY * 0.9);
+  });
+  ctx.lineTo(cw, midY);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, ch);
+  grad.addColorStop(0, 'rgba(0,230,170,0.3)');
+  grad.addColorStop(0.5, 'rgba(0,230,170,0.05)');
+  grad.addColorStop(1, 'rgba(255,96,96,0.15)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  vals.forEach((v, i) => {
+    const x = i * step;
+    const y = midY - v * midY * 0.9;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#00e6aa';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ── LOAD DATA ──
+async function loadAll() {
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/price_flow?select=*&order=snapshot_at.desc&limit=48',
+    { headers: HDR }
+  );
+  if (!res.ok) return;
+  const rows = await res.json();
+
+  if (!rows.length) {
+    drawWheel(null);
+    document.getElementById('needleVal').textContent = 'No data';
+    document.getElementById('needleDesc').textContent = 'Set up the TradingView Pine Script alert to start collecting data';
+    return;
+  }
+
+  const latest = rows[0];
+  const fg = parseFloat(latest.fear_greed);
+  const sent = sentimentLabel(fg);
+
+  // Update wheel
+  drawWheel(fg);
+
+  // Update needle readout
+  document.getElementById('needleVal').textContent = sent.label;
+  document.getElementById('needleVal').style.color = sent.color;
+  document.getElementById('needleDesc').textContent = sent.desc;
+  document.getElementById('lastUpdated').textContent =
+    'Last update: ' + new Date(latest.snapshot_at).toUTCString().slice(0, 22) + ' UTC';
+
+  // Update score bars
+  const scores = {
+    USD: parseFloat(latest.usd_score)||0,
+    EUR: parseFloat(latest.eur_score)||0,
+    GBP: parseFloat(latest.gbp_score)||0,
+    JPY: parseFloat(latest.jpy_score)||0,
+    AUD: parseFloat(latest.aud_score)||0,
+    CAD: parseFloat(latest.cad_score)||0,
+    CHF: parseFloat(latest.chf_score)||0,
+    NZD: parseFloat(latest.nzd_score)||0,
+  };
+  renderScores(scores);
+
+  // Signal confirmation
+  const todayCount = rows.filter(r => {
+    const d = new Date(r.snapshot_at);
+    const now = new Date();
+    return d.getUTCDate() === now.getUTCDate();
+  }).length;
+  document.getElementById('cfPrice').textContent = 'Currency indices (8)';
+  document.getElementById('cfSignal').textContent = 'Trade outcomes (live)';
+  document.getElementById('cfSnaps').textContent = todayCount + ' of 48 today';
+
+  const topFear  = Object.entries(scores).filter(([c]) => FEAR_CCY.includes(c)).sort((a,b)=>b[1]-a[1])[0];
+  const topGreed = Object.entries(scores).filter(([c]) => GREED_CCY.includes(c)).sort((a,b)=>b[1]-a[1])[0];
+  const agreement = fg < -0.1 ? `<span class="badge badge-r">Risk Off</span>` :
+                    fg >  0.1 ? `<span class="badge badge-g">Risk On</span>` :
+                                `<span class="badge badge-a">Mixed</span>`;
+  document.getElementById('cfAgreement').innerHTML = agreement;
+
+  // History chart (reverse to chronological)
+  drawHistory([...rows].reverse());
+
+  // Recent snapshots table
+  const tableRows = rows.slice(0, 10).map(r => {
+    const fg = parseFloat(r.fear_greed);
+    const sent = sentimentLabel(fg);
+    const time = new Date(r.snapshot_at).toUTCString().slice(0, 22);
+    return `<tr>
+      <td>${time}</td>
+      <td style="color:${parseFloat(r.usd_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.usd_score)*100).toFixed(0)}</td>
+      <td style="color:${parseFloat(r.eur_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.eur_score)*100).toFixed(0)}</td>
+      <td style="color:${parseFloat(r.gbp_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.gbp_score)*100).toFixed(0)}</td>
+      <td style="color:${parseFloat(r.jpy_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.jpy_score)*100).toFixed(0)}</td>
+      <td style="color:${parseFloat(r.aud_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.aud_score)*100).toFixed(0)}</td>
+      <td style="color:${parseFloat(r.cad_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.cad_score)*100).toFixed(0)}</td>
+      <td style="color:${parseFloat(r.chf_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.chf_score)*100).toFixed(0)}</td>
+      <td style="color:${parseFloat(r.nzd_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.nzd_score)*100).toFixed(0)}</td>
+      <td style="color:${sent.color};font-weight:700">${fg>=0?'+':''}${(fg*100).toFixed(0)}</td>
+      <td><span class="badge ${fg>0.1?'badge-g':fg<-0.1?'badge-r':'badge-a'}">${sent.label}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('snapTable').innerHTML = `
+    <table>
+      <thead><tr>
+        <th style="text-align:left">Time (UTC)</th>
+        <th>USD</th><th>EUR</th><th>GBP</th><th>JPY</th>
+        <th>AUD</th><th>CAD</th><th>CHF</th><th>NZD</th>
+        <th>F&G</th><th>Sentiment</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>`;
+}
+
+// Initial draw with no data
+drawWheel(null);
+loadAll();
+setInterval(loadAll, 60000); // refresh every minute
+</script>
+</body>
+</html>
