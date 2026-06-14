@@ -566,8 +566,33 @@ async function init(){
     </div>`;
   }).join('');
 
+  // Fetch last 1000 currency AI signals for simulator and max DD calculation
+  // Separate from equity curve which uses daily aggregates
+  const simRes = await fetch(
+    SUPABASE_URL+'/rest/v1/signals?select=outcome,created_at&outcome=not.is.null&currency_ai_pass=eq.true&order=created_at.desc&limit=1000',
+    {headers:{...HEADERS,'Range-Unit':'items','Range':'0-999'}}
+  );
+  const simSignals = simRes.ok ? (await simRes.json()).reverse() : [];
+
+  // Recalculate max DD from real sequential signal data (not daily aggregates)
+  let simEq=0, simPeak=0, simMaxDD=0;
+  simSignals.forEach(r => {
+    simEq += r.outcome==='tp' ? RR : -1.0;
+    if(simEq > simPeak) simPeak = simEq;
+    if(simEq - simPeak < simMaxDD) simMaxDD = simEq - simPeak;
+  });
+
+  // Update max DD and Calmar with real per-trade data
+  const realMaxDD = simMaxDD;
+  const realCalmar = realMaxDD !== 0 ? m.totalR / Math.abs(realMaxDD) : 0;
+  const realRecovery = realMaxDD !== 0 ? m.totalR / Math.abs(realMaxDD) : 0;
+  document.getElementById('statCalmar').textContent = realCalmar.toFixed(2);
+  document.getElementById('mCalmar').textContent = realCalmar.toFixed(2);
+  document.getElementById('mRecovery').textContent = realRecovery.toFixed(2);
+  document.getElementById('mMaxDD').textContent = realMaxDD.toFixed(1)+'R';
+
   // Store for simulator use
-  window._aiSignals = aiSignals;
+  window._aiSignals = simSignals;
 
   // Run simulator with defaults
   runSimulator();
