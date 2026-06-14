@@ -314,10 +314,10 @@ async function loadWeeklyStats(){
 }
 
 async function loadSignalsForCurrency(){
-  // Fetch only currency AI approved signals in chronological order
+  // Use daily_equity aggregate table — scales to any signal volume
   const res = await fetch(
-    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,created_at&outcome=not.is.null&currency_ai_pass=eq.true&order=created_at.asc&limit=5000',
-    {headers:{...HEADERS, 'Range-Unit':'items', 'Range':'0-4999', 'Prefer':'count=exact'}}
+    SUPABASE_URL+'/rest/v1/daily_equity?select=*&order=trade_date.asc&limit=1000',
+    {headers:HEADERS}
   );
   if(!res.ok) return [];
   return await res.json();
@@ -406,16 +406,16 @@ async function init(){
     }
   });
 
-  // Equity curve — real sequential outcomes in chronological order
-  const aiSignals = signalRows; // pre-filtered server-side
-  console.log('Currency AI signals for curve:', aiSignals.length, 'of', signalRows.length, 'total');
+  // Equity curve — built from daily_equity aggregate table
+  // One point per day rather than per trade — scales to any volume
+  console.log('daily_equity rows for curve:', signalRows.length);
   const curve = [0];
   let eq = 0;
-  aiSignals.forEach(r => {
-    eq += r.outcome === 'tp' ? RR : -1.0;
+  signalRows.forEach(r => {
+    eq += parseFloat(r.ai_r_delta) || 0;
     curve.push(parseFloat(eq.toFixed(2)));
   });
-  console.log('Curve final R:', curve[curve.length-1], 'from', curve.length-1, 'trades');
+  console.log('Curve final R:', curve[curve.length-1], 'from', signalRows.length, 'days');
 
   // Calculate real max drawdown from actual curve
   let ddPeak = curve[0];
@@ -504,10 +504,15 @@ async function init(){
 
   // Currency strength heatmap
   const ccyHist = {};
-  // Use last 7 days for current momentum picture
+  // Heatmap uses its own signal fetch (needs sym/dir for currency mapping)
+  const heatmapRes = await fetch(
+    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,created_at&outcome=not.is.null&order=created_at.desc&limit=300',
+    {headers:HEADERS}
+  );
+  const heatmapSignals = heatmapRes.ok ? await heatmapRes.json() : [];
   const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-  const recentSignals = signalRows.filter(r => r.created_at >= sevenDaysAgo);
-  const heatmapSource = recentSignals.length >= 30 ? recentSignals : signalRows; // fall back to all-time if not enough recent data
+  const recentSignals = heatmapSignals.filter(r => r.created_at >= sevenDaysAgo);
+  const heatmapSource = recentSignals.length >= 30 ? recentSignals : heatmapSignals;
   heatmapSource.forEach(r => {
     const sp = SPECIAL[r.sym];
     const base = sp?sp[0]:r.sym.slice(0,3);
