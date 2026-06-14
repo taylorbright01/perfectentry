@@ -240,10 +240,15 @@ async function loadAll() {
     fetch(SUPABASE_URL + '/rest/v1/daily_equity?select=*&order=trade_date.asc&limit=1000', {headers:HDR}),
     fetch(SUPABASE_URL + '/rest/v1/pair_stats?select=*&limit=500', {headers:HDR}),
   ]);
-  if (!wsRes.ok || !deRes.ok || !psRes.ok) return;
+  if (!wsRes.ok) return;
   const wsRows = await wsRes.json();
-  const deRows = await deRes.json();
-  const psRows = await psRes.json();
+  const deRows = deRes.ok ? await deRes.json() : [];
+  const psRows = psRes.ok ? await psRes.json() : [];
+
+  if (deRows.length === 0) {
+    document.getElementById('equityChart').closest('.chart-section').querySelector('p').textContent =
+      'Run aggregate_setup.sql in Supabase to enable this chart — daily_equity table not found or empty.';
+  }
 
   // ── TOTALS from weekly_stats ──
   let aiW=0, aiL=0, rawW=0, rawL=0;
@@ -282,18 +287,18 @@ async function loadAll() {
 
   const deltaR  = ai.r - raw.r;
   const deltaPF = (parseFloat(ai.pf)||0) - (parseFloat(raw.pf)||0);
-  const deltaDD = ai.dd - raw.dd; // both negative, less negative is better
-  const filteredCount = suppRows.length;
-  const filteredPct   = rawRows.length>0?(filteredCount/rawRows.length*100).toFixed(1):'0';
+  const deltaDD = ai.dd - raw.dd;
+  const filteredCount = (rawW+rawL) - (aiW+aiL);
+  const filteredPct   = (rawW+rawL)>0?(filteredCount/(rawW+rawL)*100).toFixed(1):'0';
 
   document.getElementById('delta-r').textContent        = fmtR(deltaR);
   document.getElementById('delta-r').style.color        = deltaR>=0?'var(--green)':'var(--red)';
   document.getElementById('delta-pf').textContent       = (deltaPF>=0?'+':'')+deltaPF.toFixed(3);
   document.getElementById('delta-pf').style.color       = deltaPF>=0?'var(--green)':'var(--red)';
-  const deltaWR = (ai.w/(ai.w+ai.l||1)*100) - (raw.w/(raw.w+raw.l||1)*100);
+  const deltaWR = (aiW/(aiW+aiL||1)*100) - (rawW/(rawW+rawL||1)*100);
   document.getElementById('delta-wr').textContent       = (deltaWR>=0?'+':'')+deltaWR.toFixed(1)+'%';
   document.getElementById('delta-wr').style.color       = deltaWR>=0?'var(--green)':'var(--red)';
-  document.getElementById('delta-dd').textContent       = fmtR(deltaDD)+' less DD';
+  document.getElementById('delta-dd').textContent       = deRows.length>0 ? fmtR(deltaDD)+' less DD' : 'Run SQL first';
   document.getElementById('delta-dd').style.color       = deltaDD>=0?'var(--green)':'var(--amber)';
   document.getElementById('delta-filtered').textContent = filteredCount+' ('+filteredPct+'%)';
 
