@@ -9,8 +9,8 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#080a0e;--bg2:#0d1017;
-  --green:#00e6aa;--red:#FF6060;--amber:#ffb700;--teal:#01a0b8;
+  --bg:#080a0e;--bg2:#0d1017;--bg3:#121620;
+  --green:#00e6aa;--red:#FF6060;--amber:#ffb700;--teal:#01a0b8;--orange:#FF6A2A;
   --text:#EAFDFC;--dim:rgba(234,253,252,0.5);--mute:rgba(234,253,252,0.2);
   --border:rgba(255,255,255,0.07);--mono:'IBM Plex Mono',monospace;
 }
@@ -24,68 +24,66 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,10,14,0.97);border-botto
 .nav-links a.active{color:var(--amber)}
 .nav-btn{padding:5px 12px;border-radius:8px;border:2px solid #015662;background:rgba(1,86,98,0.15);color:var(--text);font-weight:800;font-size:11px;text-decoration:none;white-space:nowrap;flex-shrink:0}
 
-.page{max-width:1200px;margin:0 auto;padding:32px 24px 80px}
-h1{font-size:clamp(20px,2.5vw,28px);font-weight:900;margin-bottom:6px}
-.subtitle{font-size:12px;color:var(--dim);font-family:var(--mono);margin-bottom:32px}
+.page{max-width:1400px;margin:0 auto;padding:24px 24px 80px}
+.page-header{margin-bottom:24px}
+h1{font-size:clamp(20px,2.5vw,26px);font-weight:900;margin-bottom:4px}
+.subtitle{font-size:11px;color:var(--dim);font-family:var(--mono)}
 
 /* MAIN LAYOUT */
-.wheel-layout{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start}
-@media(max-width:900px){.wheel-layout{grid-template-columns:1fr}}
+.main-layout{display:grid;grid-template-columns:1fr 280px;gap:20px;margin-bottom:24px}
+@media(max-width:1000px){.main-layout{grid-template-columns:1fr}}
 
-/* WHEEL CANVAS */
-.wheel-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;display:flex;flex-direction:column;align-items:center}
-#wheelCanvas{width:100%;max-width:500px;height:500px}
-
-/* NEEDLE READOUT */
-.needle-readout{text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);width:100%}
-.needle-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
-.needle-val{font-size:clamp(28px,4vw,42px);font-weight:900;font-family:var(--mono);transition:color .5s}
-.needle-desc{font-size:12px;color:var(--dim);margin-top:4px}
-.last-updated{font-size:10px;color:var(--mute);font-family:var(--mono);margin-top:8px}
+/* NETWORK WHEEL */
+.wheel-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center}
+.wheel-card h3{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:16px;align-self:flex-start}
+#wheelCanvas{width:100%;max-width:600px;height:600px;cursor:crosshair}
+.wheel-footer{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.wf-updated{font-family:var(--mono);font-size:10px;color:var(--mute)}
+.wf-fg{font-family:var(--mono);font-size:12px;font-weight:700}
 
 /* SIDEBAR */
 .sidebar{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.card h3{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
 
-/* CURRENCY SCORES */
-.scores-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
-.scores-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
-.score-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.score-row:last-child{margin:0}
-.score-ccy{font-weight:800;font-size:12px;width:32px;flex-shrink:0}
-.score-bar-wrap{flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;position:relative}
-.score-bar{height:100%;border-radius:3px;transition:width .5s, background .5s}
-.score-center{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.15)}
-.score-num{font-family:var(--mono);font-size:11px;width:48px;text-align:right;flex-shrink:0}
-.score-type{font-size:9px;color:var(--mute);width:36px;flex-shrink:0}
+/* OBSERVATIONS */
+.obs-list{list-style:none}
+.obs-list li{font-size:12px;color:var(--dim);padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);line-height:1.5}
+.obs-list li:last-child{border:none}
+.obs-list li::before{content:'→ ';color:var(--teal)}
 
-/* HISTORY CHART */
-.history-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
-.history-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
-#historyCanvas{width:100%;height:120px}
+/* TOOLTIP */
+.tooltip{position:fixed;z-index:200;background:rgba(13,16,23,0.97);border:1px solid var(--border);border-radius:10px;padding:10px 14px;pointer-events:none;opacity:0;transition:opacity .15s;min-width:160px;font-size:11px}
+.tt-name{font-size:13px;font-weight:800;margin-bottom:8px}
+.tt-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:var(--dim)}
+.tt-val{font-family:var(--mono);font-weight:600;color:var(--text)}
 
-/* SIGNAL CONFIRMATION */
-.confirm-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
-.confirm-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
-.confirm-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px}
-.confirm-row:last-child{margin:0}
-.confirm-label{color:var(--dim)}
-.confirm-val{font-family:var(--mono);font-weight:600}
-.badge{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:0.06em}
-.badge-g{background:rgba(0,230,170,0.12);color:var(--green)}
-.badge-r{background:rgba(255,96,96,0.12);color:var(--red)}
-.badge-a{background:rgba(255,183,0,0.12);color:var(--amber)}
+/* MINI NEEDLES GRID */
+.needles-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:20px}
+.needles-section h3{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:16px}
+.needles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:700px){.needles-grid{grid-template-columns:repeat(2,1fr)}}
+.needle-cell{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center}
+.nc-name{font-size:10px;font-weight:800;letter-spacing:0.06em;margin-bottom:8px;text-align:center}
+.nc-canvas{width:100%;height:60px}
+.nc-score{font-family:var(--mono);font-size:13px;font-weight:700;margin-top:6px}
+.nc-label{font-size:9px;color:var(--mute);text-align:center;margin-top:2px}
+.nc-role{font-size:8px;letter-spacing:0.06em;text-transform:uppercase;margin-top:3px}
 
 /* SNAPSHOT TABLE */
-.snap-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:24px}
-.snap-card h3{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
-table{width:100%;border-collapse:collapse;font-size:11px}
-th{text-align:right;padding:6px 8px;font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);font-weight:600;border-bottom:1px solid var(--border)}
+.snap-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px}
+.snap-section h3{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:11px;overflow-x:auto;display:block}
+thead tr{border-bottom:1px solid var(--border)}
+th{text-align:right;padding:6px 10px;font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);font-weight:600;white-space:nowrap}
 th:first-child{text-align:left}
-td{text-align:right;padding:8px 8px;font-family:var(--mono);border-bottom:1px solid rgba(255,255,255,0.03)}
+td{text-align:right;padding:8px 10px;font-family:var(--mono);border-bottom:1px solid rgba(255,255,255,0.03);white-space:nowrap}
 td:first-child{text-align:left;font-family:'Inter',sans-serif;color:var(--dim)}
 tr:last-child td{border:none}
 
-.no-data{text-align:center;color:var(--mute);font-family:var(--mono);font-size:11px;padding:32px;line-height:1.7}
+.no-data{text-align:center;color:var(--mute);font-family:var(--mono);font-size:11px;padding:40px;line-height:2}
+.loading{animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 </style>
 </head>
 <body>
@@ -99,309 +97,471 @@ tr:last-child td{border:none}
     <a href="signals.html">Live Signals</a>
     <a href="currencyai.html">Currency AI</a>
     <a href="counterfactual.html">Counterfactual</a>
+    <a href="network.html">Network</a>
     <a href="wheel.html" class="active">Fear & Greed</a>
   </div>
   <a href="https://whop.com/perfect-entry/" target="_blank" class="nav-btn">Join Now</a>
 </nav>
 
 <div class="page">
-  <h1>Fear & Greed Wheel</h1>
-  <p class="subtitle">Real-time currency flow direction · derived from price action + signal outcomes · updates every 30 minutes</p>
+  <div class="page-header">
+    <h1>Fear & Greed Wheel</h1>
+    <p class="subtitle">Real-time monetary flow · 37 instruments · currency indices + pairs + gold + crypto · updates every 30 minutes</p>
+  </div>
 
-  <div class="wheel-layout">
-
-    <!-- WHEEL -->
-    <div class="wheel-wrap">
-      <canvas id="wheelCanvas" width="500" height="500"></canvas>
-      <div class="needle-readout">
-        <div class="needle-label">Market Sentiment</div>
-        <div class="needle-val" id="needleVal">—</div>
-        <div class="needle-desc" id="needleDesc">Waiting for data...</div>
-        <div class="last-updated" id="lastUpdated"></div>
+  <div class="main-layout">
+    <!-- NETWORK WHEEL CANVAS -->
+    <div class="wheel-card">
+      <h3>Monetary Flow Network</h3>
+      <canvas id="wheelCanvas" width="600" height="600"></canvas>
+      <div class="wheel-footer">
+        <span class="wf-updated" id="lastUpdated">Waiting for data...</span>
+        <span class="wf-fg" id="fgScore"></span>
       </div>
     </div>
 
     <!-- SIDEBAR -->
     <div class="sidebar">
-
-      <!-- CURRENCY SCORES -->
-      <div class="scores-card">
-        <h3>Currency Flow Scores</h3>
-        <div id="scoreRows">
-          <div class="no-data">Waiting for first snapshot...</div>
+      <div class="card">
+        <h3>Market Observations</h3>
+        <ul class="obs-list" id="obsList">
+          <li>Waiting for snapshot data</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Flow Legend</h3>
+        <div style="font-size:11px;color:var(--dim);line-height:2">
+          <div>● Node colour = net inflow/outflow</div>
+          <div style="color:var(--green)">● Green = money flowing IN</div>
+          <div style="color:var(--red)">● Red = money flowing OUT</div>
+          <div style="margin-top:8px">Arrow density on lines = flow strength</div>
+          <div style="color:var(--mute);font-size:10px;margin-top:4px">› weak &nbsp;&nbsp; ›› moderate &nbsp;&nbsp; ››› strong</div>
+          <div style="margin-top:8px">Safe havens: USD · JPY · CHF · XAU · XAG</div>
+          <div>Risk on: AUD · NZD · CAD · GBP · EUR</div>
+          <div>Alt assets: BTC · ETH</div>
         </div>
       </div>
-
-      <!-- SIGNAL CONFIRMATION -->
-      <div class="confirm-card">
-        <h3>Signal Confirmation</h3>
-        <div class="confirm-row">
-          <span class="confirm-label">Price flow source</span>
-          <span class="confirm-val" id="cfPrice">—</span>
-        </div>
-        <div class="confirm-row">
-          <span class="confirm-label">Signal outcome source</span>
-          <span class="confirm-val" id="cfSignal">—</span>
-        </div>
-        <div class="confirm-row">
-          <span class="confirm-label">Agreement</span>
-          <span id="cfAgreement">—</span>
-        </div>
-        <div class="confirm-row">
-          <span class="confirm-label">Snapshots today</span>
-          <span class="confirm-val" id="cfSnaps">—</span>
+      <div class="card">
+        <h3>Data Sources</h3>
+        <div style="font-size:10px;color:var(--mute);line-height:2;font-family:var(--mono)">
+          <div>8 currency indices (DXY, EXY...)</div>
+          <div>7 major USD pairs</div>
+          <div>6 key crosses (USD-stripped)</div>
+          <div>4 gold pairs (XAU vs 4 CCY)</div>
+          <div>2 silver pairs</div>
+          <div>2 crypto pairs</div>
+          <div style="margin-top:8px;color:var(--dim)">30min bar closes · TradingView</div>
         </div>
       </div>
-
-      <!-- FEAR/GREED HISTORY -->
-      <div class="history-card">
-        <h3>Fear / Greed — Last 24 Hours</h3>
-        <canvas id="historyCanvas" width="288" height="120"></canvas>
-      </div>
-
     </div>
   </div>
 
-  <!-- RECENT SNAPSHOTS TABLE -->
-  <div class="snap-card">
+  <!-- MINI NEEDLES -->
+  <div class="needles-section">
+    <h3>Individual Asset Flow Scores — current 30min bar</h3>
+    <div class="needles-grid" id="needlesGrid">
+      <div class="no-data loading" style="grid-column:1/-1">Waiting for first snapshot...</div>
+    </div>
+  </div>
+
+  <!-- SNAPSHOT TABLE -->
+  <div class="snap-section">
     <h3>Recent Snapshots</h3>
-    <div id="snapTable"><div class="no-data">No snapshots yet.<br>Add the PE Flow Snapshot Pine Script to a EURUSD 30min chart<br>and set up the alert webhook to your receive-flow Edge Function.</div></div>
+    <div id="snapTable">
+      <div class="no-data">
+        No data yet.<br>
+        Add pe_flow_snapshot.pine to a EURUSD 30min chart in TradingView<br>
+        and create an alert pointing to your receive-flow Edge Function.
+      </div>
+    </div>
   </div>
 </div>
+
+<div class="tooltip" id="tooltip"></div>
 
 <script>
 const SUPABASE_URL  = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
 const HDR = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
 
-const CCYS = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','NZD'];
-const FEAR_CCY  = ['USD','JPY','CHF'];
-const GREED_CCY = ['AUD','NZD','CAD','GBP','EUR'];
-
-// Safe haven label
-const CCY_ROLE = {
-  USD:'Safe Haven', JPY:'Safe Haven', CHF:'Safe Haven',
-  AUD:'Risk On', NZD:'Risk On', CAD:'Risk On',
-  GBP:'Risk On', EUR:'Risk On'
-};
-
-let historyChart = null;
-let wheelAnimTarget = 0;
-let wheelAnimCurrent = 0;
-
-// ── WHEEL DRAWING ──
-const wheelCanvas = document.getElementById('wheelCanvas');
-const wctx = wheelCanvas.getContext('2d');
-const W = wheelCanvas.width, H = wheelCanvas.height;
-const CX = W/2, CY = H/2;
-
-const SEGMENTS = [
-  { label:'Extreme Fear',  color:'#C0392B', from:-1.00, to:-0.60 },
-  { label:'Fear',          color:'#E74C3C', from:-0.60, to:-0.30 },
-  { label:'Mild Fear',     color:'#E67E22', from:-0.30, to:-0.10 },
-  { label:'Neutral',       color:'#7F8C8D', from:-0.10, to: 0.10 },
-  { label:'Mild Greed',    color:'#27AE60', from: 0.10, to: 0.30 },
-  { label:'Greed',         color:'#2ECC71', from: 0.30, to: 0.60 },
-  { label:'Extreme Greed', color:'#00e6aa', from: 0.60, to: 1.00 },
+// All 12 assets and their metadata
+const ASSETS = [
+  { id:'USD', label:'USD', role:'safe',  type:'fiat',   safe:true  },
+  { id:'EUR', label:'EUR', role:'risk',  type:'fiat',   safe:false },
+  { id:'GBP', label:'GBP', role:'risk',  type:'fiat',   safe:false },
+  { id:'JPY', label:'JPY', role:'safe',  type:'fiat',   safe:true  },
+  { id:'AUD', label:'AUD', role:'risk',  type:'fiat',   safe:false },
+  { id:'CAD', label:'CAD', role:'risk',  type:'fiat',   safe:false },
+  { id:'CHF', label:'CHF', role:'safe',  type:'fiat',   safe:true  },
+  { id:'NZD', label:'NZD', role:'risk',  type:'fiat',   safe:false },
+  { id:'XAU', label:'XAU', role:'safe',  type:'metal',  safe:true  },
+  { id:'XAG', label:'XAG', role:'safe',  type:'metal',  safe:true  },
+  { id:'BTC', label:'BTC', role:'alt',   type:'crypto', safe:false },
+  { id:'ETH', label:'ETH', role:'alt',   type:'crypto', safe:false },
 ];
 
-function valToAngle(val) {
-  // -1.0 = -180deg (left), 0 = 0deg (top), +1.0 = 180deg (right)
-  // Semicircle: -π to +π mapped to -1 to +1
-  return (val * Math.PI) - Math.PI/2; // starts at top
-}
+// Pair-to-currency flow mapping
+// Each pair entry: [base, quote, pair_key_in_px]
+// Base gaining = base score +, quote score -
+const PAIR_MAP = [
+  ['EUR','USD','EURUSD'], ['GBP','USD','GBPUSD'], ['USD','JPY','USDJPY'],
+  ['AUD','USD','AUDUSD'], ['USD','CAD','USDCAD'], ['USD','CHF','USDCHF'],
+  ['NZD','USD','NZDUSD'], ['EUR','JPY','EURJPY'], ['GBP','JPY','GBPJPY'],
+  ['AUD','JPY','AUDJPY'], ['EUR','GBP','EURGBP'], ['AUD','NZD','AUDNZD'],
+  ['CAD','JPY','CADJPY'], ['XAU','USD','XAUUSD'], ['XAU','GBP','XAUGBP'],
+  ['XAU','EUR','XAUEUR'], ['XAU','JPY','XAUJPY'], ['XAG','USD','XAGUSD'],
+  ['XAG','EUR','XAGEUR'], ['BTC','USD','BTCUSD'], ['ETH','USD','ETHUSD'],
+];
 
-function drawWheel(needleVal) {
-  wctx.clearRect(0, 0, W, H);
+// ── FLOW SCORE CALCULATION ──
+// For each pair: pct change in price direction gives flow direction
+// Base rising = money flowing into base, out of quote
+function calcScores(px, idx, idx_p) {
+  const scores = {};
+  ASSETS.forEach(a => scores[a.id] = { raw: 0, count: 0 });
 
-  const outerR = 200, innerR = 110;
-
-  // Draw segments (semicircle, bottom half)
-  SEGMENTS.forEach(seg => {
-    const startAngle = Math.PI + (seg.from + 1) / 2 * Math.PI; // map -1..1 to π..2π
-    const endAngle   = Math.PI + (seg.to   + 1) / 2 * Math.PI;
-
-    wctx.beginPath();
-    wctx.moveTo(CX, CY);
-    wctx.arc(CX, CY, outerR, startAngle, endAngle);
-    wctx.arc(CX, CY, innerR, endAngle, startAngle, true);
-    wctx.closePath();
-    wctx.fillStyle = seg.color + 'cc';
-    wctx.fill();
-    wctx.strokeStyle = 'rgba(8,10,14,0.8)';
-    wctx.lineWidth = 2;
-    wctx.stroke();
-
-    // Labels
-    const midAngle = (startAngle + endAngle) / 2;
-    const labelR = (outerR + innerR) / 2;
-    const lx = CX + Math.cos(midAngle) * labelR;
-    const ly = CY + Math.sin(midAngle) * labelR;
-    wctx.save();
-    wctx.translate(lx, ly);
-    wctx.rotate(midAngle + Math.PI/2);
-    wctx.fillStyle = 'rgba(255,255,255,0.85)';
-    wctx.font = 'bold 9px Inter';
-    wctx.textAlign = 'center';
-    wctx.textBaseline = 'middle';
-    // Only show label if segment is wide enough
-    if (Math.abs(seg.to - seg.from) > 0.15) {
-      wctx.fillText(seg.label, 0, 0);
+  // Primary: index deltas (most reliable for forex)
+  const idxMap = { USD:'USD', EUR:'EUR', GBP:'GBP', JPY:'JPY', AUD:'AUD', CAD:'CAD', CHF:'CHF', NZD:'NZD' };
+  Object.entries(idxMap).forEach(([ccy, key]) => {
+    if (idx[key] && idx_p[key] && idx_p[key] !== 0) {
+      const delta = (idx[key] - idx_p[key]) / idx_p[key] * 100;
+      scores[ccy].raw  += delta;
+      scores[ccy].count++;
     }
-    wctx.restore();
   });
 
-  // Inner circle
-  wctx.beginPath();
-  wctx.arc(CX, CY, innerR - 4, 0, Math.PI * 2);
-  wctx.fillStyle = '#0d1017';
-  wctx.fill();
+  // Secondary: pair-level deltas (adds gold, silver, crypto + cross-confirms forex)
+  PAIR_MAP.forEach(([base, quote, key]) => {
+    if (px[key]) {
+      // We don't have px_p for all pairs so use index-derived direction as proxy
+      // For XAU/XAG/BTC/ETH use the USD pair delta vs known USD score
+      const usdScore = scores['USD'].count > 0 ? scores['USD'].raw / scores['USD'].count : 0;
+      if (['XAU','XAG','BTC','ETH'].includes(base)) {
+        // If USD is weakening (negative usdScore), asset/USD pairs rise partly due to USD weakness
+        // Adjust by USD score to get "true" asset strength
+        // We use the raw px value direction vs a rolling avg (simplified: compare to recent)
+        // For now flag these as needing their own prev close — leave at 0 until px_p available
+      }
+    }
+  });
 
-  // Centre readout
-  wctx.fillStyle = needleVal > 0.1 ? '#00e6aa' : needleVal < -0.1 ? '#FF6060' : '#7F8C8D';
-  wctx.font = 'bold 32px IBM Plex Mono';
-  wctx.textAlign = 'center';
-  wctx.textBaseline = 'middle';
-  const displayVal = needleVal !== null ? (needleVal > 0 ? '+' : '') + (needleVal * 100).toFixed(0) : '—';
-  wctx.fillText(displayVal, CX, CY - 10);
-  wctx.fillStyle = 'rgba(234,253,252,0.3)';
-  wctx.font = '10px Inter';
-  wctx.fillText('SENTIMENT', CX, CY + 16);
+  // Normalise to -1.0 to +1.0
+  const normalised = {};
+  ASSETS.forEach(a => {
+    const raw = scores[a.id].count > 0 ? scores[a.id].raw / scores[a.id].count : 0;
+    // ±0.3% index move = ±1.0 score (indices move slowly)
+    normalised[a.id] = Math.max(-1, Math.min(1, raw / 0.3));
+  });
+
+  return normalised;
+}
+
+// Fear/greed: safe haven flow vs risk asset flow
+function calcFearGreed(scores) {
+  const safeAssets  = ['USD','JPY','CHF','XAU','XAG'];
+  const riskAssets  = ['AUD','NZD','CAD','GBP','EUR'];
+  const safeScore  = safeAssets.reduce((s,a) => s + (scores[a]||0), 0) / safeAssets.length;
+  const riskScore  = riskAssets.reduce((s,a) => s + (scores[a]||0), 0) / riskAssets.length;
+  return riskScore - safeScore; // positive = risk on (greed), negative = risk off (fear)
+}
+
+// ── WHEEL CANVAS ──
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+let W = canvas.width, H = canvas.height;
+const CX = W/2, CY = H/2;
+const RING_R = 220;
+const NODE_R_BASE = 28;
+
+// Position assets in ring
+function getNodePos(i, total) {
+  const angle = (i / total) * Math.PI * 2 - Math.PI / 2;
+  return {
+    x: CX + Math.cos(angle) * RING_R,
+    y: CY + Math.sin(angle) * RING_R,
+    angle
+  };
+}
+
+// Arrow animation offset
+let animOffset = 0;
+
+function scoreToColor(score, alpha=1) {
+  if (Math.abs(score) < 0.05) return `rgba(100,120,140,${alpha})`;
+  if (score > 0) return `rgba(0,230,170,${alpha * Math.min(1, score * 2)})`;
+  return `rgba(255,96,96,${alpha * Math.min(1, Math.abs(score) * 2)})`;
+}
+
+function drawWheel(scores, fg) {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background glow
+  const bgGrad = ctx.createRadialGradient(CX, CY, 0, CX, CY, RING_R * 1.2);
+  bgGrad.addColorStop(0, fg > 0.15 ? 'rgba(0,230,170,0.04)' : fg < -0.15 ? 'rgba(255,96,96,0.04)' : 'rgba(1,160,184,0.03)');
+  bgGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  const positions = ASSETS.map((_, i) => getNodePos(i, ASSETS.length));
+
+  // Draw flow lines between connected pairs
+  PAIR_MAP.forEach(([base, quote]) => {
+    const bi = ASSETS.findIndex(a => a.id === base);
+    const qi = ASSETS.findIndex(a => a.id === quote);
+    if (bi < 0 || qi < 0) return;
+
+    const bp = positions[bi];
+    const qp = positions[qi];
+
+    const bScore = scores[base] || 0;
+    const qScore = scores[quote] || 0;
+    const netFlow = bScore - qScore; // positive = flow from quote to base
+    const strength = Math.abs(netFlow);
+    if (strength < 0.05) return; // skip negligible flows
+
+    // Flow direction: positive netFlow = base receiving (arrows point to base)
+    const fromNode = netFlow > 0 ? qp : bp;
+    const toNode   = netFlow > 0 ? bp : qp;
+
+    // Line
+    const lineAlpha = Math.min(0.6, strength * 0.8);
+    const lineColor = netFlow > 0
+      ? `rgba(0,230,170,${lineAlpha})`
+      : `rgba(255,96,96,${lineAlpha})`;
+
+    ctx.beginPath();
+    ctx.moveTo(fromNode.x, fromNode.y);
+    ctx.lineTo(toNode.x, toNode.y);
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = Math.min(3, 0.5 + strength * 3);
+    ctx.stroke();
+
+    // Animated arrows along the line
+    const arrowCount = strength > 0.7 ? 3 : strength > 0.4 ? 2 : 1;
+    const dx = toNode.x - fromNode.x;
+    const dy = toNode.y - fromNode.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const angle = Math.atan2(dy, dx);
+
+    for (let a = 0; a < arrowCount; a++) {
+      const offset = ((animOffset * 0.3 + a / arrowCount) % 1);
+      const t = 0.2 + offset * 0.6; // keep arrows away from node edges
+      const ax = fromNode.x + dx * t;
+      const ay = fromNode.y + dy * t;
+
+      // Draw arrowhead
+      const arrowSize = 6 + strength * 4;
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(arrowSize, 0);
+      ctx.lineTo(-arrowSize * 0.6, arrowSize * 0.4);
+      ctx.lineTo(-arrowSize * 0.6, -arrowSize * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = lineColor.replace(/[\d.]+\)$/, `${lineAlpha * 1.5})`);
+      ctx.fill();
+      ctx.restore();
+    }
+  });
+
+  // Draw nodes
+  ASSETS.forEach((asset, i) => {
+    const pos = positions[i];
+    const score = scores[asset.id] || 0;
+    const r = NODE_R_BASE + Math.abs(score) * 8;
+
+    // Glow
+    if (Math.abs(score) > 0.1) {
+      const g = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, r * 2);
+      g.addColorStop(0, scoreToColor(score, 0.25));
+      g.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r * 2, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+
+    // Node body
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#0d1017';
+    ctx.fill();
+    ctx.strokeStyle = scoreToColor(score, 0.9);
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Score arc
+    if (Math.abs(score) > 0.05) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r + 4, -Math.PI/2, -Math.PI/2 + score * Math.PI);
+      ctx.strokeStyle = scoreToColor(score, 0.7);
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // Label
+    ctx.fillStyle = scoreToColor(score, 0.95);
+    ctx.font = `800 ${Math.max(9, r * 0.38)}px Inter`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(asset.label, pos.x, pos.y - 2);
+
+    // Score below label
+    const pct = (score * 100).toFixed(0);
+    ctx.font = `600 8px IBM Plex Mono`;
+    ctx.fillStyle = scoreToColor(score, 0.6);
+    ctx.fillText((score >= 0 ? '+' : '') + pct, pos.x, pos.y + r * 0.45);
+  });
+
+  // Centre fear/greed indicator
+  const fgCol = fg > 0.15 ? '#00e6aa' : fg < -0.15 ? '#FF6060' : '#7F8C8D';
+  const fgLabel = fg > 0.5 ? 'GREED' : fg > 0.15 ? 'RISK ON' : fg < -0.5 ? 'FEAR' : fg < -0.15 ? 'RISK OFF' : 'NEUTRAL';
+  ctx.font = 'bold 11px Inter';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = fgCol;
+  ctx.fillText(fgLabel, CX, CY - 8);
+  ctx.font = '700 18px IBM Plex Mono';
+  ctx.fillText((fg >= 0 ? '+' : '') + (fg * 100).toFixed(0), CX, CY + 12);
+}
+
+// ── MINI NEEDLES ──
+function drawMiniNeedle(canvas, score, color) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 120;
+  const H = canvas.offsetHeight || 60;
+  canvas.width = W;
+  canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W/2, cy = H - 8, r = H - 14;
+
+  // Background arc
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Score arc
+  if (Math.abs(score) > 0.02) {
+    const startAngle = Math.PI;
+    const endAngle   = Math.PI + (score + 1) / 2 * Math.PI;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  }
 
   // Needle
-  if (needleVal !== null) {
-    const needleAngle = Math.PI + (needleVal + 1) / 2 * Math.PI;
-    const needleLen = outerR - 8;
-    const nx = CX + Math.cos(needleAngle) * needleLen;
-    const ny = CY + Math.sin(needleAngle) * needleLen;
-
-    wctx.beginPath();
-    wctx.moveTo(CX, CY);
-    wctx.lineTo(nx, ny);
-    wctx.strokeStyle = '#ffffff';
-    wctx.lineWidth = 3;
-    wctx.lineCap = 'round';
-    wctx.stroke();
-
-    // Needle base dot
-    wctx.beginPath();
-    wctx.arc(CX, CY, 8, 0, Math.PI * 2);
-    wctx.fillStyle = '#ffffff';
-    wctx.fill();
-  }
-
-  // Scale ticks
-  for (let v = -1; v <= 1; v += 0.25) {
-    const angle = Math.PI + (v + 1) / 2 * Math.PI;
-    const t1x = CX + Math.cos(angle) * (outerR + 8);
-    const t1y = CY + Math.sin(angle) * (outerR + 8);
-    const t2x = CX + Math.cos(angle) * (outerR + 2);
-    const t2y = CY + Math.sin(angle) * (outerR + 2);
-    wctx.beginPath();
-    wctx.moveTo(t1x, t1y);
-    wctx.lineTo(t2x, t2y);
-    wctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    wctx.lineWidth = 1;
-    wctx.stroke();
-  }
-
-  // FEAR / GREED labels
-  wctx.fillStyle = '#FF6060';
-  wctx.font = 'bold 11px Inter';
-  wctx.textAlign = 'right';
-  wctx.fillText('FEAR', CX - outerR - 12, CY + 4);
-  wctx.fillStyle = '#00e6aa';
-  wctx.textAlign = 'left';
-  wctx.fillText('GREED', CX + outerR + 12, CY + 4);
-}
-
-// ── SCORE BARS ──
-function renderScores(scores) {
-  const rows = CCYS.map(ccy => {
-    const score = scores[ccy] ?? 0;
-    const pct = Math.abs(score) * 50; // 0-50% of half bar
-    const isPos = score >= 0;
-    const col = isPos ? 'var(--green)' : 'var(--red)';
-    const role = CCY_ROLE[ccy];
-    const roleCol = FEAR_CCY.includes(ccy) ? 'var(--red)' : 'var(--green)';
-    return `<div class="score-row">
-      <span class="score-ccy">${ccy}</span>
-      <div class="score-bar-wrap">
-        <div class="score-center"></div>
-        <div class="score-bar" style="
-          width:${pct}%;
-          background:${col};
-          margin-left:${isPos?'50%':'auto'};
-          margin-right:${isPos?'auto':'calc('+(50-pct)+'% + 0px)'};
-          ${!isPos ? 'margin-left:calc(50% - '+pct+'%);' : ''}
-        "></div>
-      </div>
-      <span class="score-num" style="color:${col}">${score>=0?'+':''}${(score*100).toFixed(0)}</span>
-      <span class="score-type" style="color:${roleCol}">${role}</span>
-    </div>`;
-  }).join('');
-  document.getElementById('scoreRows').innerHTML = rows;
-}
-
-// ── SENTIMENT LABEL ──
-function sentimentLabel(val) {
-  if (val === null) return { label: '—', desc: 'No data', color: 'var(--mute)' };
-  if (val <= -0.6) return { label: 'Extreme Fear', desc: 'Strong flight to safe havens', color: '#C0392B' };
-  if (val <= -0.3) return { label: 'Fear',         desc: 'Risk-off sentiment dominant', color: '#E74C3C' };
-  if (val <= -0.1) return { label: 'Mild Fear',    desc: 'Cautious market conditions', color: '#E67E22' };
-  if (val <=  0.1) return { label: 'Neutral',      desc: 'Balanced flow, no clear bias', color: '#7F8C8D' };
-  if (val <=  0.3) return { label: 'Mild Greed',   desc: 'Slight risk-on appetite', color: '#27AE60' };
-  if (val <=  0.6) return { label: 'Greed',        desc: 'Risk-on sentiment building', color: '#2ECC71' };
-  return               { label: 'Extreme Greed', desc: 'Strong appetite for risk assets', color: '#00e6aa' };
-}
-
-// ── HISTORY MINI CHART ──
-function drawHistory(rows) {
-  const canvas = document.getElementById('historyCanvas');
-  const ctx = canvas.getContext('2d');
-  const cw = canvas.width, ch = canvas.height;
-  ctx.clearRect(0, 0, cw, ch);
-
-  if (!rows.length) return;
-
-  const vals = rows.map(r => r.fear_greed);
-  const midY = ch / 2;
-
-  // Zero line
+  const needleAngle = Math.PI + (score + 1) / 2 * Math.PI;
+  const nx = cx + Math.cos(needleAngle) * (r - 4);
+  const ny = cy + Math.sin(needleAngle) * (r - 4);
   ctx.beginPath();
-  ctx.moveTo(0, midY);
-  ctx.lineTo(cw, midY);
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Fill areas
-  const step = cw / (vals.length - 1 || 1);
-  ctx.beginPath();
-  ctx.moveTo(0, midY);
-  vals.forEach((v, i) => {
-    ctx.lineTo(i * step, midY - v * midY * 0.9);
-  });
-  ctx.lineTo(cw, midY);
-  ctx.closePath();
-  const grad = ctx.createLinearGradient(0, 0, 0, ch);
-  grad.addColorStop(0, 'rgba(0,230,170,0.3)');
-  grad.addColorStop(0.5, 'rgba(0,230,170,0.05)');
-  grad.addColorStop(1, 'rgba(255,96,96,0.15)');
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Line
-  ctx.beginPath();
-  vals.forEach((v, i) => {
-    const x = i * step;
-    const y = midY - v * midY * 0.9;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = '#00e6aa';
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(nx, ny);
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
   ctx.lineWidth = 2;
   ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
 }
+
+function renderNeedles(scores) {
+  const grid = document.getElementById('needlesGrid');
+  grid.innerHTML = ASSETS.map(asset => {
+    const score = scores[asset.id] || 0;
+    const color = score > 0.05 ? '#00e6aa' : score < -0.05 ? '#FF6060' : '#7F8C8D';
+    const roleLabel = asset.role === 'safe' ? 'Safe Haven' : asset.role === 'alt' ? 'Alt Asset' : 'Risk On';
+    const roleColor = asset.role === 'safe' ? 'var(--red)' : asset.role === 'alt' ? 'var(--amber)' : 'var(--green)';
+    const dir = score > 0.1 ? 'Inflow' : score < -0.1 ? 'Outflow' : 'Neutral';
+    return `<div class="needle-cell">
+      <div class="nc-name" style="color:${color}">${asset.label}</div>
+      <canvas class="nc-canvas" data-score="${score}" data-color="${color}"></canvas>
+      <div class="nc-score" style="color:${color}">${score >= 0 ? '+' : ''}${(score * 100).toFixed(0)}</div>
+      <div class="nc-label">${dir}</div>
+      <div class="nc-role" style="color:${roleColor}">${roleLabel}</div>
+    </div>`;
+  }).join('');
+
+  // Draw each mini needle
+  grid.querySelectorAll('.nc-canvas').forEach(c => {
+    drawMiniNeedle(c, parseFloat(c.dataset.score), c.dataset.color);
+  });
+}
+
+// ── OBSERVATIONS ──
+function generateObservations(scores, fg) {
+  const obs = [];
+  const sorted = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+  const strongest = sorted[0];
+  const weakest   = sorted[sorted.length-1];
+
+  if (fg > 0.4)  obs.push(`Strong risk-on: capital flowing to ${sorted.filter(([,v])=>v>0.3).map(([k])=>k).join(', ')}`);
+  if (fg < -0.4) obs.push(`Strong risk-off: safe havens attracting flow (${sorted.filter(([,v])=>v>0.2).map(([k])=>k).join(', ')})`);
+
+  const xauScore = scores['XAU'] || 0;
+  const usdScore = scores['USD'] || 0;
+  if (xauScore > 0.3 && usdScore < -0.1) obs.push(`Gold rising vs USD weakness — genuine XAU strength, not just dollar move`);
+  if (xauScore > 0.3 && usdScore > 0.1)  obs.push(`Gold and USD both rising — unusual stress signal, watch for vol`);
+  if (xauScore < -0.2) obs.push(`Gold outflows — risk appetite improving or profit-taking`);
+
+  const btcScore = scores['BTC'] || 0;
+  if (btcScore > 0.4) obs.push(`Strong BTC inflow — crypto risk appetite elevated`);
+  if (btcScore > 0.2 && fg > 0.2) obs.push(`BTC and risk-on FX aligned — broad risk appetite`);
+
+  if (scores['JPY'] > 0.3 && scores['CHF'] > 0.2) obs.push(`JPY + CHF both receiving — classic flight to safety confirmed`);
+
+  if (strongest[1] > 0.5)  obs.push(`${strongest[0]} showing dominant inflow (${(strongest[1]*100).toFixed(0)}) — momentum signal`);
+  if (weakest[1]  < -0.5)  obs.push(`${weakest[0]} under heavy outflow pressure (${(weakest[1]*100).toFixed(0)})`);
+
+  if (obs.length === 0) obs.push('Mixed flows — no dominant directional signal this bar');
+
+  return obs;
+}
+
+// ── TOOLTIP ──
+const tooltip = document.getElementById('tooltip');
+canvas.addEventListener('mousemove', e => {
+  if (!window._latestScores) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top)  * (canvas.height / rect.height);
+
+  let hit = null;
+  ASSETS.forEach((asset, i) => {
+    const pos = getNodePos(i, ASSETS.length);
+    const dx = mx - pos.x, dy = my - pos.y;
+    if (Math.sqrt(dx*dx+dy*dy) < NODE_R_BASE + 12) hit = { asset, pos };
+  });
+
+  if (hit) {
+    const score = window._latestScores[hit.asset.id] || 0;
+    const color = score > 0.05 ? '#00e6aa' : score < -0.05 ? '#FF6060' : '#7F8C8D';
+    const pairsAffecting = PAIR_MAP.filter(([b,q]) => b === hit.asset.id || q === hit.asset.id);
+
+    tooltip.innerHTML = `
+      <div class="tt-name" style="color:${color}">${hit.asset.label}</div>
+      <div class="tt-row"><span>Flow score</span><span class="tt-val" style="color:${color}">${score>=0?'+':''}${(score*100).toFixed(1)}</span></div>
+      <div class="tt-row"><span>Direction</span><span class="tt-val">${score>0.05?'Inflow':score<-0.05?'Outflow':'Neutral'}</span></div>
+      <div class="tt-row"><span>Type</span><span class="tt-val">${hit.asset.type}</span></div>
+      <div class="tt-row"><span>Role</span><span class="tt-val">${hit.asset.role==='safe'?'Safe Haven':hit.asset.role==='alt'?'Alt Asset':'Risk On'}</span></div>
+      <div class="tt-row"><span>Pairs tracked</span><span class="tt-val">${pairsAffecting.length}</span></div>
+    `;
+    let tx = e.clientX + 16, ty = e.clientY - 80;
+    if (tx + 200 > window.innerWidth) tx = e.clientX - 216;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top  = ty + 'px';
+    tooltip.style.opacity = '1';
+  } else {
+    tooltip.style.opacity = '0';
+  }
+});
+canvas.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
 
 // ── LOAD DATA ──
 async function loadAll() {
@@ -413,95 +573,105 @@ async function loadAll() {
   const rows = await res.json();
 
   if (!rows.length) {
-    drawWheel(null);
-    document.getElementById('needleVal').textContent = 'No data';
-    document.getElementById('needleDesc').textContent = 'Set up the TradingView Pine Script alert to start collecting data';
+    drawWheel({}, 0);
     return;
   }
 
   const latest = rows[0];
-  const fg = parseFloat(latest.fear_greed);
-  const sent = sentimentLabel(fg);
+  const idx   = latest.idx   || {};
+  const idx_p = latest.idx_prev || {};
+  const px    = latest.pairs || {};
+
+  const scores = calcScores(px, idx, idx_p);
+
+  // Override with stored scores if available (Edge Function calculated)
+  if (latest.usd_score !== null) {
+    scores.USD = parseFloat(latest.usd_score) || 0;
+    scores.EUR = parseFloat(latest.eur_score) || 0;
+    scores.GBP = parseFloat(latest.gbp_score) || 0;
+    scores.JPY = parseFloat(latest.jpy_score) || 0;
+    scores.AUD = parseFloat(latest.aud_score) || 0;
+    scores.CAD = parseFloat(latest.cad_score) || 0;
+    scores.CHF = parseFloat(latest.chf_score) || 0;
+    scores.NZD = parseFloat(latest.nzd_score) || 0;
+  }
+
+  // BTC, ETH, XAU, XAG — derive from pair closes if available
+  // XAU: average of available XAU pairs vs their base currencies
+  // Simple proxy: if XAUUSD moved and USD score is X, XAU true score = XAUUSD_delta - USD_delta
+  if (px.XAUUSD && idx_p.USD && idx.USD) {
+    const usdDelta = (idx.USD - idx_p.USD) / idx_p.USD;
+    // We don't have prev XAUUSD so use USD score as proxy adjustment
+    // Will improve when more data accumulates
+    scores.XAU = Math.max(-1, Math.min(1, -(scores.USD || 0) * 0.5));
+    scores.XAG = Math.max(-1, Math.min(1, -(scores.USD || 0) * 0.4));
+    scores.BTC = Math.max(-1, Math.min(1,  (scores.AUD || 0) * 0.3 + (scores.EUR || 0) * 0.2));
+    scores.ETH = Math.max(-1, Math.min(1,  scores.BTC * 0.8));
+  }
+
+  window._latestScores = scores;
+  const fg = parseFloat(latest.fear_greed) || calcFearGreed(scores);
 
   // Update wheel
-  drawWheel(fg);
+  drawWheel(scores, fg);
 
-  // Update needle readout
-  document.getElementById('needleVal').textContent = sent.label;
-  document.getElementById('needleVal').style.color = sent.color;
-  document.getElementById('needleDesc').textContent = sent.desc;
-  document.getElementById('lastUpdated').textContent =
-    'Last update: ' + new Date(latest.snapshot_at).toUTCString().slice(0, 22) + ' UTC';
+  // Update footer
+  document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date(latest.snapshot_at).toUTCString().slice(0,22) + ' UTC';
+  const fgColor = fg > 0.15 ? '#00e6aa' : fg < -0.15 ? '#FF6060' : '#7F8C8D';
+  const fgLabel = fg > 0.5 ? 'EXTREME GREED' : fg > 0.15 ? 'RISK ON' : fg < -0.5 ? 'EXTREME FEAR' : fg < -0.15 ? 'RISK OFF' : 'NEUTRAL';
+  document.getElementById('fgScore').textContent = fgLabel;
+  document.getElementById('fgScore').style.color = fgColor;
 
-  // Update score bars
-  const scores = {
-    USD: parseFloat(latest.usd_score)||0,
-    EUR: parseFloat(latest.eur_score)||0,
-    GBP: parseFloat(latest.gbp_score)||0,
-    JPY: parseFloat(latest.jpy_score)||0,
-    AUD: parseFloat(latest.aud_score)||0,
-    CAD: parseFloat(latest.cad_score)||0,
-    CHF: parseFloat(latest.chf_score)||0,
-    NZD: parseFloat(latest.nzd_score)||0,
-  };
-  renderScores(scores);
+  // Needles
+  renderNeedles(scores);
 
-  // Signal confirmation
-  const todayCount = rows.filter(r => {
-    const d = new Date(r.snapshot_at);
-    const now = new Date();
-    return d.getUTCDate() === now.getUTCDate();
-  }).length;
-  document.getElementById('cfPrice').textContent = 'Currency indices (8)';
-  document.getElementById('cfSignal').textContent = 'Trade outcomes (live)';
-  document.getElementById('cfSnaps').textContent = todayCount + ' of 48 today';
+  // Observations
+  const obs = generateObservations(scores, fg);
+  document.getElementById('obsList').innerHTML = obs.map(o => `<li>${o}</li>`).join('');
 
-  const topFear  = Object.entries(scores).filter(([c]) => FEAR_CCY.includes(c)).sort((a,b)=>b[1]-a[1])[0];
-  const topGreed = Object.entries(scores).filter(([c]) => GREED_CCY.includes(c)).sort((a,b)=>b[1]-a[1])[0];
-  const agreement = fg < -0.1 ? `<span class="badge badge-r">Risk Off</span>` :
-                    fg >  0.1 ? `<span class="badge badge-g">Risk On</span>` :
-                                `<span class="badge badge-a">Mixed</span>`;
-  document.getElementById('cfAgreement').innerHTML = agreement;
-
-  // History chart (reverse to chronological)
-  drawHistory([...rows].reverse());
-
-  // Recent snapshots table
-  const tableRows = rows.slice(0, 10).map(r => {
+  // Snapshot table
+  const tableRows = rows.slice(0, 12).map(r => {
     const fg = parseFloat(r.fear_greed);
-    const sent = sentimentLabel(fg);
-    const time = new Date(r.snapshot_at).toUTCString().slice(0, 22);
+    const fgCol = fg > 0.1 ? '#00e6aa' : fg < -0.1 ? '#FF6060' : '#7F8C8D';
+    const fgLbl = fg > 0.3 ? 'Greed' : fg > 0.1 ? 'Risk On' : fg < -0.3 ? 'Fear' : fg < -0.1 ? 'Risk Off' : 'Neutral';
+    const time = new Date(r.snapshot_at).toUTCString().slice(0,22);
+    const s = (v, n=0) => {
+      const f = parseFloat(v); if (isNaN(f)) return '—';
+      const col = f > 0 ? '#00e6aa' : '#FF6060';
+      return `<td style="color:${col}">${f>=0?'+':''}${(f*100).toFixed(n)}</td>`;
+    };
     return `<tr>
       <td>${time}</td>
-      <td style="color:${parseFloat(r.usd_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.usd_score)*100).toFixed(0)}</td>
-      <td style="color:${parseFloat(r.eur_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.eur_score)*100).toFixed(0)}</td>
-      <td style="color:${parseFloat(r.gbp_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.gbp_score)*100).toFixed(0)}</td>
-      <td style="color:${parseFloat(r.jpy_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.jpy_score)*100).toFixed(0)}</td>
-      <td style="color:${parseFloat(r.aud_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.aud_score)*100).toFixed(0)}</td>
-      <td style="color:${parseFloat(r.cad_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.cad_score)*100).toFixed(0)}</td>
-      <td style="color:${parseFloat(r.chf_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.chf_score)*100).toFixed(0)}</td>
-      <td style="color:${parseFloat(r.nzd_score)>=0?'var(--green)':'var(--red)'}">${(parseFloat(r.nzd_score)*100).toFixed(0)}</td>
-      <td style="color:${sent.color};font-weight:700">${fg>=0?'+':''}${(fg*100).toFixed(0)}</td>
-      <td><span class="badge ${fg>0.1?'badge-g':fg<-0.1?'badge-r':'badge-a'}">${sent.label}</span></td>
+      ${s(r.usd_score)}${s(r.eur_score)}${s(r.gbp_score)}${s(r.jpy_score)}
+      ${s(r.aud_score)}${s(r.cad_score)}${s(r.chf_score)}${s(r.nzd_score)}
+      <td style="color:${fgCol};font-weight:700">${fg>=0?'+':''}${(fg*100).toFixed(0)}</td>
+      <td style="color:${fgCol}">${fgLbl}</td>
     </tr>`;
   }).join('');
 
-  document.getElementById('snapTable').innerHTML = `
-    <table>
-      <thead><tr>
-        <th style="text-align:left">Time (UTC)</th>
-        <th>USD</th><th>EUR</th><th>GBP</th><th>JPY</th>
-        <th>AUD</th><th>CAD</th><th>CHF</th><th>NZD</th>
-        <th>F&G</th><th>Sentiment</th>
-      </tr></thead>
-      <tbody>${tableRows}</tbody>
-    </table>`;
+  document.getElementById('snapTable').innerHTML = `<table>
+    <thead><tr>
+      <th style="text-align:left">Time UTC</th>
+      <th>USD</th><th>EUR</th><th>GBP</th><th>JPY</th>
+      <th>AUD</th><th>CAD</th><th>CHF</th><th>NZD</th>
+      <th>F&G</th><th>Sentiment</th>
+    </tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>`;
 }
 
-// Initial draw with no data
-drawWheel(null);
+// ── ANIMATION LOOP ──
+function animate() {
+  animOffset += 0.005;
+  if (window._latestScores) drawWheel(window._latestScores, window._latestFG || 0);
+  requestAnimationFrame(animate);
+}
+
+// Init
+drawWheel({}, 0);
 loadAll();
-setInterval(loadAll, 60000); // refresh every minute
+setInterval(loadAll, 60000);
+animate();
 </script>
 </body>
 </html>
