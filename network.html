@@ -77,10 +77,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:10;padding:16px 24px;display:
 
 <div class="legend">
   <div class="legend-title">Currency Strength</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#00e6aa"></div>Strong when long (&gt;50% WR)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#00e6aa"></div>Strong (&gt;50% WR)</div>
   <div class="legend-item"><div class="legend-dot" style="background:#ffb700"></div>Neutral (42–50% WR)</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#ff6a6a"></div>Weak when long (&lt;42% WR)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff6a6a"></div>Weak (&lt;42% WR)</div>
   <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.15)"></div>Insufficient data</div>
+  <div class="legend-title" style="margin-top:12px">Arcs</div>
+  <div class="legend-item"><div style="width:20px;height:3px;background:#00e6aa;border-radius:2px;flex-shrink:0"></div>Outer · when held long</div>
+  <div class="legend-item"><div style="width:20px;height:2px;background:rgba(0,230,170,0.5);border-radius:2px;flex-shrink:0;border-top:2px dashed rgba(0,230,170,0.5)"></div>Inner · when held short</div>
 </div>
 
 <div class="stats-bar" id="statsBar"></div>
@@ -168,10 +171,10 @@ async function loadData() {
   if (!res.ok) return;
   const rows = await res.json();
 
-  // Build currency stats
-  const hist = {};
+  // Build currency stats — track both long and short WR separately
+  const longHist  = {}; // outcomes when currency held long  (base+buy or quote+sell)
+  const shortHist = {}; // outcomes when currency held short (base+sell or quote+buy)
   const tradeCount = {};
-  const recent = {};
 
   // Process oldest first for rolling window
   const sorted = [...rows].reverse();
@@ -179,29 +182,37 @@ async function loadData() {
     const [base, quote] = getCcys(row.sym);
     const [longC, shortC] = row.dir === 'buy' ? [base, quote] : [quote, base];
 
-    // Count trades per pair for edge sizing
     tradeCount[row.sym] = (tradeCount[row.sym] || 0) + 1;
 
-    // Long currency history
-    if (!hist[longC]) hist[longC] = [];
-    hist[longC].push(row.outcome);
-    if (!hist[shortC]) hist[shortC] = [];
-    // Short currency: wins when opponent loses
-    hist[shortC].push(row.outcome === 'tp' ? 'sl' : 'tp');
+    // Long currency — held long this trade
+    if (!longHist[longC])  longHist[longC]  = [];
+    longHist[longC].push(row.outcome);
+
+    // Short currency — held short this trade
+    // Win when held short = long currency lost
+    if (!shortHist[shortC]) shortHist[shortC] = [];
+    shortHist[shortC].push(row.outcome === 'tp' ? 'sl' : 'tp');
+
+    // Also track short currency's long history and long currency's short history
+    if (!longHist[shortC])  longHist[shortC]  = [];
+    longHist[shortC].push(row.outcome === 'tp' ? 'sl' : 'tp'); // short ccy held long = inverse
+
+    if (!shortHist[longC]) shortHist[longC] = [];
+    shortHist[longC].push(row.outcome); // long ccy held short this trade = same outcome
   });
 
-  // Calculate rolling stats
-  Object.entries(hist).forEach(([ccy, h]) => {
+  // Calculate rolling stats for both directions
+  CURRENCIES.forEach(ccy => {
     if (!nodes[ccy]) return;
-    const recent = h.slice(-CCY_LOOKBACK);
-    nodes[ccy].longTotal = recent.length;
-    nodes[ccy].longWins = recent.filter(o => o === 'tp').length;
-    if (recent.length >= CCY_MIN) {
-      nodes[ccy].wr = nodes[ccy].longWins / recent.length;
-    } else {
-      nodes[ccy].wr = null;
-    }
-    nodes[ccy].trades = h.length;
+    const lh = (longHist[ccy]  || []).slice(-CCY_LOOKBACK);
+    const sh = (shortHist[ccy] || []).slice(-CCY_LOOKBACK);
+
+    nodes[ccy].longWR  = lh.length >= CCY_MIN ? lh.filter(o=>o==='tp').length / lh.length : null;
+    nodes[ccy].shortWR = sh.length >= CCY_MIN ? sh.filter(o=>o==='tp').length / sh.length : null;
+    nodes[ccy].longTotal  = lh.length;
+    nodes[ccy].shortTotal = sh.length;
+    nodes[ccy].wr = nodes[ccy].longWR; // primary WR = when held long (for node colouring)
+    nodes[ccy].trades = (longHist[ccy]||[]).length;
   });
 
   // Update edge trade counts
@@ -297,13 +308,23 @@ function draw() {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Win rate arc if data available
-    if (n.wr !== null && n.longTotal >= CCY_MIN) {
+    // Long WR arc (outer) — green/amber/red
+    if (n.longWR !== null && n.longTotal >= CCY_MIN) {
       ctx.beginPath();
-      ctx.arc(n.x, n.y, r + 4, -Math.PI/2, -Math.PI/2 + n.wr * Math.PI * 2);
-      ctx.strokeStyle = nodeColor(n.wr, 0.6);
+      ctx.arc(n.x, n.y, r + 5, -Math.PI/2, -Math.PI/2 + n.longWR * Math.PI * 2);
+      ctx.strokeStyle = nodeColor(n.longWR, 0.8);
       ctx.lineWidth = 3;
       ctx.stroke();
+    }
+    // Short WR arc (inner, dashed) — shows when held short
+    if (n.shortWR !== null && n.shortTotal >= CCY_MIN) {
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      ctx.arc(n.x, n.y, r + 1, -Math.PI/2, -Math.PI/2 + n.shortWR * Math.PI * 2);
+      ctx.strokeStyle = nodeColor(n.shortWR, 0.5);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
     // Currency label
@@ -342,10 +363,27 @@ canvas.addEventListener('mousemove', e => {
     const status = hit.wr === null ? 'No data' : hit.wr >= 0.5 ? 'Strong' : hit.wr >= 0.417 ? 'Neutral' : 'Weak';
     const statusColor = hit.wr === null ? 'var(--mute)' : hit.wr >= 0.5 ? 'var(--green)' : hit.wr >= 0.417 ? 'var(--amber)' : 'var(--red)';
 
+    const shortWrPct = hit.shortWR !== null ? (hit.shortWR * 100).toFixed(1) + '%' : 'Insufficient';
+    const shortStatus = hit.shortWR === null ? 'No data' : hit.shortWR >= 0.5 ? 'Strong short' : hit.shortWR >= 0.417 ? 'Neutral short' : 'Weak short';
+    const shortColor  = hit.shortWR === null ? 'var(--mute)' : hit.shortWR >= 0.5 ? 'var(--green)' : hit.shortWR >= 0.417 ? 'var(--amber)' : 'var(--red)';
+
+    // Asymmetry signal
+    const asymmetry = (hit.longWR !== null && hit.shortWR !== null)
+      ? ((hit.longWR + hit.shortWR) * 100).toFixed(1) + '%'
+      : '—';
+    const asymColor = (hit.longWR !== null && hit.shortWR !== null)
+      ? ((hit.longWR + hit.shortWR) > 1.1 ? 'var(--green)' : (hit.longWR + hit.shortWR) < 0.9 ? 'var(--red)' : 'var(--amber)')
+      : 'var(--mute)';
+
     tooltip.innerHTML = `
       <div class="tt-sym">${hit.id}</div>
-      <div class="tt-row"><span class="tt-label">Win rate (long)</span><span class="tt-val">${wrPct}</span></div>
-      <div class="tt-row"><span class="tt-label">Trades (rolling)</span><span class="tt-val">${hit.longTotal}</span></div>
+      <div class="tt-row"><span class="tt-label">WR when held long</span><span class="tt-val" style="color:${statusColor}">${wrPct}</span></div>
+      <div class="tt-row"><span class="tt-label">WR when held short</span><span class="tt-val" style="color:${shortColor}">${shortWrPct}</span></div>
+      <div class="tt-row" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:4px;padding-top:4px">
+        <span class="tt-label">Long + short sum</span>
+        <span class="tt-val" style="color:${asymColor}">${asymmetry}</span>
+      </div>
+      <div class="tt-row"><span class="tt-label">Rolling trades</span><span class="tt-val">${hit.longTotal}</span></div>
       <div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${statusColor}">${status}</span></div>
       <div class="tt-row"><span class="tt-label">All-time trades</span><span class="tt-val">${hit.trades}</span></div>
     `;
