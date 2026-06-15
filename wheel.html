@@ -36,7 +36,7 @@ h1{font-size:clamp(20px,2.5vw,26px);font-weight:900;margin-bottom:4px}
 /* NETWORK WHEEL */
 .wheel-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center}
 .wheel-card h3{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:16px;align-self:flex-start}
-#wheelCanvas{width:100%;max-width:600px;height:600px;cursor:crosshair}
+#wheelCanvas{width:100%;max-width:600px;height:min(600px,90vw);cursor:crosshair}
 .wheel-footer{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
 .wf-updated{font-family:var(--mono);font-size:10px;color:var(--mute)}
 .wf-fg{font-family:var(--mono);font-size:12px;font-weight:700}
@@ -63,6 +63,7 @@ h1{font-size:clamp(20px,2.5vw,26px);font-weight:900;margin-bottom:4px}
 .needles-section h3{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:16px}
 .needles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media(max-width:700px){.needles-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:400px){.needles-grid{grid-template-columns:repeat(1,1fr)}}
 .needle-cell{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center}
 .nc-name{font-size:10px;font-weight:800;letter-spacing:0.06em;margin-bottom:8px;text-align:center}
 .nc-canvas{width:100%;height:60px}
@@ -73,7 +74,7 @@ h1{font-size:clamp(20px,2.5vw,26px);font-weight:900;margin-bottom:4px}
 /* SNAPSHOT TABLE */
 .snap-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px}
 .snap-section h3{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
-table{width:100%;border-collapse:collapse;font-size:11px;overflow-x:auto;display:block}
+table{width:100%;border-collapse:collapse;font-size:11px;overflow-x:auto;display:block;-webkit-overflow-scrolling:touch}
 thead tr{border-bottom:1px solid var(--border)}
 th{text-align:right;padding:6px 10px;font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);font-weight:600;white-space:nowrap}
 th:first-child{text-align:left}
