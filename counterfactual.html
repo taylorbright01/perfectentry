@@ -15,12 +15,13 @@
   --text:#EAFDFC;--dim:rgba(234,253,252,0.55);--mute:rgba(234,253,252,0.25);
   --border:rgba(255,255,255,0.07);--mono:'IBM Plex Mono',monospace;
 }
-html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
 nav{position:sticky;top:0;z-index:100;background:rgba(8,10,14,0.97);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:14px;height:44px}
 .nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-weight:800;font-size:12px;flex-shrink:0}
 .nav-logo img{width:20px;height:20px;object-fit:contain}
 .nav-links{display:flex;gap:14px;font-size:11px;font-weight:600;margin-left:auto}
+  @media(max-width:768px){.nav-links{display:none}}
 .nav-links a{color:var(--dim);text-decoration:none;transition:color .15s}
 .nav-links a:hover,.nav-links a.active{color:var(--text)}
 .nav-links a.active{color:var(--orange)}
@@ -28,6 +29,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(8,10,14,0.97);border-botto
 @media(max-width:768px){.nav-links{display:none}}
 
 .page{max-width:1200px;margin:0 auto;padding:32px 24px 80px}
+  @media(max-width:560px){.page{padding:16px 12px 60px}}
 
 h1{font-size:clamp(22px,3vw,30px);font-weight:900;margin-bottom:8px}
 .subtitle{font-size:13px;color:var(--dim);line-height:1.6;max-width:680px;margin-bottom:32px}
@@ -59,6 +61,7 @@ h1{font-size:clamp(22px,3vw,30px);font-weight:900;margin-bottom:8px}
 .week-section h3{font-size:13px;font-weight:700;margin-bottom:4px}
 .week-section p{font-size:11px;color:var(--dim);margin-bottom:16px}
 table{width:100%;border-collapse:collapse;font-size:12px}
+  .week-section,.inst-section{overflow-x:auto;-webkit-overflow-scrolling:touch}
 thead tr{border-bottom:1px solid var(--border)}
 th{text-align:right;padding:8px 12px;font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);font-weight:600}
 th:first-child{text-align:left}
