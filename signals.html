@@ -300,6 +300,10 @@
     align-items: flex-start;
   }
   .mob-cards-scroll::-webkit-scrollbar { display: none; }
+  .mob-cards-scroll::after {
+    content: '';
+    flex: 0 0 8px;
+  }
 
   .mob-empty { padding: 16px; font-size: 11px; color: var(--text-mute); font-family: 'IBM Plex Mono', monospace; line-height: 1.8; }
 
@@ -769,7 +773,7 @@ function updateMobileCounts() {
     const n = signals[tf].length;
     const cnt = document.getElementById('mob-cnt-' + tf);
     const dot = document.getElementById('mob-dot-' + tf);
-    if (cnt) cnt.textContent = n === 0 ? 'waiting...' : n + (n === 1 ? ' signal' : ' signals');
+    if (cnt) cnt.textContent = n === 0 ? 'waiting...' : n + (n === 1 ? ' signal' : ' signals') + (n > 2 ? '  ›' : '');
     if (dot) dot.classList.toggle('show', n > 0);
   });
 }
