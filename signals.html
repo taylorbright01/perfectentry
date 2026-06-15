@@ -1471,10 +1471,21 @@ async function loadRecent(){
           const tmpSig={sym:row.sym,tf:row.tf,dir:row.dir,score,currency_ai_pass:row.currency_ai_pass,created_at:row.created_at};
           if(currencyFilterHidden(tmpSig)) return;
         }
-        if(!isS0&&!row.score&&outcome&&!wasInSession(row.sym,row.tf,sigTime,outcome))return;
+        // Active signals always show in columns
+        // Completed signals only show in columns if they closed today (same session context)
+        const isActive = !row.outcome || row.outcome === 'active';
+        if (!isActive) {
+          const today = new Date();
+          const closedAt = row.closed_at ? new Date(row.closed_at) : sigTime;
+          const closedToday = closedAt.getUTCFullYear() === today.getUTCFullYear() &&
+                              closedAt.getUTCMonth() === today.getUTCMonth() &&
+                              closedAt.getUTCDate() === today.getUTCDate();
+          if (!closedToday) return; // completed before today — skip column display
+          if(!isS0&&!row.score&&!wasInSession(row.sym,row.tf,sigTime,row.outcome))return;
+        }
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
-        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
-        signals[row.tf].push(sig);
+        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome:row.outcome};
+        if(isActive) signals[row.tf].push(sig);
         const card=makeCard(sig);
         card.classList.remove('entering');
         list.appendChild(card);
