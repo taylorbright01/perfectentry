@@ -596,6 +596,11 @@ function pushSignal(sig){
   // Only display if the signal fired during a valid session window
   const sigTime=sig.created_at?new Date(sig.created_at):new Date();
   if(!wasInSession(sig.sym,sig.tf,sigTime,sig.outcome))return;
+  // Check score filter
+  const fkey=sig.score?fk(sig.score):'S0';
+  if(fkey&&!activeFilters.has(fkey))return;
+  // Check currency AI filter — don't add to array or count if hidden
+  if(currencyFilterHidden(sig))return;
   const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
   signals[sig.tf].unshift(sig);
   const card=makeCard(sig);
@@ -611,7 +616,6 @@ function pushSignal(sig){
   updateMobileCounts();
   pushToMobile(sig, card);
   updateWeeklyStrip();
-  if(betaMode) applyBetaFilter();
   playChime();
 }
 
@@ -634,9 +638,12 @@ function updateAgos(){
 
 function updateCounts(){
   TFS.forEach(tf=>{
-    const n=signals[tf].length;
-    document.getElementById('cnt-'+tf).textContent=n===0?'waiting...':n+(n===1?' signal':' signals');
-    document.getElementById('dot-'+tf).classList.toggle('show',n>0);
+    const list=document.getElementById('list-'+tf);
+    const n=list?list.querySelectorAll('.sig-card:not(.fading)').length:signals[tf].length;
+    const el=document.getElementById('cnt-'+tf);
+    const dot=document.getElementById('dot-'+tf);
+    if(el)el.textContent=n===0?'waiting...':n+(n===1?' signal':' signals')+(n>2?' ›':'');
+    if(dot)dot.classList.toggle('show',n>0);
   });
 }
 
