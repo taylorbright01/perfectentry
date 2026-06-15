@@ -514,18 +514,29 @@ async function init(){
   const recentSignals = heatmapSignals.filter(r => r.created_at >= sevenDaysAgo);
   const heatmapSource = recentSignals.length >= 30 ? recentSignals : heatmapSignals;
   // Track long and short history separately
+  // longHist[ccy]  = outcomes when currency held long (base+buy or quote+sell)
+  // shortHist[ccy] = outcomes when currency held short (base+sell or quote+buy)
   const longHist = {}, shortHist = {};
   heatmapSource.forEach(r => {
     const sp = SPECIAL[r.sym];
     const base = sp?sp[0]:r.sym.slice(0,3);
     const quote = sp?sp[1]:r.sym.slice(3);
-    const [longC, shortC] = r.dir==='buy'?[base,quote]:[quote,base];
-    // Long currency WR when held long
-    if(!longHist[longC]) longHist[longC]={wins:0,losses:0};
-    r.outcome==='tp' ? longHist[longC].wins++ : longHist[longC].losses++;
-    // Short currency WR when held short (wins when long loses and vice versa)
-    if(!shortHist[shortC]) shortHist[shortC]={wins:0,losses:0};
-    r.outcome==='tp' ? shortHist[shortC].losses++ : shortHist[shortC].wins++;
+    const isBuy = r.dir === 'buy';
+
+    if(!longHist[base])  longHist[base]  = {wins:0,losses:0};
+    if(!shortHist[base]) shortHist[base] = {wins:0,losses:0};
+    if(!longHist[quote])  longHist[quote]  = {wins:0,losses:0};
+    if(!shortHist[quote]) shortHist[quote] = {wins:0,losses:0};
+
+    if(isBuy) {
+      // base held long, quote held short
+      r.outcome==='tp' ? longHist[base].wins++   : longHist[base].losses++;
+      r.outcome==='tp' ? shortHist[quote].losses++ : shortHist[quote].wins++;
+    } else {
+      // quote held long, base held short
+      r.outcome==='tp' ? longHist[quote].wins++  : longHist[quote].losses++;
+      r.outcome==='tp' ? shortHist[base].losses++ : shortHist[base].wins++;
+    }
   });
 
   // Merge into combined currency list
