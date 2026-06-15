@@ -106,7 +106,7 @@ tr:last-child td{border:none}
 <div class="page">
   <div class="page-header">
     <h1>Fear & Greed Wheel</h1>
-    <p class="subtitle">Real-time monetary flow · 37 instruments · currency indices + pairs + gold + crypto · updates every 30 minutes</p>
+    <p class="subtitle">Real-time monetary flow · 37 pairs · forex + gold + silver + crypto · EMA-12 smoothed · updates every 90 minutes</p>
   </div>
 
   <div class="main-layout">
@@ -144,13 +144,12 @@ tr:last-child td{border:none}
       <div class="card">
         <h3>Data Sources</h3>
         <div style="font-size:10px;color:var(--mute);line-height:2;font-family:var(--mono)">
-          <div>8 currency indices (DXY, EXY...)</div>
-          <div>7 major USD pairs</div>
-          <div>6 key crosses (USD-stripped)</div>
-          <div>4 gold pairs (XAU vs 4 CCY)</div>
-          <div>2 silver pairs</div>
-          <div>2 crypto pairs</div>
-          <div style="margin-top:8px;color:var(--dim)">30min bar closes · TradingView</div>
+          <div>29 signal pairs (your full list)</div>
+          <div>XAUEUR · XAUGBP · XAUJPY</div>
+          <div>XAGEUR · XAUXAG · BTCETH</div>
+          <div>EURCHF · GBPNZD</div>
+          <div style="margin-top:8px;color:var(--dim)">37 pairs total · Twelve Data</div>
+          <div style="color:var(--dim)">90min bars · EMA-12 smoothed</div>
         </div>
       </div>
     </div>
@@ -582,32 +581,23 @@ async function loadAll() {
   const idx_p = latest.idx_prev || {};
   const px    = latest.pairs || {};
 
-  const scores = calcScores(px, idx, idx_p);
-
-  // Override with stored scores if available (Edge Function calculated)
-  if (latest.usd_score !== null) {
-    scores.USD = parseFloat(latest.usd_score) || 0;
-    scores.EUR = parseFloat(latest.eur_score) || 0;
-    scores.GBP = parseFloat(latest.gbp_score) || 0;
-    scores.JPY = parseFloat(latest.jpy_score) || 0;
-    scores.AUD = parseFloat(latest.aud_score) || 0;
-    scores.CAD = parseFloat(latest.cad_score) || 0;
-    scores.CHF = parseFloat(latest.chf_score) || 0;
-    scores.NZD = parseFloat(latest.nzd_score) || 0;
-  }
-
-  // BTC, ETH, XAU, XAG — derive from pair closes if available
-  // XAU: average of available XAU pairs vs their base currencies
-  // Simple proxy: if XAUUSD moved and USD score is X, XAU true score = XAUUSD_delta - USD_delta
-  if (px.XAUUSD && idx_p.USD && idx.USD) {
-    const usdDelta = (idx.USD - idx_p.USD) / idx_p.USD;
-    // We don't have prev XAUUSD so use USD score as proxy adjustment
-    // Will improve when more data accumulates
-    scores.XAU = Math.max(-1, Math.min(1, -(scores.USD || 0) * 0.5));
-    scores.XAG = Math.max(-1, Math.min(1, -(scores.USD || 0) * 0.4));
-    scores.BTC = Math.max(-1, Math.min(1,  (scores.AUD || 0) * 0.3 + (scores.EUR || 0) * 0.2));
-    scores.ETH = Math.max(-1, Math.min(1,  scores.BTC * 0.8));
-  }
+  // Use EMA-smoothed scores from consolidated Edge Function
+  // Falls back to raw scores if EMA not yet available
+  const scores = {
+    USD: parseFloat(latest.ema_usd ?? latest.usd_score) || 0,
+    EUR: parseFloat(latest.ema_eur ?? latest.eur_score) || 0,
+    GBP: parseFloat(latest.ema_gbp ?? latest.gbp_score) || 0,
+    JPY: parseFloat(latest.ema_jpy ?? latest.jpy_score) || 0,
+    AUD: parseFloat(latest.ema_aud ?? latest.aud_score) || 0,
+    CAD: parseFloat(latest.ema_cad ?? latest.cad_score) || 0,
+    CHF: parseFloat(latest.ema_chf ?? latest.chf_score) || 0,
+    NZD: parseFloat(latest.ema_nzd ?? latest.nzd_score) || 0,
+    XAU: parseFloat(latest.ema_xau) || 0,
+    XAG: parseFloat(latest.ema_xag) || 0,
+    BTC: parseFloat(latest.ema_btc) || 0,
+    ETH: parseFloat(latest.ema_eth) || 0,
+    NAS: parseFloat(latest.ema_nas) || 0,
+  };
 
   window._latestScores = scores;
   const fg = parseFloat(latest.fear_greed) || calcFearGreed(scores);
@@ -642,8 +632,9 @@ async function loadAll() {
     };
     return `<tr>
       <td>${time}</td>
-      ${s(r.usd_score)}${s(r.eur_score)}${s(r.gbp_score)}${s(r.jpy_score)}
-      ${s(r.aud_score)}${s(r.cad_score)}${s(r.chf_score)}${s(r.nzd_score)}
+      ${s(r.ema_usd??r.usd_score)}${s(r.ema_eur??r.eur_score)}${s(r.ema_gbp??r.gbp_score)}${s(r.ema_jpy??r.jpy_score)}
+      ${s(r.ema_aud??r.aud_score)}${s(r.ema_cad??r.cad_score)}${s(r.ema_chf??r.chf_score)}${s(r.ema_nzd??r.nzd_score)}
+      ${s(r.ema_xau)}${s(r.ema_xag)}${s(r.ema_btc)}${s(r.ema_eth)}
       <td style="color:${fgCol};font-weight:700">${fg>=0?'+':''}${(fg*100).toFixed(0)}</td>
       <td style="color:${fgCol}">${fgLbl}</td>
     </tr>`;
@@ -654,6 +645,7 @@ async function loadAll() {
       <th style="text-align:left">Time UTC</th>
       <th>USD</th><th>EUR</th><th>GBP</th><th>JPY</th>
       <th>AUD</th><th>CAD</th><th>CHF</th><th>NZD</th>
+      <th>XAU</th><th>XAG</th><th>BTC</th><th>ETH</th>
       <th>F&G</th><th>Sentiment</th>
     </tr></thead>
     <tbody>${tableRows}</tbody>
