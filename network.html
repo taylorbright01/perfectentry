@@ -173,47 +173,54 @@ async function loadData() {
   const rows = await res.json();
 
   // Build currency stats — track both long and short WR separately
-  const longHist  = {}; // outcomes when currency held long  (base+buy or quote+sell)
-  const shortHist = {}; // outcomes when currency held short (base+sell or quote+buy)
+  // longHist[ccy]  = outcomes for trades where this currency was held LONG
+  //                  (it is the base currency and dir=buy, OR quote currency and dir=sell)
+  // shortHist[ccy] = outcomes for trades where this currency was held SHORT
+  //                  (it is the base currency and dir=sell, OR quote currency and dir=buy)
+  const longHist  = {};
+  const shortHist = {};
   const tradeCount = {};
 
-  // Process oldest first for rolling window
   const sorted = [...rows].reverse();
   sorted.forEach(row => {
     const [base, quote] = getCcys(row.sym);
-    const [longC, shortC] = row.dir === 'buy' ? [base, quote] : [quote, base];
-
     tradeCount[row.sym] = (tradeCount[row.sym] || 0) + 1;
 
-    // Long currency — held long this trade
-    if (!longHist[longC])  longHist[longC]  = [];
-    longHist[longC].push(row.outcome);
+    const isBuy = row.dir === 'buy';
 
-    // Short currency — held short this trade
-    // Win when held short = long currency lost
-    if (!shortHist[shortC]) shortHist[shortC] = [];
-    shortHist[shortC].push(row.outcome === 'tp' ? 'sl' : 'tp');
+    // BASE currency: held long on buy, held short on sell
+    if (!longHist[base])  longHist[base]  = [];
+    if (!shortHist[base]) shortHist[base] = [];
+    if (isBuy) {
+      longHist[base].push(row.outcome);   // base held long
+    } else {
+      // base held short — wins when trade loses and vice versa
+      shortHist[base].push(row.outcome === 'tp' ? 'sl' : 'tp');
+    }
 
-    // Also track short currency's long history and long currency's short history
-    if (!longHist[shortC])  longHist[shortC]  = [];
-    longHist[shortC].push(row.outcome === 'tp' ? 'sl' : 'tp'); // short ccy held long = inverse
-
-    if (!shortHist[longC]) shortHist[longC] = [];
-    shortHist[longC].push(row.outcome); // long ccy held short this trade = same outcome
+    // QUOTE currency: held short on buy, held long on sell
+    if (!longHist[quote])  longHist[quote]  = [];
+    if (!shortHist[quote]) shortHist[quote] = [];
+    if (isBuy) {
+      // quote held short — wins when trade loses
+      shortHist[quote].push(row.outcome === 'tp' ? 'sl' : 'tp');
+    } else {
+      longHist[quote].push(row.outcome);  // quote held long on sell
+    }
   });
 
-  // Calculate rolling stats for both directions
+  // Calculate rolling stats
   CURRENCIES.forEach(ccy => {
     if (!nodes[ccy]) return;
     const lh = (longHist[ccy]  || []).slice(-CCY_LOOKBACK);
     const sh = (shortHist[ccy] || []).slice(-CCY_LOOKBACK);
 
-    nodes[ccy].longWR  = lh.length >= CCY_MIN ? lh.filter(o=>o==='tp').length / lh.length : null;
-    nodes[ccy].shortWR = sh.length >= CCY_MIN ? sh.filter(o=>o==='tp').length / sh.length : null;
+    nodes[ccy].longWR     = lh.length >= CCY_MIN ? lh.filter(o=>o==='tp').length / lh.length : null;
+    nodes[ccy].shortWR    = sh.length >= CCY_MIN ? sh.filter(o=>o==='tp').length / sh.length : null;
     nodes[ccy].longTotal  = lh.length;
     nodes[ccy].shortTotal = sh.length;
-    nodes[ccy].wr = nodes[ccy].longWR; // primary WR = when held long (for node colouring)
-    nodes[ccy].trades = (longHist[ccy]||[]).length;
+    nodes[ccy].wr         = nodes[ccy].longWR;
+    nodes[ccy].trades     = lh.length + sh.length;
   });
 
   // Update edge trade counts
