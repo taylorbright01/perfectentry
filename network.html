@@ -98,7 +98,7 @@ const HDR = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANO
 
 const SPECIAL = {XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
 const CCY_LOOKBACK = 30;
-const CCY_MIN = 10;
+const CCY_MIN = 5;
 
 // Currency nodes and their positions (will be force-directed)
 const CURRENCIES = ['USD','EUR','GBP','JPY','AUD','NZD','CAD','CHF','XAU','XAG','BTC','ETH'];
@@ -167,7 +167,7 @@ let ccyStats = {};
 async function loadData() {
   const res = await fetch(
     SUPABASE_URL + '/rest/v1/signals?select=sym,dir,outcome,currency_ai_pass&outcome=not.is.null&order=created_at.desc&limit=5000',
-    { headers: HDR }
+    { headers: { ...HDR, 'Range-Unit':'items', 'Range':'0-4999' } }
   );
   if (!res.ok) return;
   const rows = await res.json();
