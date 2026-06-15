@@ -79,6 +79,13 @@
   .col-hist .sig-card { flex-shrink: 0; opacity: 0.85; }
   .sig-card { border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); padding: 9px 11px; position: relative; overflow: hidden; flex-shrink: 0; }
   .sig-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 10px 0 0 10px; }
+  /* Collapsed/expanded card states */
+  .sig-card { cursor:pointer; transition:border-color .15s; }
+  .sig-card:hover { border-color:rgba(255,255,255,0.18); }
+  .sig-card .sig-body { display:none; }
+  .sig-card.expanded .sig-body { display:block; }
+  .sig-card .sig-chevron { font-size:9px; color:var(--text-mute); transition:transform .2s; }
+  .sig-card.expanded .sig-chevron { transform:rotate(180deg); }
   .sig-card.buy::before { background: var(--green); }
   .sig-card.sell::before { background: var(--orange); }
   .sig-card.entering { animation: cardIn 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
@@ -634,9 +641,9 @@ function exitCard(el){
 
 function pushSignal(sig){
   const list=document.getElementById('list-'+sig.tf);if(!list)return;
-  // Only display if the signal fired during a valid session window
+  // Active signals always show — wasInSession only filters completed signals
   const sigTime=sig.created_at?new Date(sig.created_at):new Date();
-  if(!wasInSession(sig.sym,sig.tf,sigTime,sig.outcome))return;
+  if(sig.outcome && !wasInSession(sig.sym,sig.tf,sigTime,sig.outcome))return;
   // Check score filter
   const fkey=sig.score?fk(sig.score):'S0';
   if(fkey&&!activeFilters.has(fkey))return;
@@ -1464,7 +1471,7 @@ async function loadRecent(){
           const tmpSig={sym:row.sym,tf:row.tf,dir:row.dir,score,currency_ai_pass:row.currency_ai_pass,created_at:row.created_at};
           if(currencyFilterHidden(tmpSig)) return;
         }
-        if(!isS0&&!row.score&&!wasInSession(row.sym,row.tf,sigTime,outcome))return;
+        if(!isS0&&!row.score&&outcome&&!wasInSession(row.sym,row.tf,sigTime,outcome))return;
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
         const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome};
         signals[row.tf].push(sig);
