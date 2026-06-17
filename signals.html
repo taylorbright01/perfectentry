@@ -737,6 +737,27 @@ function renderWeeklyStrip(wins, losses, active) {
 }
 
 
+function getVisibleActiveCardCount() {
+  // The weekly active number should mirror what the user can actually see
+  // in the main live columns under the currently enabled filters.
+  let n = 0;
+  TFS.forEach(tf => {
+    const list = document.getElementById('list-' + tf);
+    if (!list) return;
+    list.querySelectorAll('.sig-card').forEach(card => {
+      if (card.classList.contains('fading')) return;
+      if (card.classList.contains('beta-hidden')) return;
+      if (card.style.display === 'none') return;
+
+      const ob = card.querySelector('.outcome-badge');
+      const isActive = ob && ob.textContent.trim().toUpperCase() === 'ACTIVE';
+      if (isActive) n++;
+    });
+  });
+  return n;
+}
+
+
 // Single source of truth for whether an ACTIVE row should be visible when filters are on.
 // This keeps the underlined "active" count/modal aligned with the main timeframe columns.
 function activeRowPassesVisibleFilters(row) {
@@ -802,18 +823,9 @@ async function updateWeeklyStrip() {
       }
     });
 
-    // Active signals — still count from live signals table
-    const activeRes = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,score,currency_ai_pass,currency_ai_pass_open,created_at&outcome=is.null&order=created_at.desc&limit=500',
-      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
-    );
-    let active = 0;
-    if (activeRes.ok) {
-      const activeRows = await activeRes.json();
-      activeRows.forEach((row) => {
-        if (activeRowPassesVisibleFilters(row)) active++;
-      });
-    }
+    // Active count should match the active cards currently visible on the main board.
+    // Do not run a separate active query here, because that can drift from the UI filters.
+    let active = getVisibleActiveCardCount();
 
     renderWeeklyStrip(wins, losses, active);
   } catch(e) { console.error('updateWeeklyStrip error:', e); }
@@ -1349,6 +1361,8 @@ function applyBetaFilter() {
     }
   });
   updateCounts();
+  updateMobileCounts();
+  updateWeeklyStrip();
 }
 
 function toggleAllHistory() {
