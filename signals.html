@@ -1342,8 +1342,16 @@ function applyBetaFilter() {
     const sc = scoreType ? { type:scoreType, val: isNaN(scoreVal) ? scoreVal : parseInt(scoreVal) } : null;
     const sig = { sym, tf, dir, score:sc };
 
-    // Apply/remove beta-hidden
-    card.classList.toggle('beta-hidden', eitherBetaHidden(sig));
+    // Apply/remove beta-hidden.
+    // Active cards are already filtered by immutable DB state in loadRecent(),
+    // so do not let the old client-side beta/pair recalculation hide them afterwards.
+    const ob = card.querySelector('.outcome-badge');
+    const isActiveCard = ob && ob.textContent.trim().toUpperCase() === 'ACTIVE';
+    if (!isActiveCard) {
+      card.classList.toggle('beta-hidden', eitherBetaHidden(sig));
+    } else {
+      card.classList.remove('beta-hidden');
+    }
 
     // Prob badge
     const existingProb = card.querySelector('.prob-badge');
@@ -1456,8 +1464,8 @@ async function loadTodayHistory() {
 
 async function loadRecent(){
   try{
-    // Live columns should show ACTIVE trades only.
-    // Closed trades are shown only in Today's history.
+    // Main live columns show ACTIVE trades only.
+    // Closed/TP/SL/void trades are only shown inside Today's closed history.
     const res = await fetch(
       SUPABASE_URL + '/rest/v1/signals?select=*&outcome=is.null&order=created_at.desc&limit=1000',
       {headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}}
@@ -1465,7 +1473,7 @@ async function loadRecent(){
     if(!res.ok)return;
     const rows = await res.json();
 
-    // Reset live state/lists so actives are the only cards on the main page.
+    // Reset live state/lists.
     TFS.forEach(tf => {
       signals[tf] = [];
       const list = document.getElementById('list-' + tf);
@@ -1484,6 +1492,7 @@ async function loadRecent(){
     TFS.forEach(tf => {
       const list = document.getElementById('list-' + tf);
       if(!list) return;
+
       const tfRows = (byTF[tf] || []).sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       let shown = 0;
@@ -1492,9 +1501,8 @@ async function loadRecent(){
 
         const sigTime = new Date(row.created_at);
 
-        // Use stored score from DB if available, fall back to derived score.
+        // Work out display score.
         let score = null;
-        let isS0 = false;
         if(row.score){
           if(row.score.startsWith('S')) score = {type:'score', val:parseInt(row.score[1])};
           else score = {type:'conf', val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
@@ -1502,33 +1510,27 @@ async function loadRecent(){
           score = getScore(row.sym, row.tf, sigTime);
         }
 
-        // No score = S0. Only show if Currency AI mode is on, S0 filter is on, and stored CAI pass exists.
+        // If there is no score, this can only be shown as S0 when Currency AI passed at open.
         if(!score){
-          if(!betaMode) return;
-          if(!activeFilters.has('S0')) return;
-          if(sigTime.getUTCHours() >= 20) return;
           const caiPass = (row.currency_ai_pass_open ?? row.currency_ai_pass) === true;
           if(!caiPass) return;
           score = {type:'score', val:0};
-          isS0 = true;
-        } else if(betaMode) {
-          // Currency AI on: active scored trades also need to pass the Currency AI filter.
-          const NON_FOREX = ['XAUUSD','XAGUSD','BTCUSD','ETHUSD','NAS100'];
-          if(NON_FOREX.includes(row.sym)) return;
-          const tmpSig = {
-            sym: row.sym,
-            tf: row.tf,
-            dir: row.dir,
-            score,
-            currency_ai_pass: (row.currency_ai_pass_open ?? row.currency_ai_pass),
-            created_at: row.created_at
-          };
-          if(currencyFilterHidden(tmpSig)) return;
         }
 
-        // Respect score/conf filter toggles.
-        const fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
-        if(!activeFilters.has(fkey)) return;
+        // Use one active visibility rule based on the stored database state.
+        // This prevents active trades like S1 + currency_ai_pass_open=true being hidden
+        // by the old client-side recalculated Currency AI / Pair AI logic.
+        const activeFilterRow = {
+          sym: row.sym,
+          tf: row.tf,
+          dir: row.dir,
+          score: score.type === 'score' ? 'S' + score.val : score.val[0],
+          currency_ai_pass: row.currency_ai_pass,
+          currency_ai_pass_open: row.currency_ai_pass_open,
+          created_at: row.created_at
+        };
+
+        if(!activeRowPassesVisibleFilters(activeFilterRow)) return;
 
         const empty = list.querySelector('.empty-msg');
         if(empty) empty.remove();
@@ -1556,12 +1558,16 @@ async function loadRecent(){
 
     updateCounts();
     updateMobileCounts();
-    updateWeeklyStrip();
+
+    // History is loaded separately and should contain closed/void rows only.
     loadTodayHistory();
 
-    if(betaMode) applyBetaFilter();
+    // Do NOT call applyBetaFilter() on active cards here.
+    // Active visibility has already been handled by activeRowPassesVisibleFilters()
+    // using immutable open-time fields from the database.
+    updateWeeklyStrip();
 
-    // Populate mobile live lists from the active-only desktop columns.
+    // Populate mobile live lists from active-only desktop columns.
     TFS.forEach(tf => {
       const mobList = document.getElementById('mob-list-' + tf);
       if (!mobList) return;
