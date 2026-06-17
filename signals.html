@@ -435,7 +435,7 @@
     <span class="ftag on" data-f="M">MED</span>
     <span class="ftag on" data-f="L">LOW</span>
     <button class="clear-btn" id="clearBtn">Clear signals</button>
-    <button class="ftag" id="histBtn" onclick="toggleAllHistory()">Today's history</button>
+    <button class="ftag" id="histBtn" onclick="toggleAllHistory()">Today's closed history</button>
     <button class="beta-btn on" id="betaBtn" onclick="toggleBetaFilter()">⚡ Currency AI</button>
     <button class="beta-btn" id="betaPairBtn" onclick="togglePairFilter()">🎯 Pair AI</button>
   </div>
@@ -450,7 +450,7 @@
     <span class="weekly-sep">·</span>
     <span class="weekly-r zero" id="wkR">+0.0R</span>
     <span class="weekly-sep">·</span>
-    <span class="weekly-open" id="wkOpen" onclick="openActiveModal()" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px" title="View active trades">0 active</span>
+    <span class="weekly-open" id="wkOpen" title="Active trades are shown in the main columns">0 active</span>
   </div>
 </div>
 
@@ -1371,8 +1371,8 @@ function toggleAllHistory() {
       else { mobLive.style.display = ''; mobHist.classList.remove('active'); }
     }
   });
-  const label = historyMode ? '← Live' : "Today's history";
-  if (btn) { btn.classList.toggle('on', historyMode); btn.textContent = historyMode ? '← Live view' : "Today's history"; }
+  const label = historyMode ? '← Active trades' : "Today's closed history";
+  if (btn) { btn.classList.toggle('on', historyMode); btn.textContent = historyMode ? '← Active trades' : "Today's closed history"; }
   if (mobBtn) mobBtn.textContent = label;
 }
 
@@ -1391,6 +1391,9 @@ async function loadTodayHistory() {
     const rows = await res.json();
     const byTF = {};
     rows.forEach(row => {
+      // Today's history is for closed/voided results only.
+      // Active trades are shown on the main live columns.
+      if (!row.outcome && !row.closed_at) return;
       if (!byTF[row.tf]) byTF[row.tf] = [];
       byTF[row.tf].push(row);
     });
@@ -1439,114 +1442,136 @@ async function loadTodayHistory() {
 
 async function loadRecent(){
   try{
-    // Fetch all currently active trades plus today's closed trades.
-    // This fixes the issue where older active trades could be present in the Active modal
-    // but missing from the main timeframe columns because the page only loaded the last 200 rows.
-    const todayStart = new Date();
-    todayStart.setUTCHours(0,0,0,0);
-    const res=await fetch(
-      SUPABASE_URL+'/rest/v1/signals?select=*&or=(outcome.is.null,closed_at.gte.'+encodeURIComponent(todayStart.toISOString())+')&order=created_at.desc&limit=1000',
+    // Live columns should show ACTIVE trades only.
+    // Closed trades are shown only in Today's history.
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/signals?select=*&outcome=is.null&order=created_at.desc&limit=1000',
       {headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}}
     );
     if(!res.ok)return;
-    const rows=await res.json();
-    const byTF={};
-    rows.forEach(row=>{
-      if(!byTF[row.tf])byTF[row.tf]=[];
+    const rows = await res.json();
+
+    // Reset live state/lists so actives are the only cards on the main page.
+    TFS.forEach(tf => {
+      signals[tf] = [];
+      const list = document.getElementById('list-' + tf);
+      if (list) list.innerHTML = '<div class="empty-msg">No active trades.<br>Waiting for<br>webhook alerts.</div>';
+
+      const mobList = document.getElementById('mob-list-' + tf);
+      if (mobList) mobList.innerHTML = '<div class="mob-empty">No active trades. Waiting for webhook alerts.</div>';
+    });
+
+    const byTF = {};
+    rows.forEach(row => {
+      if(!byTF[row.tf]) byTF[row.tf] = [];
       byTF[row.tf].push(row);
     });
-    TFS.forEach(tf=>{
-      if(!byTF[tf])return;
-      const list=document.getElementById('list-'+tf);if(!list)return;
-      // Active trades first, then newest closed trades.
-      // This guarantees unresolved positions remain visible even if the column is at MAX.
-      byTF[tf].sort((a,b)=>{
-        const aa = (!a.outcome && !a.closed_at) ? 1 : 0;
-        const bb = (!b.outcome && !b.closed_at) ? 1 : 0;
-        if (aa !== bb) return bb - aa;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-      let shown=0;
-      byTF[tf].forEach(row=>{
-        if(shown>=MAX)return;
-        const sigTime=new Date(row.created_at);
-        let outcome=row.outcome||null;
-        if(!outcome&&!row.closed_at)outcome='active';
-        else if(!outcome&&row.closed_at)outcome='closed';
-        // Use stored score from DB if available, fall back to derived
-        let score=null;
-        let isS0=false;
+
+    TFS.forEach(tf => {
+      const list = document.getElementById('list-' + tf);
+      if(!list) return;
+      const tfRows = (byTF[tf] || []).sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      let shown = 0;
+      tfRows.forEach(row => {
+        if(shown >= MAX) return;
+
+        const sigTime = new Date(row.created_at);
+
+        // Use stored score from DB if available, fall back to derived score.
+        let score = null;
+        let isS0 = false;
         if(row.score){
-          if(row.score.startsWith('S')) score={type:'score',val:parseInt(row.score[1])};
-          else score={type:'conf',val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
+          if(row.score.startsWith('S')) score = {type:'score', val:parseInt(row.score[1])};
+          else score = {type:'conf', val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
         } else {
-          score=getScore(row.sym,row.tf,sigTime);
+          score = getScore(row.sym, row.tf, sigTime);
         }
-        // No score — only show if Currency AI is on and signal passes currency filter
+
+        // No score = S0. Only show if Currency AI mode is on, S0 filter is on, and stored CAI pass exists.
         if(!score){
-          // S0 — only show if Currency AI on, S0 toggled on, and passed filter
-          if(!betaMode) return; // currency AI off — hide unscored
-          if(!activeFilters.has('S0')) return; // user toggled S0 off — hide
-          if(sigTime.getUTCHours() >= 20) return; // blackout
-          if(row.currency_ai_pass === false) return;
-          if(row.currency_ai_pass === null || row.currency_ai_pass === undefined) {
-            const tmpSig={sym:row.sym,tf:row.tf,dir:row.dir,score:null,currency_ai_pass:row.currency_ai_pass,created_at:row.created_at};
-            if(currencyFilterHidden(tmpSig)) return;
-          }
-          score={type:'score',val:0}; // assign S0
-          isS0=true;
+          if(!betaMode) return;
+          if(!activeFilters.has('S0')) return;
+          if(sigTime.getUTCHours() >= 20) return;
+          const caiPass = (row.currency_ai_pass_open ?? row.currency_ai_pass) === true;
+          if(!caiPass) return;
+          score = {type:'score', val:0};
+          isS0 = true;
         } else if(betaMode) {
-          // Currency AI on — exclude non-forex instruments
+          // Currency AI on: active scored trades also need to pass the Currency AI filter.
           const NON_FOREX = ['XAUUSD','XAGUSD','BTCUSD','ETHUSD','NAS100'];
           if(NON_FOREX.includes(row.sym)) return;
-          // Scored signals also need to pass the currency filter
-          const tmpSig={sym:row.sym,tf:row.tf,dir:row.dir,score,currency_ai_pass:row.currency_ai_pass,created_at:row.created_at};
+          const tmpSig = {
+            sym: row.sym,
+            tf: row.tf,
+            dir: row.dir,
+            score,
+            currency_ai_pass: (row.currency_ai_pass_open ?? row.currency_ai_pass),
+            created_at: row.created_at
+          };
           if(currencyFilterHidden(tmpSig)) return;
         }
-        // Active signals always show in columns
-        // Completed signals only show in columns if they closed today (same session context)
-        const isActive = !row.outcome || row.outcome === 'active';
-        if (!isActive) {
-          const today = new Date();
-          const closedAt = row.closed_at ? new Date(row.closed_at) : sigTime;
-          const closedToday = closedAt.getUTCFullYear() === today.getUTCFullYear() &&
-                              closedAt.getUTCMonth() === today.getUTCMonth() &&
-                              closedAt.getUTCDate() === today.getUTCDate();
-          if (!closedToday) return; // completed before today — skip column display
-          if(!isS0&&!row.score&&!wasInSession(row.sym,row.tf,sigTime,row.outcome))return;
-        }
-        const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
-        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome:row.outcome,currency_ai_pass:(row.currency_ai_pass_open ?? row.currency_ai_pass)};
-        if(isActive) signals[row.tf].push(sig);
-        const card=makeCard(sig);
+
+        // Respect score/conf filter toggles.
+        const fkey = score.type === 'score' ? 'S' + score.val : score.val[0];
+        if(!activeFilters.has(fkey)) return;
+
+        const empty = list.querySelector('.empty-msg');
+        if(empty) empty.remove();
+
+        const sig = {
+          sym: row.sym,
+          tf: row.tf,
+          dir: row.dir,
+          entry: parseFloat(row.entry),
+          sl: parseFloat(row.sl),
+          tp: parseFloat(row.tp),
+          score,
+          created_at: row.created_at,
+          outcome: 'active',
+          currency_ai_pass: (row.currency_ai_pass_open ?? row.currency_ai_pass)
+        };
+
+        signals[row.tf].push(sig);
+        const card = makeCard(sig);
         card.classList.remove('entering');
         list.appendChild(card);
         shown++;
       });
     });
+
     updateCounts();
     updateMobileCounts();
     updateWeeklyStrip();
     loadTodayHistory();
+
     if(betaMode) applyBetaFilter();
-    // Also populate mobile lists from loaded signals
+
+    // Populate mobile live lists from the active-only desktop columns.
     TFS.forEach(tf => {
       const mobList = document.getElementById('mob-list-' + tf);
       if (!mobList) return;
+      mobList.innerHTML = '<div class="mob-empty">No active trades. Waiting for webhook alerts.</div>';
+
       const desktopList = document.getElementById('list-' + tf);
       if (!desktopList) return;
       const cards = desktopList.querySelectorAll('.sig-card');
       if (cards.length === 0) return;
+
       const empty = mobList.querySelector('.mob-empty');
       if (empty) empty.remove();
+
       cards.forEach(card => {
         const clone = card.cloneNode(true);
         clone.classList.remove('entering');
         mobList.appendChild(clone);
       });
     });
+
     updateAgos();
-  }catch(e){}
+  }catch(e){
+    console.error('loadRecent error:', e);
+  }
 }
 
 Promise.all([loadSignalStats(), loadCurrencyStats()]).then(() => loadRecent());
@@ -1564,14 +1589,14 @@ updateCounts();
     <span class="mob-utc" id="mobUtcClock">UTC — —</span>
     <a class="mob-nav-btn" href="data.html">View data</a>
     <a class="mob-nav-btn" href="screener.html">Session timings</a>
-    <button class="mob-nav-btn" id="mobHistBtn" onclick="toggleAllHistory()" style="border:1px solid rgba(1,160,184,0.4);background:rgba(1,160,184,0.1);color:var(--teal);cursor:pointer">Today's history</button>
+    <button class="mob-nav-btn" id="mobHistBtn" onclick="toggleAllHistory()" style="border:1px solid rgba(1,160,184,0.4);background:rgba(1,160,184,0.1);color:var(--teal);cursor:pointer">Today's closed history</button>
     <button class="mob-nav-btn" id="mobBetaBtn" onclick="toggleBetaFilter()" style="border:1px solid rgba(255,183,0,0.35);background:rgba(255,183,0,0.08);color:#ffb700;cursor:pointer">⚡ Beta</button>
   </div>
   <div style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.07);padding:7px 16px;display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;flex-wrap:wrap">
     <span style="font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(234,253,252,0.35)">This week</span>
     <span style="font-size:11px;font-weight:800"><span id="mob-wkWins" style="color:#00e6aa">0</span>W / <span id="mob-wkLosses" style="color:#FF9060">0</span>L</span>
     <span style="font-size:12px;font-weight:900" id="mob-wkR">0.0R</span>
-    <span style="font-size:10px;color:#7de3ff;font-weight:700" id="mob-wkOpen" onclick="openActiveModal()" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px">0 active</span>
+    <span style="font-size:10px;color:#7de3ff;font-weight:700" id="mob-wkOpen">0 active</span>
   </div>
 
   <div class="mob-tf-section">
