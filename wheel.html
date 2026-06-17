@@ -564,93 +564,180 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
 
 // ── LOAD DATA ──
-async function loadAll() {
-  const res = await fetch(
-    SUPABASE_URL + '/rest/v1/price_flow?select=*&order=snapshot_at.desc&limit=48',
-    { headers: HDR }
-  );
-  if (!res.ok) return;
-  const rows = await res.json();
+function showDataError(title, detail) {
+  console.error(title, detail || '');
+  const last = document.getElementById('lastUpdated');
+  const fgEl = document.getElementById('fgScore');
+  const obs = document.getElementById('obsList');
+  const snap = document.getElementById('snapTable');
+  const needles = document.getElementById('needlesGrid');
 
-  if (!rows.length) {
+  if (last) last.textContent = title;
+  if (fgEl) { fgEl.textContent = 'NO DATA'; fgEl.style.color = '#FF6060'; }
+  if (obs) obs.innerHTML = `<li>${title}</li><li>${detail || 'Check browser console / Supabase table permissions.'}</li>`;
+  if (needles) needles.innerHTML = `<div class="no-data" style="grid-column:1/-1;color:#FF6060">${title}<br><span style="color:var(--mute)">${detail || ''}</span></div>`;
+  if (snap) snap.innerHTML = `<div class="no-data" style="color:#FF6060">
+    ${title}<br>
+    <span style="color:var(--mute)">${detail || ''}</span>
+  </div>`;
+}
+
+function numOrZero(...vals) {
+  for (const v of vals) {
+    if (v === null || v === undefined || v === '') continue;
+    const n = parseFloat(v);
+    if (!Number.isNaN(n)) return n;
+  }
+  return 0;
+}
+
+function scoreFromRow(r, asset) {
+  const a = asset.toLowerCase();
+  return numOrZero(
+    r['ema_' + a],
+    r[a + '_score'],
+    r['raw_' + a]
+  );
+}
+
+async function fetchPriceFlowRows() {
+  const url =
+    SUPABASE_URL +
+    '/rest/v1/price_flow?select=*&order=snapshot_at.desc.nullslast&limit=48&cb=' +
+    Date.now();
+
+  const res = await fetch(url, {
+    headers: {
+      ...HDR,
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache'
+    }
+  });
+
+  const raw = await res.text();
+
+  if (!res.ok) {
+    throw new Error(`price_flow fetch failed: HTTP ${res.status} ${res.statusText} — ${raw.slice(0, 300)}`);
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    throw new Error('price_flow returned non-JSON response: ' + raw.slice(0, 300));
+  }
+}
+
+async function loadAll() {
+  let rows = [];
+
+  try {
+    rows = await fetchPriceFlowRows();
+  } catch (e) {
+    showDataError('Failed to load price_flow', e.message);
     drawWheel({}, 0);
     return;
   }
 
-  const latest = rows[0];
-  const idx   = latest.idx   || {};
-  const idx_p = latest.idx_prev || {};
-  const px    = latest.pairs || {};
+  if (!Array.isArray(rows)) {
+    showDataError('Invalid price_flow response', 'Expected an array from Supabase, got: ' + typeof rows);
+    drawWheel({}, 0);
+    return;
+  }
 
-  // Use EMA-smoothed scores from consolidated Edge Function
-  // Falls back to raw scores if EMA not yet available
+  if (!rows.length) {
+    showDataError('No price_flow rows found', 'The page can read Supabase, but the price_flow table returned 0 rows. Run the consolidated flow Edge Function final batch, or check it is inserting into price_flow.');
+    drawWheel({}, 0);
+    return;
+  }
+
+  const latest = rows[0] || {};
+
+  if (!latest.snapshot_at) {
+    showDataError('price_flow rows missing snapshot_at', 'The page found rows but cannot find snapshot_at. Check the price_flow table schema.');
+    drawWheel({}, 0);
+    return;
+  }
+
   const scores = {
-    USD: parseFloat(latest.ema_usd ?? latest.usd_score) || 0,
-    EUR: parseFloat(latest.ema_eur ?? latest.eur_score) || 0,
-    GBP: parseFloat(latest.ema_gbp ?? latest.gbp_score) || 0,
-    JPY: parseFloat(latest.ema_jpy ?? latest.jpy_score) || 0,
-    AUD: parseFloat(latest.ema_aud ?? latest.aud_score) || 0,
-    CAD: parseFloat(latest.ema_cad ?? latest.cad_score) || 0,
-    CHF: parseFloat(latest.ema_chf ?? latest.chf_score) || 0,
-    NZD: parseFloat(latest.ema_nzd ?? latest.nzd_score) || 0,
-    XAU: parseFloat(latest.ema_xau) || 0,
-    XAG: parseFloat(latest.ema_xag) || 0,
-    BTC: parseFloat(latest.ema_btc) || 0,
-    ETH: parseFloat(latest.ema_eth) || 0,
-    NAS: parseFloat(latest.ema_nas) || 0,
+    USD: scoreFromRow(latest, 'USD'),
+    EUR: scoreFromRow(latest, 'EUR'),
+    GBP: scoreFromRow(latest, 'GBP'),
+    JPY: scoreFromRow(latest, 'JPY'),
+    AUD: scoreFromRow(latest, 'AUD'),
+    CAD: scoreFromRow(latest, 'CAD'),
+    CHF: scoreFromRow(latest, 'CHF'),
+    NZD: scoreFromRow(latest, 'NZD'),
+    XAU: scoreFromRow(latest, 'XAU'),
+    XAG: scoreFromRow(latest, 'XAG'),
+    BTC: scoreFromRow(latest, 'BTC'),
+    ETH: scoreFromRow(latest, 'ETH'),
+    NAS: scoreFromRow(latest, 'NAS'),
   };
 
   window._latestScores = scores;
-  const fg = parseFloat(latest.fear_greed) || calcFearGreed(scores);
+  const fg = numOrZero(latest.fear_greed, calcFearGreed(scores));
+  window._latestFG = fg;
 
   // Update wheel
   drawWheel(scores, fg);
 
   // Update footer
-  document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date(latest.snapshot_at).toUTCString().slice(0,22) + ' UTC';
+  const lastEl = document.getElementById('lastUpdated');
+  const fgEl = document.getElementById('fgScore');
+  if (lastEl) lastEl.textContent = 'Updated: ' + new Date(latest.snapshot_at).toUTCString().slice(0,22) + ' UTC';
+
   const fgColor = fg > 0.15 ? '#00e6aa' : fg < -0.15 ? '#FF6060' : '#7F8C8D';
   const fgLabel = fg > 0.5 ? 'EXTREME GREED' : fg > 0.15 ? 'RISK ON' : fg < -0.5 ? 'EXTREME FEAR' : fg < -0.15 ? 'RISK OFF' : 'NEUTRAL';
-  document.getElementById('fgScore').textContent = fgLabel;
-  document.getElementById('fgScore').style.color = fgColor;
+  if (fgEl) {
+    fgEl.textContent = fgLabel;
+    fgEl.style.color = fgColor;
+  }
 
   // Needles
   renderNeedles(scores);
 
   // Observations
   const obs = generateObservations(scores, fg);
-  document.getElementById('obsList').innerHTML = obs.map(o => `<li>${o}</li>`).join('');
+  const obsList = document.getElementById('obsList');
+  if (obsList) obsList.innerHTML = obs.map(o => `<li>${o}</li>`).join('');
 
   // Snapshot table
   const tableRows = rows.slice(0, 12).map(r => {
-    const fg = parseFloat(r.fear_greed);
-    const fgCol = fg > 0.1 ? '#00e6aa' : fg < -0.1 ? '#FF6060' : '#7F8C8D';
-    const fgLbl = fg > 0.3 ? 'Greed' : fg > 0.1 ? 'Risk On' : fg < -0.3 ? 'Fear' : fg < -0.1 ? 'Risk Off' : 'Neutral';
-    const time = new Date(r.snapshot_at).toUTCString().slice(0,22);
-    const s = (v, n=0) => {
-      const f = parseFloat(v); if (isNaN(f)) return '—';
-      const col = f > 0 ? '#00e6aa' : '#FF6060';
+    const rowFg = numOrZero(r.fear_greed);
+    const fgCol = rowFg > 0.1 ? '#00e6aa' : rowFg < -0.1 ? '#FF6060' : '#7F8C8D';
+    const fgLbl = rowFg > 0.3 ? 'Greed' : rowFg > 0.1 ? 'Risk On' : rowFg < -0.3 ? 'Fear' : rowFg < -0.1 ? 'Risk Off' : 'Neutral';
+    const time = r.snapshot_at ? new Date(r.snapshot_at).toUTCString().slice(0,22) : '—';
+
+    const s = (asset, n=0) => {
+      const f = scoreFromRow(r, asset);
+      if (Number.isNaN(f)) return '<td>—</td>';
+      const col = f > 0 ? '#00e6aa' : f < 0 ? '#FF6060' : '#7F8C8D';
       return `<td style="color:${col}">${f>=0?'+':''}${(f*100).toFixed(n)}</td>`;
     };
+
     return `<tr>
       <td>${time}</td>
-      ${s(r.ema_usd??r.usd_score)}${s(r.ema_eur??r.eur_score)}${s(r.ema_gbp??r.gbp_score)}${s(r.ema_jpy??r.jpy_score)}
-      ${s(r.ema_aud??r.aud_score)}${s(r.ema_cad??r.cad_score)}${s(r.ema_chf??r.chf_score)}${s(r.ema_nzd??r.nzd_score)}
-      ${s(r.ema_xau)}${s(r.ema_xag)}${s(r.ema_btc)}${s(r.ema_eth)}
-      <td style="color:${fgCol};font-weight:700">${fg>=0?'+':''}${(fg*100).toFixed(0)}</td>
+      ${s('USD')}${s('EUR')}${s('GBP')}${s('JPY')}
+      ${s('AUD')}${s('CAD')}${s('CHF')}${s('NZD')}
+      ${s('XAU')}${s('XAG')}${s('BTC')}${s('ETH')}
+      <td style="color:${fgCol};font-weight:700">${rowFg>=0?'+':''}${(rowFg*100).toFixed(0)}</td>
       <td style="color:${fgCol}">${fgLbl}</td>
     </tr>`;
   }).join('');
 
-  document.getElementById('snapTable').innerHTML = `<table>
-    <thead><tr>
-      <th style="text-align:left">Time UTC</th>
-      <th>USD</th><th>EUR</th><th>GBP</th><th>JPY</th>
-      <th>AUD</th><th>CAD</th><th>CHF</th><th>NZD</th>
-      <th>XAU</th><th>XAG</th><th>BTC</th><th>ETH</th>
-      <th>F&G</th><th>Sentiment</th>
-    </tr></thead>
-    <tbody>${tableRows}</tbody>
-  </table>`;
+  const snapTable = document.getElementById('snapTable');
+  if (snapTable) {
+    snapTable.innerHTML = `<table>
+      <thead><tr>
+        <th style="text-align:left">Time UTC</th>
+        <th>USD</th><th>EUR</th><th>GBP</th><th>JPY</th>
+        <th>AUD</th><th>CAD</th><th>CHF</th><th>NZD</th>
+        <th>XAU</th><th>XAG</th><th>BTC</th><th>ETH</th>
+        <th>F&G</th><th>Sentiment</th>
+      </tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>`;
+  }
 }
 
 // ── ANIMATION LOOP ──
