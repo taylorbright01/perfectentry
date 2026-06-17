@@ -582,6 +582,7 @@ function makeCard(sig){
   d.dataset.tf=sig.tf;
   d.dataset.dir=dir;
   d.dataset.ts=ts.getTime();
+  if (sig.currency_ai_pass !== undefined && sig.currency_ai_pass !== null) d.dataset.currencyAiPass = String(sig.currency_ai_pass);
   if(sc){ d.dataset.scoreType=sc.type; d.dataset.scoreVal=sc.val; }
   if(f&&!activeFilters.has(f))d.style.display='none';
   if(currencyFilterHidden({...sig, created_at: sig.created_at}))d.style.display='none';
@@ -687,7 +688,8 @@ function updateAgos(){
 function updateCounts(){
   TFS.forEach(tf=>{
     const list=document.getElementById('list-'+tf);
-    const n=list?list.querySelectorAll('.sig-card:not(.fading)').length:signals[tf].length;
+    const cards = list ? Array.from(list.querySelectorAll('.sig-card:not(.fading)')) : [];
+    const n = list ? cards.filter(c => c.style.display !== 'none' && !c.classList.contains('beta-hidden')).length : signals[tf].length;
     const el=document.getElementById('cnt-'+tf);
     const dot=document.getElementById('dot-'+tf);
     if(el)el.textContent=n===0?'waiting...':n+(n===1?' signal':' signals')+(n>2?' ›':'');
@@ -734,6 +736,37 @@ function renderWeeklyStrip(wins, losses, active) {
   if (mo) mo.textContent = active + ' active';
 }
 
+
+// Single source of truth for whether an ACTIVE row should be visible when filters are on.
+// This keeps the underlined "active" count/modal aligned with the main timeframe columns.
+function activeRowPassesVisibleFilters(row) {
+  const fkey = row.score || 'S0';
+  if (!activeFilters.has(fkey)) return false;
+
+  if (betaMode) {
+    const NON_FOREX = ['XAUUSD','XAGUSD','BTCUSD','ETHUSD','NAS100'];
+    if (NON_FOREX.includes(row.sym)) return false;
+
+    // In Currency AI mode, active trades must have passed at OPEN.
+    // Prefer immutable v2 field, fall back to legacy field.
+    const caiPass = (row.currency_ai_pass_open ?? row.currency_ai_pass) === true;
+    if (!caiPass) return false;
+  } else {
+    // With Currency AI off, do not show S0/unscored active signals.
+    if (fkey === 'S0') return false;
+  }
+
+  return true;
+}
+
+function scoreFromRow(row, tf, sigTime) {
+  if (row.score) {
+    if (row.score.startsWith('S')) return {type:'score', val:parseInt(row.score[1])};
+    return {type:'conf', val:row.score==='H'?'HIGH':row.score==='M'?'MEDIUM':'LOW'};
+  }
+  return getScore(row.sym, tf, sigTime);
+}
+
 async function updateWeeklyStrip() {
   try {
     const weekStart = getWeekStart();
@@ -771,32 +804,14 @@ async function updateWeeklyStrip() {
 
     // Active signals — still count from live signals table
     const activeRes = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,score,currency_ai_pass,created_at&outcome=is.null&order=created_at.desc&limit=500',
+      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,score,currency_ai_pass,currency_ai_pass_open,created_at&outcome=is.null&order=created_at.desc&limit=500',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     let active = 0;
     if (activeRes.ok) {
       const activeRows = await activeRes.json();
       activeRows.forEach((row) => {
-        const fkey = row.score || 'S0';
-        if (!activeFilters.has(fkey)) return;
-        if (fkey === 'S0' && !betaMode) return;
-        if (fkey === 'S0' && row.currency_ai_pass !== true) return;
-        // When Currency AI on, check currency filter
-        if (betaMode) {
-          const NON_FOREX = ['XAUUSD','XAGUSD','BTCUSD','ETHUSD','NAS100'];
-          if (NON_FOREX.includes(row.sym)) return;
-          // For active signals use stored currency_ai_pass only (no blackout on actives)
-          if (row.currency_ai_pass === false) return;
-          if (row.currency_ai_pass === null || row.currency_ai_pass === undefined) {
-            const tmpSig = {sym:row.sym, tf:row.tf, dir:row.dir,
-                            score: row.score ? {type:'score',val:1} : null,
-                            currency_ai_pass: row.currency_ai_pass,
-                            created_at: row.created_at};
-            if (currencyFilterHidden(tmpSig)) return;
-          }
-        }
-        active++;
+        if (activeRowPassesVisibleFilters(row)) active++;
       });
     }
 
@@ -843,9 +858,24 @@ setInterval(() => {
 function applyFilters(){
   TFS.forEach(tf=>{
     document.getElementById('list-'+tf).querySelectorAll('.sig-card').forEach(c=>{
-      const f=c.dataset.fkey;c.style.display=(f&&!activeFilters.has(f))?'none':'';
+      const f=c.dataset.fkey;
+      const scoreType = c.dataset.scoreType;
+      const scoreVal = c.dataset.scoreVal;
+      const sc = scoreType ? { type: scoreType, val: isNaN(scoreVal) ? scoreVal : parseInt(scoreVal) } : null;
+      const sig = {
+        sym: c.dataset.sym,
+        tf: c.dataset.tf,
+        dir: c.dataset.dir,
+        score: sc,
+        currency_ai_pass: c.dataset.currencyAiPass === 'true' ? true : c.dataset.currencyAiPass === 'false' ? false : undefined,
+        created_at: c.dataset.ts ? new Date(parseInt(c.dataset.ts)).toISOString() : undefined
+      };
+      const hiddenByScore = !!(f && !activeFilters.has(f));
+      const hiddenByBeta = eitherBetaHidden(sig);
+      c.style.display = (hiddenByScore || hiddenByBeta) ? 'none' : '';
     });
   });
+  updateCounts();
 }
 
 document.querySelector('.filter-bar-inner').addEventListener('click',e=>{
@@ -969,7 +999,7 @@ async function loadActiveModal() {
     // Only show actives from this week that pass current filters
     const weekStart = getWeekStart();
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=id,sym,tf,dir,entry,sl,tp,score,created_at,currency_ai_pass&outcome=is.null&order=created_at.desc&limit=500',
+      SUPABASE_URL + '/rest/v1/signals?select=id,sym,tf,dir,entry,sl,tp,score,created_at,currency_ai_pass,currency_ai_pass_open&outcome=is.null&order=created_at.desc&limit=500',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) { body.innerHTML = '<div class="modal-empty">Failed to load.</div>'; return; }
@@ -981,19 +1011,8 @@ async function loadActiveModal() {
       return;
     }
 
-    // Filter by active score filters and currency AI
-    const filtered = rows.filter(row => {
-      // Scored signals always show if score filter matches
-      if (row.score) {
-        if (!activeFilters.has(row.score)) return false;
-        return true;
-      }
-      // S0 — only show when Currency AI on, S0 toggled, and passed filter
-      if (!betaMode) return false;
-      if (!activeFilters.has('S0')) return false;
-      if (row.currency_ai_pass !== true) return false;
-      return true;
-    });
+    // Use the exact same active visibility rule as the weekly active count/main columns
+    const filtered = rows.filter(activeRowPassesVisibleFilters);
 
     if (countEl) countEl.textContent = '(' + filtered.length + ')';
 
@@ -1329,6 +1348,7 @@ function applyBetaFilter() {
       if (existingProb) existingProb.remove();
     }
   });
+  updateCounts();
 }
 
 function toggleAllHistory() {
@@ -1419,9 +1439,13 @@ async function loadTodayHistory() {
 
 async function loadRecent(){
   try{
-    // Fetch last 5 per TF that have a score — fetch more rows to allow for filtering
+    // Fetch all currently active trades plus today's closed trades.
+    // This fixes the issue where older active trades could be present in the Active modal
+    // but missing from the main timeframe columns because the page only loaded the last 200 rows.
+    const todayStart = new Date();
+    todayStart.setUTCHours(0,0,0,0);
     const res=await fetch(
-      SUPABASE_URL+'/rest/v1/signals?select=*&order=created_at.desc&limit=200',
+      SUPABASE_URL+'/rest/v1/signals?select=*&or=(outcome.is.null,closed_at.gte.'+encodeURIComponent(todayStart.toISOString())+')&order=created_at.desc&limit=1000',
       {headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}}
     );
     if(!res.ok)return;
@@ -1434,6 +1458,14 @@ async function loadRecent(){
     TFS.forEach(tf=>{
       if(!byTF[tf])return;
       const list=document.getElementById('list-'+tf);if(!list)return;
+      // Active trades first, then newest closed trades.
+      // This guarantees unresolved positions remain visible even if the column is at MAX.
+      byTF[tf].sort((a,b)=>{
+        const aa = (!a.outcome && !a.closed_at) ? 1 : 0;
+        const bb = (!b.outcome && !b.closed_at) ? 1 : 0;
+        if (aa !== bb) return bb - aa;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
       let shown=0;
       byTF[tf].forEach(row=>{
         if(shown>=MAX)return;
@@ -1484,7 +1516,7 @@ async function loadRecent(){
           if(!isS0&&!row.score&&!wasInSession(row.sym,row.tf,sigTime,row.outcome))return;
         }
         const empty=list.querySelector('.empty-msg');if(empty)empty.remove();
-        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome:row.outcome};
+        const sig={sym:row.sym,tf:row.tf,dir:row.dir,entry:parseFloat(row.entry),sl:parseFloat(row.sl),tp:parseFloat(row.tp),score,created_at:row.created_at,outcome:row.outcome,currency_ai_pass:(row.currency_ai_pass_open ?? row.currency_ai_pass)};
         if(isActive) signals[row.tf].push(sig);
         const card=makeCard(sig);
         card.classList.remove('entering');
