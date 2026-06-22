@@ -137,7 +137,7 @@ h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}
 <div class="page">
 
   <h1>Currency AI — Live Performance</h1>
-  <p class="subtitle">All-time verified results from our rolling currency strength filter. Every number on this page is pulled live from our signals database — no backtest, no simulation, no cherry-picking. Week by week breakdown below. Week by week breakdown below.</p>
+  <p class="subtitle">Live realised results from CurrencyAI v3 copier-delivered signals. Every number on this page is pulled live from our signals database — no backtest, no simulation, no cherry-picking. Week by week breakdown below.</p>
 
   <!-- HERO STATS -->
   <div class="hero-stats" id="heroStats">
@@ -288,370 +288,315 @@ h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}
 const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
 const HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
-const RR = 1.4;
+const CURRENCY_AI_V3 = 'v3_entry_only_master_5m_aggressive_2026_06_21';
 const SPECIAL = {XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
 
 let weeklyData = [];
 let equityChartInst = null;
 let simChartInst = null;
+window._aiSignals = [];
 
-function fmt$(n){ return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0}); }
-function fmtR(n){ return (n>=0?'+':'')+n.toFixed(1)+'R'; }
-function fmtPct(n){ return n.toFixed(1)+'%'; }
-function fmtPF(n){ return n.toFixed(3); }
+function fmt$(n){ return '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0}); }
+function fmtR(n){ return (n>=0?'+':'') + Number(n || 0).toFixed(1) + 'R'; }
+function fmtPct(n){ return Number(n || 0).toFixed(1) + '%'; }
+function fmtPF(n){ if(!Number.isFinite(n)) return '—'; return n >= 99 ? '∞' : Number(n).toFixed(3); }
+function pfClass(pf){ if(pf>=1.3) return 'pf-good'; if(pf>=1.05) return 'pf-ok'; return 'pf-bad'; }
 
 function getWeekStart(){
   const now = new Date();
   const day = now.getUTCDay();
-  const diff = day===0?6:day-1;
-  return new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()-diff,0,0,0,0)).toISOString().slice(0,10);
+  const diff = day === 0 ? 6 : day - 1;
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff, 0,0,0,0)).toISOString().slice(0,10);
 }
 
-async function loadWeeklyStats(){
-  const res = await fetch(SUPABASE_URL+'/rest/v1/weekly_stats?select=*&order=stat_date.asc&limit=500', {headers:HEADERS});
-  if(!res.ok) return [];
+async function fetchSupabase(path){
+  const res = await fetch(SUPABASE_URL + path, { headers: HEADERS });
+  if(!res.ok) throw new Error(await res.text());
   return await res.json();
 }
 
-async function loadSignalsForCurrency(){
-  // Use daily_equity aggregate table — scales to any signal volume
-  const res = await fetch(
-    SUPABASE_URL+'/rest/v1/daily_equity?select=*&order=trade_date.asc&limit=1000',
-    {headers:HEADERS}
+async function loadV3ClosedSignals(){
+  // CurrencyAI v3 performance is copier-realised performance.
+  // It must use r_result because handover closes are fractional R, not full TP/SL.
+  return await fetchSupabase(
+    '/rest/v1/signals?' +
+    'select=id,sym,tf,dir,created_at,closed_at,outcome,r_result,entry,sl,tp,close_price,currency_ai_pass,webhook_delivered,currency_ai_version' +
+    '&currency_ai_version=eq.' + encodeURIComponent(CURRENCY_AI_V3) +
+    '&currency_ai_pass=eq.true' +
+    '&webhook_delivered=eq.true' +
+    '&r_result=not.is.null' +
+    '&order=closed_at.asc' +
+    '&limit=5000'
   );
-  if(!res.ok) return [];
-  return await res.json();
 }
 
-function calcMetrics(wins, losses){
-  const trades = wins+losses;
-  if(trades===0) return null;
-  const totalR = wins*RR - losses;
-  const pf = losses>0?(wins*RR)/losses:wins>0?99:0;
-  const wr = wins/trades*100;
-  const meanR = totalR/trades;
-  const variance = (wins*(RR-meanR)**2+losses*(-1-meanR)**2)/trades;
+function calcMetricsFromRows(rows){
+  const rVals = rows.map(r => Number(r.r_result)).filter(Number.isFinite);
+  const trades = rVals.length;
+  if(!trades) return null;
+
+  const wins = rVals.filter(v => v > 0).length;
+  const losses = rVals.filter(v => v <= 0).length;
+  const totalR = rVals.reduce((a,b) => a + b, 0);
+  const grossWin = rVals.filter(v => v > 0).reduce((a,b) => a + b, 0);
+  const grossLoss = Math.abs(rVals.filter(v => v <= 0).reduce((a,b) => a + b, 0));
+  const pf = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? 99 : 0;
+  const wr = wins / trades * 100;
+  const meanR = totalR / trades;
+
+  const variance = rVals.reduce((sum, v) => sum + Math.pow(v - meanR, 2), 0) / trades;
   const std = Math.sqrt(variance);
-  const downVar = losses*(-1-meanR)**2/trades;
+  const downVals = rVals.filter(v => v < 0);
+  const downVar = downVals.length ? downVals.reduce((sum, v) => sum + Math.pow(v - meanR, 2), 0) / trades : 0;
   const downStd = Math.sqrt(downVar);
-  const annFactor = Math.sqrt(700*52);
-  const sharpe = std>0?(meanR/std)*annFactor:0;
-  const sortino = downStd>0?(meanR/downStd)*annFactor:0;
-  return {trades,wins,losses,totalR,pf,wr,meanR,std,sharpe,sortino};
+  const annFactor = Math.sqrt(700 * 52);
+  const sharpe = std > 0 ? (meanR / std) * annFactor : 0;
+  const sortino = downStd > 0 ? (meanR / downStd) * annFactor : 0;
+
+  return { trades, wins, losses, totalR, grossWin, grossLoss, pf, wr, meanR, std, sharpe, sortino, rVals };
 }
 
-// equity curve built from real sequential data in init()
-
-function pfClass(pf){
-  if(pf>=1.3) return 'pf-good';
-  if(pf>=1.05) return 'pf-ok';
-  return 'pf-bad';
+function weekKeyFromDate(dateStr){
+  const d = new Date(dateStr);
+  const day = d.getUTCDay();
+  const daysSinceMon = day === 0 ? 6 : day - 1;
+  const mon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - daysSinceMon, 0,0,0,0));
+  const sun = new Date(mon.getTime() + 6 * 86400000);
+  return mon.toISOString().slice(0,10) + ' → ' + sun.toISOString().slice(0,10);
 }
 
-async function init(){
-  const [rows, signalRows] = await Promise.all([loadWeeklyStats(), loadSignalsForCurrency()]);
-
-  // Group weekly_stats by week
-  const weekStart = getWeekStart();
-  const byWeek = {};
+function groupWeeksFromRows(rows){
+  const groups = {};
   rows.forEach(r => {
-    const wk = r.stat_date; // use date as week key for now
-    if(!byWeek[wk]) byWeek[wk]={wins:0,losses:0,cai_wins:0,cai_losses:0};
-    byWeek[wk].wins += r.wins||0;
-    byWeek[wk].losses += r.losses||0;
-    byWeek[wk].cai_wins += r.currency_ai_wins||0;
-    byWeek[wk].cai_losses += r.currency_ai_losses||0;
+    const key = weekKeyFromDate(r.closed_at || r.created_at);
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(r);
   });
+  return Object.entries(groups).map(([week, weekRows]) => ({ week, rows: weekRows, ...calcMetricsFromRows(weekRows) }));
+}
 
-  // All-time totals (Currency AI)
-  let wkWins=0,wkLosses=0;
-  rows.forEach(r=>{ wkWins+=r.currency_ai_wins||0; wkLosses+=r.currency_ai_losses||0; });
+function buildEquityCurve(rows){
+  let eq = 0;
+  const curve = [0];
+  rows.forEach(r => {
+    eq += Number(r.r_result || 0);
+    curve.push(Number(eq.toFixed(4)));
+  });
+  return curve;
+}
 
-  const m = calcMetrics(wkWins, wkLosses);
-  if(!m) return;
+function maxDrawdownFromCurve(curve){
+  let peak = curve[0] || 0;
+  let worst = 0;
+  curve.forEach(v => {
+    if(v > peak) peak = v;
+    const dd = v - peak;
+    if(dd < worst) worst = dd;
+  });
+  return worst;
+}
 
-  // maxDD calculated after curve is built below
-  let maxDD = 0, calmar = 0, recovery = 0;
+function renderHeroAndMetrics(m, maxDD){
+  const calmar = maxDD !== 0 ? m.totalR / Math.abs(maxDD) : 0;
+  const recovery = calmar;
 
-  // Hero stats
-  document.getElementById('statWL').textContent = wkWins+'W / '+wkLosses+'L';
-  document.getElementById('statTrades').textContent = m.trades+' tracked trades (all time)';
+  document.getElementById('statWL').textContent = m.wins + 'W / ' + m.losses + 'L';
+  document.getElementById('statTrades').textContent = m.trades + ' realised v3 trades';
   document.getElementById('statR').textContent = fmtR(m.totalR);
   document.getElementById('statPF').textContent = fmtPF(m.pf);
   document.getElementById('statWR').textContent = fmtPct(m.wr);
-  document.getElementById('statCalmar').textContent = '...'; // updated after curve loads
-  document.getElementById('statEV').textContent = fmtR(m.meanR*100);
-
-  // Metric cards
-  document.getElementById('mPF').textContent = fmtPF(m.pf);
-  document.getElementById('mSharpe').textContent = m.sharpe.toFixed(1);
-  document.getElementById('mSortino').textContent = m.sortino.toFixed(1);
-  document.getElementById('mCalmar').textContent = '...'; // updated after curve loads
-  document.getElementById('mRecovery').textContent = '...';
-  document.getElementById('mMaxDD').textContent = '...';
-  document.getElementById('mTrades').textContent = m.trades;
-  document.getElementById('mWins').textContent = wkWins;
-  document.getElementById('mLosses').textContent = wkLosses;
-  document.getElementById('mWR').textContent = fmtPct(m.wr);
-  document.getElementById('mMeanR').textContent = (m.meanR>=0?'+':'')+m.meanR.toFixed(4)+'R';
-  document.getElementById('mEV').textContent = fmtR(m.meanR*100);
-
-  // Scaled returns
-  [1,10,50,100,500,1000].forEach(r=>{
-    const el = document.getElementById('s'+r);
-    if(el){
-      const val = m.totalR*r;
-      el.textContent = fmt$(val);
-      el.style.color = val>=0?'var(--green)':'var(--red)';
-    }
-  });
-
-  // Equity curve — built from daily_equity aggregate table
-  // One point per day rather than per trade — scales to any volume
-  console.log('daily_equity rows for curve:', signalRows.length);
-  const curve = [0];
-  let eq = 0;
-  signalRows.forEach(r => {
-    eq += parseFloat(r.ai_r_delta) || 0;
-    curve.push(parseFloat(eq.toFixed(2)));
-  });
-  console.log('Curve final R:', curve[curve.length-1], 'from', signalRows.length, 'days');
-
-  // Calculate real max drawdown from actual curve
-  let ddPeak = curve[0];
-  let worstDD = 0;
-  curve.forEach(v => {
-    if(v > ddPeak) ddPeak = v;
-    const dd = v - ddPeak;
-    if(dd < worstDD) worstDD = dd;
-  });
-  maxDD = worstDD;
-  calmar = maxDD !== 0 ? m.totalR / Math.abs(maxDD) : 0;
-  recovery = maxDD !== 0 ? m.totalR / Math.abs(maxDD) : 0;
-
-  // Now update the displays that depend on maxDD
   document.getElementById('statCalmar').textContent = calmar.toFixed(2);
+  document.getElementById('statEV').textContent = fmtR(m.meanR * 100);
+
+  document.getElementById('mPF').textContent = fmtPF(m.pf);
+  document.getElementById('mSharpe').textContent = Number.isFinite(m.sharpe) ? m.sharpe.toFixed(1) : '—';
+  document.getElementById('mSortino').textContent = Number.isFinite(m.sortino) ? m.sortino.toFixed(1) : '—';
   document.getElementById('mCalmar').textContent = calmar.toFixed(2);
   document.getElementById('mRecovery').textContent = recovery.toFixed(2);
-  document.getElementById('mMaxDD').textContent = maxDD.toFixed(1)+'R';
+  document.getElementById('mMaxDD').textContent = maxDD.toFixed(1) + 'R';
+  document.getElementById('mTrades').textContent = m.trades;
+  document.getElementById('mWins').textContent = m.wins;
+  document.getElementById('mLosses').textContent = m.losses;
+  document.getElementById('mWR').textContent = fmtPct(m.wr);
+  document.getElementById('mMeanR').textContent = (m.meanR>=0?'+':'') + m.meanR.toFixed(4) + 'R';
+  document.getElementById('mEV').textContent = fmtR(m.meanR * 100);
 
+  [1,10,50,100,500,1000].forEach(risk => {
+    const el = document.getElementById('s' + risk);
+    if(!el) return;
+    const val = m.totalR * risk;
+    el.textContent = fmt$(val);
+    el.style.color = val >= 0 ? 'var(--green)' : 'var(--red)';
+  });
+}
+
+function renderEquityCurve(curve){
   const ctx = document.getElementById('equityChart').getContext('2d');
   if(equityChartInst) equityChartInst.destroy();
+  const final = curve[curve.length - 1] || 0;
   equityChartInst = new Chart(ctx, {
-    type:'line',
-    data:{
-      labels: curve.map((_,i)=>i),
-      datasets:[{
-        data: curve,
-        borderColor: curve[curve.length-1]>=0?'#00e6aa':'#FF9060',
-        borderWidth: 2,
-        pointRadius: 0,
-        fill: true,
-        backgroundColor: curve[curve.length-1]>=0?'rgba(0,200,150,0.06)':'rgba(255,100,60,0.06)',
-        tension: 0.3
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false, animation:false,
-      plugins:{legend:{display:false},tooltip:{
-        callbacks:{label:ctx=>'R: '+(ctx.raw>=0?'+':'')+ctx.raw.toFixed(1)+'R'}
-      }},
-      scales:{
-        x:{display:false},
-        y:{
-          min: Math.min(0, Math.min(...curve)),
-          max: Math.max(...curve) * 1.05,
-          grid:{color:'rgba(255,255,255,0.04)'},
-          ticks:{color:'rgba(234,253,252,0.4)',font:{family:'IBM Plex Mono',size:10},
-            callback:v=>(v>=0?'+':'')+v.toFixed(0)+'R'}
+    type: 'line',
+    data: { labels: curve.map((_, i) => i), datasets: [{
+      data: curve,
+      borderColor: final >= 0 ? '#00e6aa' : '#FF9060',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      backgroundColor: final >= 0 ? 'rgba(0,200,150,0.06)' : 'rgba(255,100,60,0.06)',
+      tension: 0.25
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'R: ' + fmtR(ctx.raw) } } },
+      scales: {
+        x: { display: false },
+        y: {
+          min: Math.min(0, ...curve),
+          max: Math.max(1, ...curve) * 1.05,
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: 'rgba(234,253,252,0.4)', font: { family: 'IBM Plex Mono', size: 10 }, callback: v => (v>=0?'+':'') + Number(v).toFixed(0) + 'R' }
         }
       }
     }
   });
+}
 
-  // Weekly breakdown table
-  // Group by ISO week
-  const weekGroups = {};
-  rows.forEach(r => {
-    const d = new Date(r.stat_date);
-    // Get Monday of that week
-    const dow = d.getUTCDay();
-    const diff = dow===0?6:dow-1;
-    const mon = new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-diff));
-    const wk = mon.toISOString().slice(0,10);
-    if(!weekGroups[wk]) weekGroups[wk]={wins:0,losses:0,cai_wins:0,cai_losses:0};
-    weekGroups[wk].cai_wins += r.currency_ai_wins||0;
-    weekGroups[wk].cai_losses += r.currency_ai_losses||0;
-  });
-
+function renderWeeklyTable(weeks){
   const tbody = document.getElementById('weekTable');
-  const weeks = Object.entries(weekGroups).sort((a,b)=>b[0].localeCompare(a[0]));
-  tbody.innerHTML = weeks.map(([wk, v]) => {
-    const wm = calcMetrics(v.cai_wins, v.cai_losses);
-    if(!wm) return '';
-    const pfCls = pfClass(wm.pf);
-    const weekEnd = new Date(new Date(wk).getTime()+6*86400000).toISOString().slice(0,10);
+  if(!weeks.length){
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-mute);text-align:center;padding:24px">No realised v3 trades yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = weeks.slice().reverse().map(w => {
+    const pf = w.grossLoss > 0 ? w.grossWin / w.grossLoss : w.grossWin > 0 ? 99 : 0;
+    const rCls = w.totalR >= 0 ? 'pf-good' : 'pf-bad';
     return `<tr>
-      <td style="color:var(--text-dim)">${wk} → ${weekEnd}</td>
-      <td>${wm.trades}</td>
-      <td style="color:var(--green)">${v.cai_wins}</td>
-      <td style="color:var(--red)">${v.cai_losses}</td>
-      <td>${fmtPct(wm.wr)}</td>
-      <td class="${wm.totalR>=0?'pf-good':'pf-bad'}">${fmtR(wm.totalR)}</td>
-      <td class="${pfCls}">${fmtPF(wm.pf)}</td>
+      <td style="color:var(--text-dim)">${w.week}</td>
+      <td>${w.trades}</td>
+      <td style="color:var(--green)">${w.wins}</td>
+      <td style="color:var(--red)">${w.losses}</td>
+      <td>${fmtPct(w.wr)}</td>
+      <td class="${rCls}">${fmtR(w.totalR)}</td>
+      <td class="${pfClass(pf)}">${fmtPF(pf)}</td>
     </tr>`;
   }).join('');
+}
 
-  // Currency strength heatmap
-  const ccyHist = {};
-  // Heatmap uses its own signal fetch (needs sym/dir for currency mapping)
-  const heatmapRes = await fetch(
-    SUPABASE_URL+'/rest/v1/signals?select=sym,dir,outcome,created_at&outcome=not.is.null&order=created_at.desc&limit=300',
-    {headers:HEADERS}
-  );
-  const heatmapSignals = heatmapRes.ok ? await heatmapRes.json() : [];
-  const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-  const recentSignals = heatmapSignals.filter(r => r.created_at >= sevenDaysAgo);
-  const heatmapSource = recentSignals.length >= 30 ? recentSignals : heatmapSignals;
-  // Track long and short history separately
-  // longHist[ccy]  = outcomes when currency held long (base+buy or quote+sell)
-  // shortHist[ccy] = outcomes when currency held short (base+sell or quote+buy)
+function renderHeatmap(rows){
+  const sevenDaysAgo = new Date(Date.now() - 7*86400000).toISOString();
+  const recent = rows.filter(r => (r.closed_at || r.created_at) >= sevenDaysAgo);
+  const source = recent.length >= 10 ? recent : rows;
   const longHist = {}, shortHist = {};
-  heatmapSource.forEach(r => {
+
+  source.forEach(r => {
     const sp = SPECIAL[r.sym];
-    const base = sp?sp[0]:r.sym.slice(0,3);
-    const quote = sp?sp[1]:r.sym.slice(3);
+    const base = sp ? sp[0] : r.sym.slice(0,3);
+    const quote = sp ? sp[1] : r.sym.slice(3);
     const isBuy = r.dir === 'buy';
+    const win = Number(r.r_result) > 0;
 
-    if(!longHist[base])  longHist[base]  = {wins:0,losses:0};
-    if(!shortHist[base]) shortHist[base] = {wins:0,losses:0};
-    if(!longHist[quote])  longHist[quote]  = {wins:0,losses:0};
-    if(!shortHist[quote]) shortHist[quote] = {wins:0,losses:0};
+    [base, quote].forEach(ccy => {
+      if(!longHist[ccy]) longHist[ccy] = {wins:0, losses:0};
+      if(!shortHist[ccy]) shortHist[ccy] = {wins:0, losses:0};
+    });
 
-    if(isBuy) {
-      // base held long, quote held short
-      r.outcome==='tp' ? longHist[base].wins++   : longHist[base].losses++;
-      r.outcome==='tp' ? shortHist[quote].losses++ : shortHist[quote].wins++;
+    if(isBuy){
+      win ? longHist[base].wins++ : longHist[base].losses++;
+      win ? shortHist[quote].wins++ : shortHist[quote].losses++;
     } else {
-      // quote held long, base held short
-      r.outcome==='tp' ? longHist[quote].wins++  : longHist[quote].losses++;
-      r.outcome==='tp' ? shortHist[base].losses++ : shortHist[base].wins++;
+      win ? longHist[quote].wins++ : longHist[quote].losses++;
+      win ? shortHist[base].wins++ : shortHist[base].losses++;
     }
   });
 
-  // Merge into combined currency list
   const allCcys = [...new Set([...Object.keys(longHist), ...Object.keys(shortHist)])];
-  const ccyData = allCcys.map(ccy => ({
-    ccy,
-    longWR:  longHist[ccy]  && (longHist[ccy].wins+longHist[ccy].losses)>=10
-               ? longHist[ccy].wins/(longHist[ccy].wins+longHist[ccy].losses) : null,
-    shortWR: shortHist[ccy] && (shortHist[ccy].wins+shortHist[ccy].losses)>=10
-               ? shortHist[ccy].wins/(shortHist[ccy].wins+shortHist[ccy].losses) : null,
-    longTrades:  (longHist[ccy]?.wins||0)+(longHist[ccy]?.losses||0),
-    shortTrades: (shortHist[ccy]?.wins||0)+(shortHist[ccy]?.losses||0),
-  })).filter(d=>d.longWR!==null||d.shortWR!==null)
-    .sort((a,b)=>(b.longWR||0)-(a.longWR||0));
+  const ccyData = allCcys.map(ccy => {
+    const lt = (longHist[ccy]?.wins || 0) + (longHist[ccy]?.losses || 0);
+    const st = (shortHist[ccy]?.wins || 0) + (shortHist[ccy]?.losses || 0);
+    return {
+      ccy,
+      longWR: lt >= 2 ? longHist[ccy].wins / lt : null,
+      shortWR: st >= 2 ? shortHist[ccy].wins / st : null,
+      longTrades: lt,
+      shortTrades: st
+    };
+  }).filter(d => d.longWR !== null || d.shortWR !== null)
+    .sort((a,b) => ((b.longWR ?? -1) + (b.shortWR ?? -1)) - ((a.longWR ?? -1) + (a.shortWR ?? -1)));
 
-  function wrCol(wr){ return wr===null?'var(--text-mute)':wr>=0.5?'var(--green)':wr<0.417?'var(--red)':'var(--text-dim)'; }
-  function wrCls(wr){ return wr===null?'ccy-neutral':wr>=0.5?'ccy-strong':wr<0.417?'ccy-weak':'ccy-neutral'; }
+  function wrCol(wr){ return wr===null ? 'var(--text-mute)' : wr>=0.5 ? 'var(--green)' : 'var(--red)'; }
+  function wrCls(wr){ return wr===null ? 'ccy-neutral' : wr>=0.5 ? 'ccy-strong' : 'ccy-weak'; }
 
   const heatmap = document.getElementById('ccyHeatmap');
-  heatmap.innerHTML = ccyData.map(d=>{
-    const longPct  = d.longWR  !== null ? (d.longWR*100).toFixed(0)+'%'  : '—';
+  if(!ccyData.length){
+    heatmap.innerHTML = '<div style="color:var(--text-mute);font-size:12px">Not enough realised v3 trades yet.</div>';
+    return;
+  }
+  heatmap.innerHTML = ccyData.map(d => {
+    const longPct = d.longWR !== null ? (d.longWR*100).toFixed(0)+'%' : '—';
     const shortPct = d.shortWR !== null ? (d.shortWR*100).toFixed(0)+'%' : '—';
-    // Asymmetry — sum above 100% = trending, below = mean reverting
     const sum = (d.longWR!==null && d.shortWR!==null) ? ((d.longWR+d.shortWR)*100).toFixed(0)+'%' : null;
     const sumCol = sum ? (parseFloat(sum)>110?'var(--green)':parseFloat(sum)<90?'var(--red)':'var(--text-mute)') : 'var(--text-mute)';
     return `<div class="ccy-cell ${wrCls(d.longWR)}">
       <div class="ccy-name">${d.ccy}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 2px">
-        <span style="font-size:8px;color:var(--text-mute)">LONG</span>
-        <span class="ccy-wr" style="color:${wrCol(d.longWR)}">${longPct}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-        <span style="font-size:8px;color:var(--text-mute)">SHORT</span>
-        <span class="ccy-wr" style="color:${wrCol(d.shortWR)}">${shortPct}</span>
-      </div>
-      ${sum?`<div style="font-size:8px;text-align:right;color:${sumCol};margin-top:2px">∑ ${sum}</div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 2px"><span style="font-size:8px;color:var(--text-mute)">LONG</span><span class="ccy-wr" style="color:${wrCol(d.longWR)}">${longPct}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><span style="font-size:8px;color:var(--text-mute)">SHORT</span><span class="ccy-wr" style="color:${wrCol(d.shortWR)}">${shortPct}</span></div>
+      ${sum ? `<div style="font-size:8px;text-align:right;color:${sumCol};margin-top:2px">∑ ${sum}</div>` : ''}
       <div class="ccy-trades">${d.longTrades}L · ${d.shortTrades}S trades</div>
     </div>`;
   }).join('');
+}
 
-  // Fetch last 1000 currency AI signals for simulator and max DD calculation
-  // Separate from equity curve which uses daily aggregates
-  const simRes = await fetch(
-    SUPABASE_URL+'/rest/v1/signals?select=outcome,created_at&outcome=not.is.null&currency_ai_pass=eq.true&order=created_at.desc&limit=1000',
-    {headers:{...HEADERS,'Range-Unit':'items','Range':'0-999'}}
-  );
-  const simSignals = simRes.ok ? (await simRes.json()).reverse() : [];
+async function init(){
+  try{
+    const signalRows = await loadV3ClosedSignals();
+    window._aiSignals = signalRows;
+    const m = calcMetricsFromRows(signalRows);
+    if(!m){
+      document.getElementById('weekTable').innerHTML = '<tr><td colspan="7" style="color:var(--text-mute);text-align:center;padding:24px">No realised v3 trades yet.</td></tr>';
+      return;
+    }
 
-  // Recalculate max DD from real sequential signal data (not daily aggregates)
-  let simEq=0, simPeak=0, simMaxDD=0;
-  simSignals.forEach(r => {
-    simEq += r.outcome==='tp' ? RR : -1.0;
-    if(simEq > simPeak) simPeak = simEq;
-    if(simEq - simPeak < simMaxDD) simMaxDD = simEq - simPeak;
-  });
+    const curve = buildEquityCurve(signalRows);
+    const maxDD = maxDrawdownFromCurve(curve);
+    weeklyData = groupWeeksFromRows(signalRows);
 
-  // Update max DD and Calmar with real per-trade data
-  const realMaxDD = simMaxDD;
-  const realCalmar = realMaxDD !== 0 ? m.totalR / Math.abs(realMaxDD) : 0;
-  const realRecovery = realMaxDD !== 0 ? m.totalR / Math.abs(realMaxDD) : 0;
-  document.getElementById('statCalmar').textContent = realCalmar.toFixed(2);
-  document.getElementById('mCalmar').textContent = realCalmar.toFixed(2);
-  document.getElementById('mRecovery').textContent = realRecovery.toFixed(2);
-  document.getElementById('mMaxDD').textContent = realMaxDD.toFixed(1)+'R';
-
-  // Store for simulator use
-  window._aiSignals = simSignals;
-
-  // Run simulator with defaults
-  runSimulator();
+    renderHeroAndMetrics(m, maxDD);
+    renderEquityCurve(curve);
+    renderWeeklyTable(weeklyData);
+    renderHeatmap(signalRows);
+    runSimulator();
+  } catch(e){
+    console.error('CurrencyAI init failed:', e);
+    document.getElementById('weekTable').innerHTML = '<tr><td colspan="7" style="color:var(--red);text-align:center;padding:24px">Failed to load CurrencyAI v3 data.</td></tr>';
+  }
 }
 
 function runSimulator(){
-  const account = parseFloat(document.getElementById('simAccount').value)||10000;
+  const account = parseFloat(document.getElementById('simAccount').value) || 10000;
   const riskType = document.getElementById('simRiskType').value;
-  const riskAmt = parseFloat(document.getElementById('simRisk').value)||1;
+  const riskAmt = parseFloat(document.getElementById('simRisk').value) || 1;
+  const aiSeq = window._aiSignals || [];
+  if(!aiSeq.length) return;
 
-  // Get current week metrics
-  const weekStart = getWeekStart();
+  function getRiskPerTrade(bal){ return riskType === 'pct' ? (bal * riskAmt / 100) : riskAmt; }
 
-  // Use the already loaded data from init
-  // Recalculate from weeklyData if available, else use last known
-  const wins = parseInt(document.getElementById('mWins').textContent)||0;
-  const losses = parseInt(document.getElementById('mLosses').textContent)||0;
-  const trades = wins+losses;
-  if(trades===0) return;
-
-  // Calculate per-trade risk in $
-  function getRiskPerTrade(bal){
-    return riskType==='pct'?(bal*riskAmt/100):riskAmt;
-  }
-
-  // Simulate week trade by trade
-  const wr = wins/trades;
   let balance = account;
   const balanceCurve = [account];
-  let maxBal = account;
-  let maxDD = 0;
   let peakBal = account;
+  let maxDD = 0;
 
-  // Use real sequential outcomes
-  const aiSeq = window._aiSignals || [];
   aiSeq.forEach(r => {
     const risk = getRiskPerTrade(balance);
-    if(r.outcome==='tp') balance += risk*RR;
-    else balance -= risk;
-    balanceCurve.push(Math.max(0,balance));
-    if(balance>peakBal) peakBal=balance;
-    const dd = (peakBal-balance)/peakBal*100;
-    if(dd>maxDD) maxDD=dd;
+    balance += risk * Number(r.r_result || 0);
+    balanceCurve.push(Math.max(0, balance));
+    if(balance > peakBal) peakBal = balance;
+    const dd = peakBal > 0 ? (peakBal - balance) / peakBal * 100 : 0;
+    if(dd > maxDD) maxDD = dd;
   });
 
-  const finalBalance = balanceCurve[balanceCurve.length-1];
-  const profit = finalBalance-account;
-  const roi = profit/account*100;
+  const finalBalance = balanceCurve[balanceCurve.length - 1];
+  const profit = finalBalance - account;
+  const roi = profit / account * 100;
 
   const resultsEl = document.getElementById('simResults');
   resultsEl.innerHTML = `
@@ -660,37 +605,28 @@ function runSimulator(){
     <div class="sim-result"><div class="sr-label">Net Profit</div><div class="sr-val" style="color:${profit>=0?'var(--green)':'var(--red)'}">${profit>=0?'+':''}${fmt$(profit)}</div></div>
     <div class="sim-result"><div class="sr-label">ROI</div><div class="sr-val" style="color:${roi>=0?'var(--green)':'var(--red)'}">${roi>=0?'+':''}${roi.toFixed(1)}%</div></div>
     <div class="sim-result"><div class="sr-label">Max Drawdown</div><div class="sr-val" style="color:var(--amber)">${maxDD.toFixed(1)}%</div></div>
-    <div class="sim-result"><div class="sr-label">Trades</div><div class="sr-val">${trades}</div></div>
+    <div class="sim-result"><div class="sr-label">Trades</div><div class="sr-val">${aiSeq.length}</div></div>
   `;
 
-  // Simulator chart
   const sctx = document.getElementById('simChart').getContext('2d');
   if(simChartInst) simChartInst.destroy();
   simChartInst = new Chart(sctx, {
-    type:'line',
-    data:{
-      labels: balanceCurve.map((_,i)=>i),
-      datasets:[{
-        data: balanceCurve,
-        borderColor: finalBalance>=account?'#00e6aa':'#FF9060',
-        borderWidth:2, pointRadius:0,
-        fill:true,
-        backgroundColor: finalBalance>=account?'rgba(0,200,150,0.06)':'rgba(255,100,60,0.06)',
-        tension:0.3
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false, animation:false,
-      plugins:{legend:{display:false},tooltip:{
-        callbacks:{label:ctx=>fmt$(ctx.raw)}
-      }},
-      scales:{
-        x:{display:false},
-        y:{
-          grid:{color:'rgba(255,255,255,0.04)'},
-          ticks:{color:'rgba(234,253,252,0.4)',font:{family:'IBM Plex Mono',size:10},
-            callback:v=>'$'+Math.round(v/1000)+'k'}
-        }
+    type: 'line',
+    data: { labels: balanceCurve.map((_, i) => i), datasets: [{
+      data: balanceCurve,
+      borderColor: finalBalance >= account ? '#00e6aa' : '#FF9060',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      backgroundColor: finalBalance >= account ? 'rgba(0,200,150,0.06)' : 'rgba(255,100,60,0.06)',
+      tension: 0.25
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmt$(ctx.raw) } } },
+      scales: {
+        x: { display: false },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(234,253,252,0.4)', font: { family: 'IBM Plex Mono', size: 10 }, callback: v => '$' + Math.round(v/1000) + 'k' } }
       }
     }
   });
