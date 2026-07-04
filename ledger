@@ -163,7 +163,7 @@ pre{white-space:pre-wrap;max-height:230px;overflow:auto;margin:0;color:rgba(234,
 
 <script>
 const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
-const SUPABASE_ANON_KEY = 'PASTE_SUPABASE_ANON_KEY_HERE';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
 const LEDGER_VIEW = 'public_signal_ledger';
 const CURRENCY_ORDER_DEFAULT = ['AUD','CAD','CHF','EUR','GBP','JPY','NZD','USD'];
 
