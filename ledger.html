@@ -90,6 +90,10 @@ h1{font-size:clamp(28px,4.5vw,56px);line-height:1.02;font-weight:900;margin-bott
 .badge-verified{color:var(--green);border-color:rgba(0,230,170,.35)}
 .badge-pending{color:var(--amber);border-color:rgba(255,183,0,.35)}
 .badge-live{color:var(--teal);border-color:rgba(1,160,184,.35)}
+.badge-sealed{color:var(--amber);border-color:rgba(255,183,0,.35);background:rgba(255,183,0,.06)}
+.sealed-panel{border:1px solid rgba(255,183,0,.18);background:linear-gradient(180deg,rgba(255,183,0,.065),rgba(19,23,32,.92));border-radius:14px;padding:16px;display:grid;gap:8px}
+.sealed-title{font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+.sealed-copy{font-size:12px;line-height:1.6;color:var(--text-dim);max-width:880px}
 .ledger-body{padding:16px;display:grid;gap:14px}
 .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .metric{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:0}.metric span{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px}.metric b{font-family:'IBM Plex Mono',monospace;font-size:13px;word-break:break-word}
@@ -145,7 +149,7 @@ pre{white-space:pre-wrap;max-height:230px;overflow:auto;margin:0;color:rgba(234,
   </section>
 
   <section class="section">
-    <div class="section-title">Ledger Events <span>open commits and close reveals</span></div>
+    <div class="section-title">Ledger Events <span>sealed commits and close reveals</span></div>
     <div class="controls">
       <input id="search" placeholder="Search pair, hash, signal id..." />
       <select id="scope"><option value="all">All scopes</option><option value="live">Live/pass</option><option value="counterfactual">Counterfactual/fail</option><option value="shadow">Shadow</option></select>
@@ -188,6 +192,8 @@ function decodeState(code, order){
   return out;
 }
 function getPayload(row){
+  // OPEN_COMMIT events are sealed. Do not display the hidden canonical payload publicly.
+  if(row.event_type === 'OPEN_COMMIT') return {};
   if(row.revealed_payload && Object.keys(row.revealed_payload).length) return row.revealed_payload;
   return row.canonical_payload || {};
 }
@@ -246,9 +252,44 @@ function cardHtml(row){
   const longCode = row.cai_long_state_code || p.cai_long_state_code || p.cai_long_state_close || '';
   const shortCode = row.cai_short_state_code || p.cai_short_state_code || p.cai_short_state_close || '';
   const isClose = row.event_type === 'CLOSE_REVEAL';
+  const isOpen = row.event_type === 'OPEN_COMMIT';
   const statusClass = row.verification_status === 'verified' ? 'badge-verified' : 'badge-pending';
   const decisionClass = decision === 'PASS' ? 'badge-pass' : decision === 'FAIL' ? 'badge-fail' : '';
   const scopeClass = row.ledger_scope === 'live' ? 'badge-live' : '';
+
+  if(isOpen){
+    const openTitle = 'SEALED SIGNAL COMMIT';
+    return `<article class="ledger-card">
+      <div class="ledger-head">
+        <div class="head-left">
+          <div class="seq">#${safe(row.sequence_no,'-')}</div>
+          <div>
+            <div class="pair">${openTitle}</div>
+            <div class="meta">${fmtDate(row.created_at)} · <span class="mono">OPEN_COMMIT</span></div>
+          </div>
+        </div>
+        <div class="badges"><span class="badge ${decisionClass}">${decision}</span><span class="badge badge-sealed">sealed</span><span class="badge ${scopeClass}">${row.ledger_scope || 'ledger'}</span></div>
+      </div>
+      <div class="ledger-body">
+        <div class="sealed-panel">
+          <div class="sealed-title">Details hidden until close reveal</div>
+          <div class="sealed-copy">A full signal payload, CurrencyAI state snapshot and private salt were committed before the outcome was known. The trade details are not public yet. When the close reveal is published, the payload and salt can be recomputed against this commitment hash.</div>
+        </div>
+        <div class="details">
+          <div class="box"><h4>Sealed commitment hash</h4><div class="hash">${escapeHtml(safe(row.commitment_hash,'-'))}</div></div>
+          <div class="box"><h4>Event hash</h4><div class="hash">${escapeHtml(safe(row.event_hash,'-'))}</div></div>
+        </div>
+        <div class="box"><h4>Public open message</h4><pre>${escapeHtml(JSON.stringify({
+          event_type: 'OPEN_COMMIT',
+          status: 'sealed_until_close_reveal',
+          ledger_scope: row.ledger_scope || null,
+          commitment_hash: row.commitment_hash || null,
+          event_hash: row.event_hash || null
+        }, null, 2))}</pre></div>
+      </div>
+    </article>`;
+  }
+
   const sym = safe(row.sym,p.sym || '-');
   const dir = String(safe(row.dir,p.dir || '-')).toUpperCase();
   const tf = safe(row.tf,p.tf || '-');
@@ -268,24 +309,30 @@ function cardHtml(row){
         <div class="metric"><span>Entry</span><b>${price(p.entry)}</b></div>
         <div class="metric"><span>Stop loss</span><b>${price(p.sl)}</b></div>
         <div class="metric"><span>Take profit</span><b>${price(p.tp)}</b></div>
-        <div class="metric"><span>${isClose ? 'Result' : 'Commitment'}</span><b>${isClose ? rfmt(p.r_result) : shortHash(row.commitment_hash || p.commitment_hash)}</b></div>
+        <div class="metric"><span>Result</span><b>${rfmt(p.r_result)}</b></div>
+      </div>
+      <div class="metric-grid">
+        <div class="metric"><span>Close price</span><b>${price(p.close_price)}</b></div>
+        <div class="metric"><span>Outcome</span><b>${escapeHtml(safe(p.outcome,'-'))}</b></div>
+        <div class="metric"><span>Exit reason</span><b>${escapeHtml(safe(p.exit_reason,'-'))}</b></div>
+        <div class="metric"><span>Reveal salt</span><b>${escapeHtml(shortHash(row.reveal_salt || p.reveal_salt || ''))}</b></div>
       </div>
       <div class="details">
         ${stateHtml('CurrencyAI long state', longCode, order)}
         ${stateHtml('CurrencyAI short state', shortCode, order)}
       </div>
       <div class="details">
-        <div class="box"><h4>Commitment hash</h4><div class="hash">${escapeHtml(safe(row.commitment_hash,'-'))}</div></div>
-        <div class="box"><h4>Event hash</h4><div class="hash">${escapeHtml(safe(row.event_hash,'-'))}</div></div>
+        <div class="box"><h4>Original commitment hash</h4><div class="hash">${escapeHtml(safe(row.commitment_hash,'-'))}</div></div>
+        <div class="box"><h4>Close reveal event hash</h4><div class="hash">${escapeHtml(safe(row.event_hash,'-'))}</div></div>
       </div>
-      <div class="box"><h4>Ledger message</h4><pre>${escapeHtml(JSON.stringify(p,null,2))}</pre></div>
+      <div class="box"><h4>Close reveal message</h4><pre>${escapeHtml(JSON.stringify(p,null,2))}</pre></div>
     </div>
   </article>`;
 }
 function sampleRows(){
   return [
-    {sequence_no:2,created_at:new Date().toISOString(),signal_id:'sample-close',event_type:'CLOSE_REVEAL',ledger_scope:'counterfactual',sym:'EURUSD',tf:'1min',dir:'buy',commitment_hash:'b7b7d4b4f13006468f2af8f38f8a019e5f9c3cf9db21dc07a72aa203f8b2c111',event_hash:'3a0e553a8cb6a70f4071a1423c20b0d6e61b7543c9e2b3f871b77e291e0d128a',verification_status:'verified',cai_currency_order:CURRENCY_ORDER_DEFAULT,cai_long_state_code:'14862615549734458',cai_short_state_code:'23241507618456244',revealed_payload:{schema:'pe_signal_close_reveal_v1',sym:'EURUSD',tf:'1min',dir:'buy',close_price:1.14441,outcome:'sl',r_result:-0.67,exit_reason:'manual',currency_ai_pass:false,cai_currency_order:CURRENCY_ORDER_DEFAULT,cai_long_state_close:'14862615549734458',cai_short_state_close:'23241507618456244'}},
-    {sequence_no:1,created_at:new Date(Date.now()-3600000).toISOString(),signal_id:'sample-open',event_type:'OPEN_COMMIT',ledger_scope:'counterfactual',sym:'EURUSD',tf:'1min',dir:'buy',commitment_hash:'b7b7d4b4f13006468f2af8f38f8a019e5f9c3cf9db21dc07a72aa203f8b2c111',event_hash:'c2faee77af8b2f1c6d624f7b649aaa221e6ed785558f11418de56fb437b1e888',verification_status:'pending',cai_currency_order:CURRENCY_ORDER_DEFAULT,cai_long_state_code:'14575983685838062',cai_short_state_code:'23042447218615040',canonical_payload:{schema:'pe_signal_ledger_v1',sym:'EURUSD',tf:'1min',dir:'buy',entry:1.14509,sl:1.14329,tp:1.15589,currency_ai_pass:false,decision:'rejected_by_currency_ai',cai_currency_order:CURRENCY_ORDER_DEFAULT,cai_long_state_code:'14575983685838062',cai_short_state_code:'23042447218615040'}}
+    {sequence_no:2,created_at:new Date().toISOString(),signal_id:'sample-close',event_type:'CLOSE_REVEAL',ledger_scope:'counterfactual',sym:'EURUSD',tf:'1min',dir:'buy',commitment_hash:'b7b7d4b4f13006468f2af8f38f8a019e5f9c3cf9db21dc07a72aa203f8b2c111',event_hash:'3a0e553a8cb6a70f4071a1423c20b0d6e61b7543c9e2b3f871b77e291e0d128a',verification_status:'verified',reveal_salt:'sample_salt_123',cai_currency_order:CURRENCY_ORDER_DEFAULT,cai_long_state_code:'14862615549734458',cai_short_state_code:'23241507618456244',revealed_payload:{schema:'pe_signal_close_reveal_v1',sym:'EURUSD',tf:'1min',dir:'buy',entry:1.14509,sl:1.14329,tp:1.15589,close_price:1.14441,outcome:'sl',r_result:-0.67,exit_reason:'manual',currency_ai_pass:false,cai_currency_order:CURRENCY_ORDER_DEFAULT,cai_long_state_close:'14862615549734458',cai_short_state_close:'23241507618456244',reveal_salt:'sample_salt_123'}},
+    {sequence_no:1,created_at:new Date(Date.now()-3600000).toISOString(),signal_id:'sample-open',event_type:'OPEN_COMMIT',ledger_scope:'counterfactual',sym:null,tf:null,dir:null,commitment_hash:'b7b7d4b4f13006468f2af8f38f8a019e5f9c3cf9db21dc07a72aa203f8b2c111',event_hash:'c2faee77af8b2f1c6d624f7b649aaa221e6ed785558f11418de56fb437b1e888',verification_status:'pending',cai_currency_order:null,cai_long_state_code:null,cai_short_state_code:null,canonical_payload:{status:'sealed_until_close_reveal',ledger_scope:'counterfactual',event_type:'OPEN_COMMIT'}}
   ];
 }
 
