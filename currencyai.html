@@ -8,8 +8,8 @@ nav{position:sticky;top:0;z-index:200;background:rgba(11,13,16,0.95);backdrop-fi
 .hero-stats,.compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px}.hero-stat,.compare-card,.card,.chart-card,.section-card{border:1px solid var(--border);border-radius:14px;background:var(--bg2);padding:18px 16px}.hero-stat{text-align:center}.label,.cc-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px}.val,.s-val{font-size:clamp(19px,3vw,28px);font-weight:900;font-family:var(--mono)}.sub{font-size:10px;color:var(--text-mute);margin-top:4px}.val-green{color:var(--green)}.val-teal{color:var(--teal)}.val-amber{color:var(--amber)}.val-red{color:var(--red)}
 .section{margin-bottom:40px}.section-title{font-size:16px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}.section-title span{font-size:11px;font-weight:600;color:var(--text-mute);font-family:var(--mono)}.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card h3,.section-card h3{font-size:13px;font-weight:700;color:var(--text-mute);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}.metric-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}.metric-row:last-child{border:none}.metric-row .name{font-size:12px;color:var(--text-dim)}.metric-row .value{font-size:13px;font-weight:800;font-family:var(--mono)}.chart-wrap{position:relative;height:280px}
 table{width:100%;border-collapse:collapse;font-size:12px}th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);border-bottom:1px solid var(--border)}td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:12px}tr:hover td{background:rgba(255,255,255,.02)}.table-wrap{overflow-x:auto}.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:.06em;font-family:var(--mono)}.badge-g{background:rgba(0,230,170,.12);color:var(--green)}.badge-r{background:rgba(255,96,96,.12);color:var(--hard-red)}.badge-a{background:rgba(255,183,0,.12);color:var(--amber)}
-.heatmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}.ccy-cell{border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border);background:rgba(255,255,255,.03)}.ccy-name{font-size:13px;font-weight:900;margin-bottom:5px}.ccy-row{display:flex;justify-content:space-between;font:700 10px var(--mono);margin:3px 0}.small{font-size:10px;color:var(--text-mute)}.disclaimer{font-size:11px;color:var(--text-mute);line-height:1.7;border-top:1px solid var(--border);padding-top:20px;margin-top:40px}.loading{animation:pulse 1.5s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@media(max-width:600px){.page{padding:20px 14px 48px}.chart-wrap{height:220px}}
-</style></head><body><nav><div class="nav-inner"><a href="index.html" class="nav-logo"><img src="assets/logo.png" alt="Perfect Entry"><span>Perfect Entry</span></a><div class="nav-links"><a href="index.html">Home</a><a href="signals.html">Live Signals</a><a href="currencyai.html" class="active">Currency AI</a><a href="counterfactual.html" class="">Counterfactual</a><a href="network.html" class="">Network</a><a href="wheel.html" class="">Fear & Greed</a><a href="ledger.html">Ledger</a></div><a href="https://whop.com/perfect-entry/" target="_blank" class="nav-cta">Join Now</a></div></nav><div class="page"><h1>Currency AI — Verified Era</h1><p class="subtitle">Live realised results from the rebuilt non-repainting Timed Pulse CurrencyAI system. Metrics use CurrencyAI-approved verified-era trades. Currency state uses the full collector-tracked verified-era stream.</p><div class="era-pill">Verified era starts <b>5 Jul 2026 · 21:00 UTC</b></div><div class="hero-stats"><div class="hero-stat"><div class="label">W / L</div><div class="val val-green" id="statWL">—</div><div class="sub" id="statTrades">loading...</div></div><div class="hero-stat"><div class="label">Total R</div><div class="val val-green" id="statR">—</div><div class="sub">risk-adjusted return</div></div><div class="hero-stat"><div class="label">Profit Factor</div><div class="val val-teal" id="statPF">—</div><div class="sub">realised only</div></div><div class="hero-stat"><div class="label">Win Rate</div><div class="val val-teal" id="statWR">—</div><div class="sub">R &gt; 0 = win</div></div><div class="hero-stat"><div class="label">Max Drawdown</div><div class="val val-amber" id="statDD">—</div><div class="sub">R drawdown</div></div><div class="hero-stat"><div class="label">EV / 100</div><div class="val val-amber" id="statEV">—</div><div class="sub">expected R</div></div></div><div class="section"><div class="section-title">Equity Curve <span>CurrencyAI approved verified-era signals</span></div><div class="chart-card"><div class="chart-wrap"><canvas id="equityChart"></canvas></div></div></div><div class="section"><div class="cards-grid"><div class="card"><h3>Risk Metrics</h3><div class="metric-row"><span class="name">Profit Factor</span><span class="value" id="mPF">—</span></div><div class="metric-row"><span class="name">Max Drawdown</span><span class="value" id="mDD">—</span></div><div class="metric-row"><span class="name">Mean R / trade</span><span class="value" id="mMeanR">—</span></div><div class="metric-row"><span class="name">EV / 100 trades</span><span class="value" id="mEV">—</span></div></div><div class="card"><h3>Trade Statistics</h3><div class="metric-row"><span class="name">Total Trades</span><span class="value" id="mTrades">—</span></div><div class="metric-row"><span class="name">Wins</span><span class="value" id="mWins">—</span></div><div class="metric-row"><span class="name">Losses</span><span class="value" id="mLosses">—</span></div><div class="metric-row"><span class="name">Win Rate</span><span class="value" id="mWR">—</span></div></div><div class="card"><h3>Scaled Returns</h3><div id="scaledRows"></div></div></div></div><div class="section"><div class="section-title">Currency State <span>all collector-tracked verified-era long &amp; short win rates</span></div><div class="heatmap" id="ccyHeatmap"><div class="small loading">Loading currency data...</div></div></div><div class="section"><div class="section-title">Week by Week <span>verified-era realised results</span></div><div class="card table-wrap" style="padding:0"><table><thead><tr><th>Week</th><th>Trades</th><th>W</th><th>L</th><th>WR</th><th>Total R</th><th>PF</th></tr></thead><tbody id="weekTable"><tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">Loading...</td></tr></tbody></table></div></div><div class="disclaimer">Verified-era performance starts from Sunday 5 July 2026 market open. Earlier prototype and legacy CurrencyAI data is intentionally excluded because it belongs to a different model and verification regime. Past performance does not guarantee future results. Nothing on this page constitutes financial advice.</div></div><script>
+.heatmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}.ccy-cell{border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border);background:rgba(255,255,255,.03)}.ccy-name{font-size:13px;font-weight:900;margin-bottom:5px}.ccy-row{display:flex;justify-content:space-between;font:700 10px var(--mono);margin:3px 0}.small{font-size:10px;color:var(--text-mute)}.sim-inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}.sim-field label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-mute);margin-bottom:6px}.sim-field input,.sim-field select{width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--mono);outline:none}.sim-btn{padding:10px 24px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);color:var(--text);font-weight:800;font-size:13px;cursor:pointer}.sim-btn:hover{background:rgba(1,86,98,.35)}.sim-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}.sim-result{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}.sim-result .sr-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-mute);margin-bottom:4px}.sim-result .sr-val{font-size:16px;font-weight:900;font-family:var(--mono)}.disclaimer{font-size:11px;color:var(--text-mute);line-height:1.7;border-top:1px solid var(--border);padding-top:20px;margin-top:40px}.loading{animation:pulse 1.5s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@media(max-width:600px){.page{padding:20px 14px 48px}.chart-wrap{height:220px}}
+</style></head><body><nav><div class="nav-inner"><a href="index.html" class="nav-logo"><img src="assets/logo.png" alt="Perfect Entry"><span>Perfect Entry</span></a><div class="nav-links"><a href="index.html">Home</a><a href="signals.html">Live Signals</a><a href="currencyai.html" class="active">Currency AI</a><a href="counterfactual.html" class="">Counterfactual</a><a href="network.html" class="">Network</a><a href="wheel.html" class="">Fear & Greed</a><a href="ledger.html">Ledger</a></div><a href="https://whop.com/perfect-entry/" target="_blank" class="nav-cta">Join Now</a></div></nav><div class="page"><h1>Currency AI — Verified Era</h1><p class="subtitle">Live realised results from the rebuilt non-repainting Timed Pulse CurrencyAI system. Metrics use CurrencyAI-approved verified-era trades. Currency state uses the full collector-tracked verified-era stream.</p><div class="era-pill">Verified era starts <b>5 Jul 2026 · 21:00 UTC</b></div><div class="hero-stats"><div class="hero-stat"><div class="label">W / L</div><div class="val val-green" id="statWL">—</div><div class="sub" id="statTrades">loading...</div></div><div class="hero-stat"><div class="label">Total R</div><div class="val val-green" id="statR">—</div><div class="sub">risk-adjusted return</div></div><div class="hero-stat"><div class="label">Profit Factor</div><div class="val val-teal" id="statPF">—</div><div class="sub">realised only</div></div><div class="hero-stat"><div class="label">Win Rate</div><div class="val val-teal" id="statWR">—</div><div class="sub">R &gt; 0 = win</div></div><div class="hero-stat"><div class="label">Calmar Ratio</div><div class="val val-amber" id="statCalmar">—</div><div class="sub">return / drawdown</div></div><div class="hero-stat"><div class="label">EV / 100</div><div class="val val-amber" id="statEV">—</div><div class="sub">expected R</div></div></div><div class="section"><div class="section-title">Equity Curve <span>CurrencyAI approved verified-era signals</span></div><div class="chart-card"><div class="chart-wrap"><canvas id="equityChart"></canvas></div></div></div><div class="section"><div class="cards-grid"><div class="card"><h3>Risk Metrics</h3><div class="metric-row"><span class="name">Profit Factor</span><span class="value" id="mPF">—</span></div><div class="metric-row"><span class="name">Sharpe (trade-adjusted)</span><span class="value" id="mSharpe">—</span></div><div class="metric-row"><span class="name">Sortino (trade-adjusted)</span><span class="value" id="mSortino">—</span></div><div class="metric-row"><span class="name">Calmar Ratio</span><span class="value" id="mCalmar">—</span></div><div class="metric-row"><span class="name">Recovery Factor</span><span class="value" id="mRecovery">—</span></div><div class="metric-row"><span class="name">Max Drawdown</span><span class="value" id="mDD">—</span></div></div><div class="card"><h3>Trade Statistics</h3><div class="metric-row"><span class="name">Total Trades</span><span class="value" id="mTrades">—</span></div><div class="metric-row"><span class="name">Wins</span><span class="value" id="mWins">—</span></div><div class="metric-row"><span class="name">Losses</span><span class="value" id="mLosses">—</span></div><div class="metric-row"><span class="name">Win Rate</span><span class="value" id="mWR">—</span></div><div class="metric-row"><span class="name">Mean R / trade</span><span class="value" id="mMeanR">—</span></div><div class="metric-row"><span class="name">EV / 100 trades</span><span class="value" id="mEV">—</span></div></div><div class="card"><h3>Distribution</h3><div class="metric-row"><span class="name">Gross Win R</span><span class="value" id="mGrossWin">—</span></div><div class="metric-row"><span class="name">Gross Loss R</span><span class="value" id="mGrossLoss">—</span></div><div class="metric-row"><span class="name">Best Trade</span><span class="value" id="mBest">—</span></div><div class="metric-row"><span class="name">Worst Trade</span><span class="value" id="mWorst">—</span></div><div class="metric-row"><span class="name">Best Win Streak</span><span class="value" id="mBestWinStreak">—</span></div><div class="metric-row"><span class="name">Worst Loss Streak</span><span class="value" id="mWorstLossStreak">—</span></div></div><div class="card"><h3>Scaled Returns</h3><div id="scaledRows"></div></div></div></div><div class="section"><div class="section-title">Currency State <span>all collector-tracked verified-era long &amp; short win rates</span></div><div class="heatmap" id="ccyHeatmap"><div class="small loading">Loading currency data...</div></div></div><div class="section"><div class="section-title">Week by Week <span>verified-era realised results</span></div><div class="card table-wrap" style="padding:0"><table><thead><tr><th>Week</th><th>Trades</th><th>W</th><th>L</th><th>WR</th><th>Total R</th><th>PF</th></tr></thead><tbody id="weekTable"><tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">Loading...</td></tr></tbody></table></div></div><div class="section"><div class="section-title">Account Simulator <span>replays the verified-era CurrencyAI R sequence</span></div><div class="card"><div class="sim-inputs"><div class="sim-field"><label>Account Size ($)</label><input type="number" id="simAccount" value="10000" min="100" step="100"></div><div class="sim-field"><label>Risk Per Trade</label><select id="simRiskType"><option value="pct">% of account</option><option value="fixed">Fixed $ amount</option></select></div><div class="sim-field"><label>Risk Amount</label><input type="number" id="simRisk" value="1" min="0.1" step="0.1"></div><div class="sim-field" style="display:flex;align-items:flex-end"><button class="sim-btn" onclick="runSimulator()">Calculate</button></div></div><div class="sim-results" id="simResults"></div><div class="chart-wrap" style="height:240px"><canvas id="simChart"></canvas></div></div></div><div class="disclaimer">Verified-era performance starts from Sunday 5 July 2026 market open. Earlier prototype and legacy CurrencyAI data is intentionally excluded because it belongs to a different model and verification regime. Past performance does not guarantee future results. Nothing on this page constitutes financial advice.</div></div><script>
 
 const SUPABASE_URL='https://nmfsqgqwjihpudiqnuwh.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
@@ -17,6 +17,8 @@ const HEADERS={apikey:SUPABASE_ANON,Authorization:'Bearer '+SUPABASE_ANON};
 const VERIFIED_START='2026-07-05T21:00:00Z';
 const SPECIAL={XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
 let equityChartInst=null;
+let simChartInst=null;
+let latestApprovedRows=[];
 
 function nval(v){
   if(v===null || v===undefined || v==='') return null;
@@ -67,14 +69,27 @@ function metrics(rows){
   const wins=r.filter(x=>x>0).length;
   const losses=r.length-wins;
   const total=r.reduce((a,b)=>a+b,0);
-  const gw=r.filter(x=>x>0).reduce((a,b)=>a+b,0);
-  const gl=Math.abs(r.filter(x=>x<=0).reduce((a,b)=>a+b,0));
+  const winVals=r.filter(x=>x>0);
+  const lossVals=r.filter(x=>x<=0);
+  const gw=winVals.reduce((a,b)=>a+b,0);
+  const gl=Math.abs(lossVals.reduce((a,b)=>a+b,0));
   const pf=gl>0?gw/gl:gw>0?99:0;
   const wr=wins/r.length*100;
   const mean=total/r.length;
+  const variance=r.length?r.reduce((a,x)=>a+Math.pow(x-mean,2),0)/r.length:0;
+  const stdev=Math.sqrt(variance);
+  const downsideSq=r.filter(x=>x<0).reduce((a,x)=>a+Math.pow(x,2),0)/(r.filter(x=>x<0).length||1);
+  const downsideDev=Math.sqrt(downsideSq);
+  const sharpe=stdev>0?(mean/stdev)*Math.sqrt(252):null;
+  const sortino=downsideDev>0?(mean/downsideDev)*Math.sqrt(252):null;
   let eq=0,peak=0,dd=0,curve=[0];
   r.forEach(v=>{eq+=v;curve.push(Number(eq.toFixed(4)));if(eq>peak)peak=eq;if(eq-peak<dd)dd=eq-peak});
-  return {trades:r.length,wins,losses,total,pf,wr,mean,dd,curve};
+  const calmar=dd<0?total/Math.abs(dd):null;
+  const recovery=dd<0?total/Math.abs(dd):null;
+  const best=Math.max(...r), worst=Math.min(...r);
+  let bestWinStreak=0,bestLossStreak=0,cw=0,cl=0;
+  r.forEach(v=>{ if(v>0){cw++;cl=0;} else {cl++;cw=0;} if(cw>bestWinStreak)bestWinStreak=cw; if(cl>bestLossStreak)bestLossStreak=cl; });
+  return {trades:r.length,wins,losses,total,pf,wr,mean,dd,curve,gw,gl,sharpe,sortino,calmar,recovery,best,worst,bestWinStreak,bestLossStreak,returns:r};
 }
 function weekKey(d){
   const x=new Date(d); const day=x.getUTCDay(); const diff=day===0?6:day-1;
@@ -84,7 +99,7 @@ function weekKey(d){
 }
 function render(m,rows){
   if(!m){
-    ['statWL','statR','statPF','statWR','statDD','statEV','mPF','mDD','mMeanR','mEV','mTrades','mWins','mLosses','mWR'].forEach(id=>{const el=document.getElementById(id); if(el) el.textContent='—'});
+    ['statWL','statR','statPF','statWR','statCalmar','statEV','mPF','mSharpe','mSortino','mCalmar','mRecovery','mDD','mMeanR','mEV','mTrades','mWins','mLosses','mWR','mGrossWin','mGrossLoss','mBest','mWorst','mBestWinStreak','mWorstLossStreak'].forEach(id=>{const el=document.getElementById(id); if(el) el.textContent='—'});
     document.getElementById('statTrades').textContent='no verified-era CurrencyAI closes yet';
     document.getElementById('weekTable').innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">No verified-era CurrencyAI closes yet.</td></tr>';
     return;
@@ -94,9 +109,13 @@ function render(m,rows){
   document.getElementById('statR').textContent=fmtR(m.total);
   document.getElementById('statPF').textContent=fmtPF(m.pf);
   document.getElementById('statWR').textContent=fmtPct(m.wr);
-  document.getElementById('statDD').textContent=fmtR(m.dd);
+  document.getElementById('statCalmar').textContent=m.calmar==null?'—':m.calmar.toFixed(2);
   document.getElementById('statEV').textContent=fmtR(m.mean*100);
   document.getElementById('mPF').textContent=fmtPF(m.pf);
+  document.getElementById('mSharpe').textContent=m.sharpe==null?'—':m.sharpe.toFixed(2);
+  document.getElementById('mSortino').textContent=m.sortino==null?'—':m.sortino.toFixed(2);
+  document.getElementById('mCalmar').textContent=m.calmar==null?'—':m.calmar.toFixed(2);
+  document.getElementById('mRecovery').textContent=m.recovery==null?'—':m.recovery.toFixed(2);
   document.getElementById('mDD').textContent=fmtR(m.dd);
   document.getElementById('mMeanR').textContent=(m.mean>=0?'+':'')+m.mean.toFixed(4)+'R';
   document.getElementById('mEV').textContent=fmtR(m.mean*100);
@@ -104,6 +123,12 @@ function render(m,rows){
   document.getElementById('mWins').textContent=m.wins;
   document.getElementById('mLosses').textContent=m.losses;
   document.getElementById('mWR').textContent=fmtPct(m.wr);
+  document.getElementById('mGrossWin').textContent=fmtR(m.gw);
+  document.getElementById('mGrossLoss').textContent='-'+m.gl.toFixed(1)+'R';
+  document.getElementById('mBest').textContent=fmtR(m.best);
+  document.getElementById('mWorst').textContent=fmtR(m.worst);
+  document.getElementById('mBestWinStreak').textContent=m.bestWinStreak;
+  document.getElementById('mWorstLossStreak').textContent=m.bestLossStreak;
   document.getElementById('scaledRows').innerHTML=[1,10,50,100,500,1000].map(r=>`<div class="metric-row"><span class="name">$${r} risk/trade</span><span class="value" style="color:${m.total*r>=0?'var(--green)':'var(--red)'}">$${Math.round(m.total*r).toLocaleString()}</span></div>`).join('');
   renderChart(m.curve); renderWeeks(rows);
 }
@@ -168,11 +193,36 @@ function renderHeatmap(rows){
     return `<div class="ccy-cell"><div class="ccy-name">${c}</div><div class="ccy-row"><span>LONG</span><span style="color:${lw==null?'var(--text-mute)':lw>=50?'var(--green)':lw>=41.7?'var(--amber)':'var(--red)'}">${lw==null?'—':lw.toFixed(0)+'%'}</span></div><div class="ccy-row"><span>SHORT</span><span style="color:${sw==null?'var(--text-mute)':sw>=50?'var(--green)':sw>=41.7?'var(--amber)':'var(--red)'}">${sw==null?'—':sw.toFixed(0)+'%'}</span></div><div class="small">${l.length}L · ${s.length}S ${sum!=null?'· ∑ '+sum.toFixed(0)+'%':''}</div></div>`;
   }).join(''):'<div class="small">No currency state data yet.</div>';
 }
+
+function runSimulator(){
+  const rows=latestApprovedRows||[];
+  const returns=rows.map(rowR).filter(v=>v!==null);
+  const start=Number(document.getElementById('simAccount')?.value||10000);
+  const riskType=document.getElementById('simRiskType')?.value||'pct';
+  const riskAmount=Number(document.getElementById('simRisk')?.value||1);
+  let bal=start;
+  const curve=[bal];
+  returns.forEach(r=>{
+    const risk=riskType==='pct'?bal*(riskAmount/100):riskAmount;
+    bal+=risk*r;
+    curve.push(Number(bal.toFixed(2)));
+  });
+  const pnl=bal-start;
+  const pct=start>0?(pnl/start*100):0;
+  const maxBal=Math.max(...curve); const minBal=Math.min(...curve);
+  document.getElementById('simResults').innerHTML=`<div class="sim-result"><div class="sr-label">Final Balance</div><div class="sr-val" style="color:${bal>=start?'var(--green)':'var(--red)'}">$${Math.round(bal).toLocaleString()}</div></div><div class="sim-result"><div class="sr-label">P/L</div><div class="sr-val" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${Math.round(pnl).toLocaleString()}</div></div><div class="sim-result"><div class="sr-label">Return</div><div class="sr-val" style="color:${pct>=0?'var(--green)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(1)}%</div></div><div class="sim-result"><div class="sr-label">Peak / Trough</div><div class="sr-val">$${Math.round(maxBal).toLocaleString()} / $${Math.round(minBal).toLocaleString()}</div></div>`;
+  const ctx=document.getElementById('simChart')?.getContext('2d');
+  if(!ctx) return;
+  if(simChartInst) simChartInst.destroy();
+  simChartInst=new Chart(ctx,{type:'line',data:{labels:curve.map((_,i)=>i),datasets:[{data:curve,borderColor:bal>=start?'#00e6aa':'#FF9060',borderWidth:2,pointRadius:0,fill:true,backgroundColor:bal>=start?'rgba(0,200,150,.06)':'rgba(255,100,60,.06)',tension:.25}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(234,253,252,.4)',font:{family:'IBM Plex Mono',size:10},callback:v=>'$'+Number(v).toLocaleString()}}}}});
+}
 async function init(){
   try{
     const [approvedRows, allRows]=await Promise.all([loadRows(), loadAllCollectorRows()]);
+    latestApprovedRows=approvedRows;
     render(metrics(approvedRows),approvedRows);
     renderHeatmap(allRows);
+    runSimulator();
   }catch(e){
     console.error(e);
     document.getElementById('statTrades').textContent='failed to load public_signal_feed';
