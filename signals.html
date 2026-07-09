@@ -247,6 +247,15 @@ function rowType(row){
   return row.tf === '1min' ? '120m Pulse' : '5m Signal';
 }
 function isClosed(row){ return !!displayOutcome(row) || displayR(row) !== null || !!displayClosedAt(row); }
+
+function getSortTime(row){
+  const ts = displayClosedAt(row) || row.closed_at || row.shadow_closed_at || row.created_at;
+  const t = new Date(ts).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+function sortNewestFirst(list){
+  return list.slice().sort((a,b) => getSortTime(b) - getSortTime(a));
+}
 function passesToggles(row){
   if(row.tf === '1min' && !showPulse) return false;
   if(row.tf === '5min' && !showFive) return false;
@@ -312,8 +321,8 @@ function render(){
   fiveList.innerHTML = '';
 
   const visible = rows.filter(passesToggles);
-  const pulse = visible.filter(r => r.tf === '1min');
-  const five = visible.filter(r => r.tf === '5min');
+  const pulse = sortNewestFirst(visible.filter(r => r.tf === '1min'));
+  const five = sortNewestFirst(visible.filter(r => r.tf === '5min'));
 
   if(!pulse.length) pulseList.innerHTML = '<div class="empty">No visible 120m pulse signals yet.</div>';
   else pulse.forEach(r => pulseList.appendChild(makeCard(r)));
