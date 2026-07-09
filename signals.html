@@ -116,19 +116,19 @@ h1{font-size:clamp(24px,3.5vw,40px);font-weight:900;letter-spacing:-0.03em;margi
     <div>
       <h1>Timed Pulse Signals</h1>
       <p class="subtitle">
-        Verified-era CurrencyAI signals only. The 1 minute model is shown as a 120 minute pulse signal with a fixed timer, not as a normal one-minute scalp. The 5 minute model is shown separately.
+        Today-only verified-era CurrencyAI signals. The 1 minute model is shown as a 120 minute pulse signal with a fixed timer, not as a normal one-minute scalp. The 5 minute model is shown separately.
       </p>
     </div>
     <div class="status-row">
       <span class="pill live"><span class="dot"></span>Live</span>
       <span class="pill" id="utcClock">UTC --:--:--</span>
-      <span class="pill warn">Verified era from 05/07/2026</span>
+      <span class="pill warn" id="dayPill">Today UTC only</span>
     </div>
   </div>
 </section>
 
 <section class="top-stats">
-  <div class="stat"><div class="stat-label">Visible Signals</div><div class="stat-val" id="statTotal">--</div><div class="stat-sub">CurrencyAI approved only</div></div>
+  <div class="stat"><div class="stat-label">Visible Signals</div><div class="stat-val" id="statTotal">--</div><div class="stat-sub" id="rangeSub">today UTC · CurrencyAI approved only</div></div>
   <div class="stat"><div class="stat-label">Open</div><div class="stat-val" id="statOpen">--</div><div class="stat-sub">waiting for close result</div></div>
   <div class="stat"><div class="stat-label">Closed W/L</div><div class="stat-val" id="statWL">--</div><div class="stat-sub">real result, or collector fallback</div></div>
   <div class="stat"><div class="stat-label">Total R</div><div class="stat-val" id="statR">--</div><div class="stat-sub">display R result</div></div>
@@ -176,11 +176,31 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const HEADERS = { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON };
 const VERIFIED_START = '2026-07-05T21:00:00Z';
 const PULSE_MINUTES = 120;
+const TODAY_ONLY = true;
 const MAX_ROWS = 120;
 const PIP = {EURUSD:0.0001,GBPUSD:0.0001,AUDUSD:0.0001,NZDUSD:0.0001,USDCAD:0.0001,USDCHF:0.0001,EURGBP:0.0001,EURAUD:0.0001,EURCAD:0.0001,EURNZD:0.0001,EURJPY:0.01,GBPJPY:0.01,USDJPY:0.01,CADJPY:0.01,CHFJPY:0.01,AUDJPY:0.01,NZDJPY:0.01,AUDCAD:0.0001,AUDCHF:0.0001,AUDNZD:0.0001,GBPAUD:0.0001,GBPCAD:0.0001,GBPCHF:0.0001,GBPNZD:0.0001,NZDCAD:0.0001,NZDCHF:0.0001,XAUUSD:0.01,XAGUSD:0.01,NAS100:0.01,BTCUSD:1,ETHUSD:0.01};
 
 let rows = [];
 let showOpen = true, showClosed = true, showPulse = true, showFive = true;
+
+
+function utcDayStartIso(date = new Date()){
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0)).toISOString();
+}
+function effectiveStartIso(){
+  const todayStart = utcDayStartIso();
+  return TODAY_ONLY && todayStart > VERIFIED_START ? todayStart : VERIFIED_START;
+}
+function sameUtcDay(row){
+  if(!TODAY_ONLY) return true;
+  const start = new Date(effectiveStartIso()).getTime();
+  const t = new Date(row.created_at).getTime();
+  return Number.isFinite(t) && t >= start;
+}
+function fmtDateShort(iso){
+  const d = new Date(iso);
+  return pad(d.getUTCDate()) + '/' + pad(d.getUTCMonth()+1) + '/' + d.getUTCFullYear();
+}
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function fmtTime(d){
@@ -249,12 +269,19 @@ function rowType(row){
 function isClosed(row){ return !!displayOutcome(row) || displayR(row) !== null || !!displayClosedAt(row); }
 
 function getSortTime(row){
-  const ts = displayClosedAt(row) || row.closed_at || row.shadow_closed_at || row.created_at;
+  // Newest activity first: closed trades by close time, open trades by entry time.
+  const ts = displayClosedAt(row) || row.created_at;
   const t = new Date(ts).getTime();
-  return Number.isFinite(t) ? t : 0;
+  if(Number.isFinite(t)) return t;
+  const fallback = new Date(row.created_at).getTime();
+  return Number.isFinite(fallback) ? fallback : 0;
 }
 function sortNewestFirst(list){
-  return list.slice().sort((a,b) => getSortTime(b) - getSortTime(a));
+  return list.slice().sort((a,b) => {
+    const tb = getSortTime(b), ta = getSortTime(a);
+    if(tb !== ta) return tb - ta;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 }
 function passesToggles(row){
   if(row.tf === '1min' && !showPulse) return false;
@@ -301,17 +328,23 @@ function makeCard(row){
 }
 
 async function fetchSignals(){
+  const since = effectiveStartIso();
   const query =
     '/rest/v1/public_signal_feed?' +
     'select=*' +
-    '&created_at=gte.' + encodeURIComponent(VERIFIED_START) +
+    '&created_at=gte.' + encodeURIComponent(since) +
     '&currency_ai_pass=eq.true' +
     '&tf=in.(1min,5min)' +
     '&order=created_at.desc' +
     '&limit=' + MAX_ROWS;
   const res = await fetch(SUPABASE_URL + query, {headers: HEADERS});
   if(!res.ok) throw new Error(await res.text());
-  rows = await res.json();
+  rows = (await res.json()).filter(sameUtcDay);
+  const since = effectiveStartIso();
+  const dayPill = document.getElementById('dayPill');
+  if(dayPill) dayPill.textContent = TODAY_ONLY ? ('Today UTC · ' + fmtDateShort(since)) : 'Verified era from 05/07/2026';
+  const rangeSub = document.getElementById('rangeSub');
+  if(rangeSub) rangeSub.textContent = TODAY_ONLY ? 'today UTC · CurrencyAI approved only' : 'verified era · CurrencyAI approved only';
   render();
 }
 function render(){
