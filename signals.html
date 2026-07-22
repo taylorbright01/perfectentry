@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Timed Pulse Signals — Perfect Entry</title>
-<meta name="description" content="Perfect Entry verified-era Timed Pulse and 5 minute CurrencyAI signals with fixed timers, live status, and realised R tracking.">
+<title>Live Signals — Perfect Entry</title>
+<meta name="description" content="Perfect Entry live CurrencyAI M1 and M5 signals with current trade status and realised R tracking.">
 <link rel="canonical" href="https://perfectentry.store/signals.html">
 <link rel="icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -114,9 +114,9 @@ h1{font-size:clamp(24px,3.5vw,40px);font-weight:900;letter-spacing:-0.03em;margi
 <section class="header">
   <div class="header-inner">
     <div>
-      <h1>Timed Pulse Signals</h1>
+      <h1>Live Signals</h1>
       <p class="subtitle">
-        Today-only verified-era CurrencyAI signals. The 1 minute model is shown as a 120 minute pulse signal with a fixed timer, not as a normal one-minute scalp. The 5 minute model is shown separately.
+        Today's approved CurrencyAI signals. M1 trades are managed dynamically as market conditions develop, while M5 trades run to their configured exit or the daily cutoff.
       </p>
     </div>
     <div class="status-row">
@@ -137,8 +137,8 @@ h1{font-size:clamp(24px,3.5vw,40px);font-weight:900;letter-spacing:-0.03em;margi
 <section class="controls">
   <button class="btn on" id="toggleOpen">Open</button>
   <button class="btn on" id="toggleClosed">Closed</button>
-  <button class="btn on" id="togglePulse">120m Pulse</button>
-  <button class="btn on" id="toggleFive">5m Signals</button>
+  <button class="btn on" id="togglePulse">M1 Signals</button>
+  <button class="btn on" id="toggleFive">M5 Signals</button>
   <button class="btn" id="reloadBtn">Reload</button>
 </section>
 
@@ -146,28 +146,28 @@ h1{font-size:clamp(24px,3.5vw,40px);font-weight:900;letter-spacing:-0.03em;margi
   <section class="col">
     <div class="col-head">
       <div>
-        <div class="col-title">120 minute pulse</div>
-        <div class="col-sub">Triggered from the 1 minute model, then judged over a fixed 120 minute window.</div>
+        <div class="col-title">M1 signals</div>
+        <div class="col-sub">Short-term signals with dynamically managed targets and exits.</div>
       </div>
       <div class="col-count" id="countPulse">--</div>
     </div>
-    <div class="list" id="pulseList"><div class="empty">Loading pulse signals...</div></div>
+    <div class="list" id="pulseList"><div class="empty">Loading M1 signals...</div></div>
   </section>
 
   <section class="col">
     <div class="col-head">
       <div>
-        <div class="col-title">5 minute model</div>
-        <div class="col-sub">CurrencyAI-approved 5 minute signals from the verified-era model.</div>
+        <div class="col-title">M5 signals</div>
+        <div class="col-sub">Approved five-minute signals managed to their configured exit or daily cutoff.</div>
       </div>
       <div class="col-count" id="countFive">--</div>
     </div>
-    <div class="list" id="fiveList"><div class="empty">Loading 5 minute signals...</div></div>
+    <div class="list" id="fiveList"><div class="empty">Loading M5 signals...</div></div>
   </section>
 </main>
 
 <footer class="footer-note">
-  Perfect Entry signals are provided for educational and informational purposes only. Nothing displayed here is financial advice. Trading involves significant risk. Timed Pulse means the signal has a defined evaluation window, not that the chart timeframe itself is the trade duration.
+  Perfect Entry signals are provided for educational and informational purposes only. Nothing displayed here is financial advice. Trading involves significant risk. A chart timeframe identifies the signal source; it does not promise a fixed trade duration.
 </footer>
 
 <script>
@@ -175,7 +175,6 @@ const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
 const HEADERS = { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON };
 const VERIFIED_START = '2026-07-05T21:00:00Z';
-const PULSE_MINUTES = 120;
 const TODAY_ONLY = true;
 const MAX_ROWS = 120;
 const PIP = {EURUSD:0.0001,GBPUSD:0.0001,AUDUSD:0.0001,NZDUSD:0.0001,USDCAD:0.0001,USDCHF:0.0001,EURGBP:0.0001,EURAUD:0.0001,EURCAD:0.0001,EURNZD:0.0001,EURJPY:0.01,GBPJPY:0.01,USDJPY:0.01,CADJPY:0.01,CHFJPY:0.01,AUDJPY:0.01,NZDJPY:0.01,AUDCAD:0.0001,AUDCHF:0.0001,AUDNZD:0.0001,GBPAUD:0.0001,GBPCAD:0.0001,GBPCHF:0.0001,GBPNZD:0.0001,NZDCAD:0.0001,NZDCHF:0.0001,XAUUSD:0.01,XAGUSD:0.01,NAS100:0.01,BTCUSD:1,ETHUSD:0.01};
@@ -245,33 +244,20 @@ function statusFor(row){
     if(String(out).toLowerCase() === 'sl') return {label:'LOSS', cls:'loss'};
     return {label:String(out).toUpperCase(), cls:'waiting'};
   }
-  if(row.tf === '1min' && Date.now() > pulseExpiry(row).getTime()) return {label:'AWAITING CLOSE', cls:'waiting'};
   return {label:'OPEN', cls:'open'};
 }
-function pulseExpiry(row){
-  return new Date(new Date(row.created_at).getTime() + PULSE_MINUTES * 60000);
-}
 function countdownText(row){
-  if(row.tf !== '1min') return '5m model';
   const closedAt = displayClosedAt(row);
   if(closedAt) return 'closed ' + fmtTime(closedAt);
-  const ms = pulseExpiry(row).getTime() - Date.now();
-  if(ms <= 0) return 'timer ended, awaiting close';
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return 'closes in ' + m + 'm ' + pad(s) + 's';
+  return row.tf === '1min' ? 'dynamically managed' : 'managed signal';
 }
 function countdownClass(row){
-  if(row.tf !== '1min') return 'ok';
   const closedAt = displayClosedAt(row);
   if(closedAt) return 'done';
-  const ms = pulseExpiry(row).getTime() - Date.now();
-  if(ms <= 0) return 'done';
-  if(ms < 15 * 60000) return 'warn';
   return 'ok';
 }
 function rowType(row){
-  return row.tf === '1min' ? '120m Pulse' : '5m Signal';
+  return row.tf === '1min' ? 'M1 Signal' : 'M5 Signal';
 }
 function isClosed(row){ return !!displayOutcome(row) || displayR(row) !== null || !!displayClosedAt(row); }
 
@@ -369,10 +355,10 @@ function render(){
   const pulse = sortNewestFirst(visible.filter(r => r.tf === '1min'));
   const five = sortNewestFirst(visible.filter(r => r.tf === '5min'));
 
-  if(!pulse.length) pulseList.innerHTML = '<div class="empty">No visible 120m pulse signals yet.</div>';
+  if(!pulse.length) pulseList.innerHTML = '<div class="empty">No visible M1 signals yet.</div>';
   else pulse.forEach(r => pulseList.appendChild(makeCard(r)));
 
-  if(!five.length) fiveList.innerHTML = '<div class="empty">No visible 5 minute signals yet.</div>';
+  if(!five.length) fiveList.innerHTML = '<div class="empty">No visible M5 signals yet.</div>';
   else five.forEach(r => fiveList.appendChild(makeCard(r)));
 
   document.getElementById('countPulse').textContent = pulse.length + ' shown';
