@@ -1,130 +1,871 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fear & Greed Wheel - Perfect Entry</title>
-<link rel="icon" href="assets/logo.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0b0d10;--bg2:#0f1216;--bg3:#131720;--teal:#01a0b8;--teal-dark:#015662;--text:#EAFDFC;--text-dim:rgba(234,253,252,0.6);--text-mute:rgba(234,253,252,0.35);--border:rgba(255,255,255,0.08);--orange:#FF6A2A;--amber:#ffb700;--green:#00e6aa;--red:#FF9060;--hard-red:#FF6060;--mono:'IBM Plex Mono',monospace}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}a{text-decoration:none;color:inherit}
-nav{position:sticky;top:0;z-index:200;background:rgba(11,13,16,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:10px 20px}.nav-logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px}.nav-logo img{width:24px;height:24px;object-fit:contain}.nav-links{display:flex;gap:16px;font-size:12px;font-weight:600;margin-left:auto}.nav-links a{color:var(--text-dim);transition:color .15s}.nav-links a:hover,.nav-links a.active{color:var(--orange)}.nav-cta{padding:7px 16px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);font-weight:800;font-size:12px;white-space:nowrap}.nav-cta:hover{background:rgba(1,86,98,.35)}@media(max-width:768px){.nav-links{display:none}}
-.page{max-width:1400px;margin:0 auto;padding:32px 20px 64px}h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}.subtitle{color:var(--text-dim);font-size:clamp(13px,1.5vw,16px);line-height:1.6;max-width:900px;margin-bottom:18px}.era-pill{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid rgba(1,160,184,.25);background:rgba(1,160,184,.08);border-radius:999px;color:var(--text-dim);font:600 11px var(--mono);margin:0 8px 24px 0}.era-pill b{color:var(--teal)}
-.section{margin-bottom:34px}.section-title{font-size:16px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px}.section-title span{font-size:11px;font-weight:600;color:var(--text-mute);font-family:var(--mono)}
-table{width:100%;border-collapse:collapse;font-size:12px}th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);border-bottom:1px solid var(--border)}td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:12px}tr:hover td{background:rgba(255,255,255,.02)}.table-wrap{overflow-x:auto;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:10px}.small{font-size:10px;color:var(--text-mute)}.disclaimer{font-size:11px;color:var(--text-mute);line-height:1.7;border-top:1px solid var(--border);padding-top:20px;margin-top:40px}.loading{animation:pulse 1.5s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.main-layout{display:grid;grid-template-columns:1fr 310px;gap:20px;margin-bottom:24px}@media(max-width:1000px){.main-layout{grid-template-columns:1fr}}.wheel-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center}.wheel-card h3,.card h3,.needles-section h3,.snap-section h3{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-mute);margin-bottom:16px;align-self:flex-start}#wheelCanvas{width:100%;max-width:620px;height:min(620px,90vw);cursor:crosshair}.wheel-footer{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}.wf-updated,.wf-fg{font-family:var(--mono);font-size:11px;font-weight:700}.sidebar{display:flex;flex-direction:column;gap:12px}.card,.needles-section,.snap-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px}.obs-list{list-style:none}.obs-list li{font-size:12px;color:var(--text-dim);padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.5}.obs-list li::before{content:'→ ';color:var(--teal)}
-.needles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:700px){.needles-grid{grid-template-columns:repeat(2,1fr)}}.needle-cell{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}.nc-name{font-size:12px;font-weight:900;margin-bottom:8px}.bar{height:8px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;margin:6px 0}.bar span{display:block;height:100%;border-radius:999px}.score{font-family:var(--mono);font-size:12px;font-weight:800}.trend-up{color:var(--green)}.trend-down{color:var(--red)}.trend-flat{color:var(--text-mute)}.state-pill{display:inline-block;min-width:52px;text-align:center;padding:3px 7px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
-</style>
-</head>
-<body>
-<nav><div class="nav-inner"><a href="index.html" class="nav-logo"><img src="assets/logo.png" alt="Perfect Entry"><span>Perfect Entry</span></a><div class="nav-links"><a href="index.html">Home</a><a href="signals.html">Live Signals</a><a href="currencyai.html">Currency AI</a><a href="counterfactual.html">Counterfactual</a><a href="network.html">Network</a><a href="wheel.html" class="active">Fear & Greed</a><a href="ledger.html">Ledger</a></div><a href="https://whop.com/perfect-entry/" target="_blank" class="nav-cta">Join Now</a></div></nav>
-<div class="page">
-  <div class="page-header"><h1>Fear & Greed Wheel</h1><p class="subtitle">Market-state wheel powered by the full verified-era collector stream. It learns from every 120 minute pulse and 5 minute signal outcome, not only CurrencyAI-approved trades.</p><div class="era-pill">Verified era starts <b>5 Jul 2026 · 21:00 UTC</b></div><div class="era-pill">Rolling memory <b>last 50 samples per currency side</b></div></div>
-  <div class="main-layout"><div class="wheel-card"><h3>Currency Pressure Network</h3><canvas id="wheelCanvas" width="620" height="620"></canvas><div class="wheel-footer"><span class="wf-updated" id="lastUpdated">Waiting for data...</span><span class="wf-fg" id="fgScore"></span></div></div><div class="sidebar"><div class="card"><h3>Market Observations</h3><ul class="obs-list" id="obsList"><li>Waiting for verified-era outcomes</li></ul></div><div class="card"><h3>Wheel Logic</h3><div style="font-size:11px;color:var(--text-dim);line-height:2"><div>Node score = long WR − short WR</div><div>Current score uses last 50 samples</div><div style="color:var(--green)">Green = currency strength</div><div style="color:var(--red)">Red = currency weakness</div><div style="margin-top:8px">Timeline shows the same score at prior timestamps.</div></div></div></div></div>
-  <div class="needles-section section"><h3>Individual Currency Scores</h3><div class="needles-grid" id="needlesGrid"><div class="small loading" style="grid-column:1/-1">Loading...</div></div></div>
-  <div class="section"><div class="section-title">Currency Pressure Over Time <span>score = long WR − short WR, each point capped at last 50 samples</span></div><div class="table-wrap"><table><thead><tr><th>Currency</th><th>Now</th><th>1h ago</th><th>4h ago</th><th>12h ago</th><th>Yesterday</th><th>Last week</th><th>Change</th><th>Samples now</th></tr></thead><tbody id="timelineRows"><tr><td colspan="9" style="text-align:center;color:var(--text-mute);padding:24px">Loading...</td></tr></tbody></table></div></div>
-  <div class="snap-section section"><h3>Current Currency State</h3><div class="table-wrap"><table><thead><tr><th>Currency</th><th>Long WR</th><th>Short WR</th><th>Score</th><th>Samples</th></tr></thead><tbody id="stateRows"><tr><td colspan="5" style="text-align:center;color:var(--text-mute);padding:24px">Loading...</td></tr></tbody></table></div></div>
-  <div class="disclaimer">This page uses collector-tracked verified-era outcomes from the public signal feed. Scores are adaptive state indicators, not financial advice or a guarantee of future performance.</div>
-</div>
-<script>
-const SUPABASE_URL='https://nmfsqgqwjihpudiqnuwh.supabase.co';
-const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
-const HDR={apikey:SUPABASE_ANON,Authorization:'Bearer '+SUPABASE_ANON};
-const VERIFIED_START='2026-07-05T21:00:00Z';
-const SPECIAL={XAUUSD:['XAU','USD'],XAGUSD:['XAG','USD'],BTCUSD:['BTC','USD'],ETHUSD:['ETH','USD'],NAS100:['NAS','USD']};
-const ASSETS=['USD','EUR','GBP','JPY','AUD','CAD','CHF','NZD','XAU','XAG','BTC','ETH'];
-const PAIRS=[['EUR','USD'],['GBP','USD'],['AUD','USD'],['NZD','USD'],['USD','CAD'],['USD','CHF'],['USD','JPY'],['EUR','GBP'],['EUR','JPY'],['GBP','JPY'],['AUD','JPY'],['CAD','JPY'],['XAU','USD'],['XAG','USD'],['BTC','USD'],['ETH','USD']];
-const LOOKBACK=50, MIN=3;
-const WINDOWS=[['now',0],['1h',1],['4h',4],['12h',12],['1d',24],['7d',168]];
-const canvas=document.getElementById('wheelCanvas'),ctx=canvas.getContext('2d');
-const W=canvas.width,H=canvas.height,CX=W/2,CY=H/2,RING_R=225,NODE_R=30;let latest={},timeline={},rawRows=[];
-function getCcys(sym){const sp=SPECIAL[sym];return sp?sp:[sym.slice(0,3),sym.slice(3)]}
-function scoreColor(s,a=1){if(Math.abs(s)<.05)return `rgba(120,135,145,${a})`;return s>0?`rgba(0,230,170,${a})`:`rgba(255,96,96,${a})`}
-function pos(i){const ang=i/ASSETS.length*Math.PI*2-Math.PI/2;return {x:CX+Math.cos(ang)*RING_R,y:CY+Math.sin(ang)*RING_R,ang}}
-function calcFG(scores){const safe=['USD','JPY','CHF','XAU','XAG'],risk=['AUD','NZD','CAD','GBP','EUR'];const avg=a=>a.reduce((s,c)=>s+(scores[c]?.score||0),0)/a.length;return avg(risk)-avg(safe)}
-function nval(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null}
-function pct(w){return w==null?'—':(w*100).toFixed(0)+'%'}
-function fmtScore(s){if(s==null)return '—';return (s>=0?'+':'')+(s*100).toFixed(0)}
-function scoreClass(s){if(s==null)return 'trend-flat';return s>.05?'trend-up':s<-.05?'trend-down':'trend-flat'}
-function buildScores(rows, cutoffMs=Date.now()){
-  const long={},short={};
-  rows.filter(r=>r.ts<=cutoffMs).forEach(row=>{
-    const [base,quote]=getCcys(row.sym);
-    [base,quote].forEach(c=>{long[c]||(long[c]=[]);short[c]||(short[c]=[])});
-    if(row.dir==='buy'){
-      long[base].push(row.win);
-      short[quote].push(row.win);
-    }else{
-      short[base].push(row.win);
-      long[quote].push(row.win);
-    }
-  });
-  const scores={};
-  ASSETS.forEach(c=>{
-    const l=(long[c]||[]).slice(-LOOKBACK),s=(short[c]||[]).slice(-LOOKBACK);
-    const lw=l.length>=MIN?l.filter(Boolean).length/l.length:null;
-    const sw=s.length>=MIN?s.filter(Boolean).length/s.length:null;
-    const score=(lw!=null&&sw!=null)?lw-sw:lw!=null?lw-.5:sw!=null?.5-sw:0;
-    scores[c]={longWR:lw,shortWR:sw,longTotal:l.length,shortTotal:s.length,score};
-  });
-  return scores;
-}
-async function loadData(){
-  try{
-    const url=SUPABASE_URL+'/rest/v1/public_signal_feed?select=sym,tf,dir,r_result,shadow_r_result,display_r_result,created_at,display_closed_at&created_at=gte.'+encodeURIComponent(VERIFIED_START)+'&tf=in.(1min,5min)&order=created_at.asc&limit=5000';
-    const res=await fetch(url,{headers:HDR});
-    if(!res.ok){document.getElementById('lastUpdated').textContent='Data error: '+res.status;return}
-    const raw=await res.json();
-    rawRows=raw.map(x=>{
-      const displayR=nval(x.display_r_result), realR=nval(x.r_result), shadowR=nval(x.shadow_r_result);
-      const r=displayR!==null?displayR:(realR!==null?realR:shadowR);
-      const ts=Date.parse(x.display_closed_at || x.created_at);
-      return {...x,r,win:r>0,ts};
-    }).filter(x=>Number.isFinite(x.r)&&Number.isFinite(x.ts));
-    if(!rawRows.length){document.getElementById('lastUpdated').textContent='No verified-era outcomes yet';return}
-    const now=Date.now();
-    latest=buildScores(rawRows,now);
-    timeline={};
-    WINDOWS.forEach(([label,hours])=>{timeline[label]=buildScores(rawRows, now-hours*3600*1000)});
-    const fg=calcFG(latest); window._fg=fg;
-    document.getElementById('lastUpdated').textContent='Updated from '+rawRows.length+' collector-tracked outcomes';
-    const fgEl=document.getElementById('fgScore');fgEl.textContent=fg>.2?'GREED / RISK ON':fg<-.2?'FEAR / RISK OFF':'NEUTRAL';fgEl.style.color=fg>.2?'var(--green)':fg<-.2?'var(--red)':'var(--text-mute)';
-    renderNeedles(latest);renderTable(latest);renderTimeline();renderObs(latest,fg);
-  }catch(e){document.getElementById('lastUpdated').textContent='Data error';console.error(e)}
-}
-function renderObs(scores,fg){
-  const entries=Object.entries(scores).sort((a,b)=>Math.abs(b[1].score)-Math.abs(a[1].score));
-  const top=entries.slice(0,4).map(([c,s])=>`${c} ${s.score>=0?'strength':'weakness'} ${fmtScore(s.score)}`).join(', ');
-  const movers=ASSETS.map(c=>({c,delta:(timeline.now?.[c]?.score??0)-(timeline['4h']?.[c]?.score??0)})).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)).slice(0,3).map(x=>`${x.c} ${x.delta>=0?'+':''}${(x.delta*100).toFixed(0)}`).join(', ');
-  document.getElementById('obsList').innerHTML=[`Wheel sentiment: ${fg>.2?'risk on / greed':fg<-.2?'risk off / fear':'neutral'}`,top?`Largest pressure: ${top}`:'Waiting for more samples',movers?`Biggest 4h movers: ${movers}`:'Waiting for movement history',`Rolling lookback: last ${LOOKBACK} samples per currency side`].map(x=>`<li>${x}</li>`).join('')
-}
-function renderNeedles(scores){
-  document.getElementById('needlesGrid').innerHTML=ASSETS.map(c=>{const s=scores[c]||{score:0};const v=Math.max(-1,Math.min(1,s.score));const width=Math.abs(v)*100;return `<div class="needle-cell"><div class="nc-name">${c}</div><div class="bar"><span style="width:${width}%;background:${scoreColor(v,.9)}"></span></div><div class="score" style="color:${scoreColor(v,1)}">${fmtScore(v)}</div><div class="small">L ${pct(s.longWR)} · S ${pct(s.shortWR)}</div></div>`}).join('')
-}
-function renderTable(scores){
-  document.getElementById('stateRows').innerHTML=ASSETS.map(c=>{const s=scores[c];return `<tr><td>${c}</td><td>${pct(s.longWR)}</td><td>${pct(s.shortWR)}</td><td class="${scoreClass(s.score)}">${fmtScore(s.score)}</td><td>${s.longTotal}L · ${s.shortTotal}S</td></tr>`}).join('')
-}
-function renderTimeline(){
-  document.getElementById('timelineRows').innerHTML=ASSETS.map(c=>{
-    const now=timeline.now?.[c]?.score??null;
-    const h1=timeline['1h']?.[c]?.score??null, h4=timeline['4h']?.[c]?.score??null, h12=timeline['12h']?.[c]?.score??null, d1=timeline['1d']?.[c]?.score??null, d7=timeline['7d']?.[c]?.score??null;
-    const delta=h4==null||now==null?null:now-h4;
-    const sample=timeline.now?.[c]||{longTotal:0,shortTotal:0};
-    const cell=v=>`<span class="state-pill ${scoreClass(v)}">${fmtScore(v)}</span>`;
-    return `<tr><td><b>${c}</b></td><td>${cell(now)}</td><td>${cell(h1)}</td><td>${cell(h4)}</td><td>${cell(h12)}</td><td>${cell(d1)}</td><td>${cell(d7)}</td><td class="${scoreClass(delta)}">${delta==null?'—':(delta>=0?'+':'')+(delta*100).toFixed(0)}</td><td>${sample.longTotal}L · ${sample.shortTotal}S</td></tr>`;
-  }).join('')
-}
-function drawWheel(scores,fg){
-  ctx.clearRect(0,0,W,H);const bg=ctx.createRadialGradient(CX,CY,0,CX,CY,RING_R*1.3);bg.addColorStop(0,fg>.2?'rgba(0,230,170,.04)':fg<-.2?'rgba(255,96,96,.04)':'rgba(1,160,184,.03)');bg.addColorStop(1,'transparent');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);const ps=ASSETS.map((_,i)=>pos(i));
-  PAIRS.forEach(([a,b])=>{const ai=ASSETS.indexOf(a),bi=ASSETS.indexOf(b);if(ai<0||bi<0)return;const pa=ps[ai],pb=ps[bi];const score=((scores[a]?.score||0)-(scores[b]?.score||0));ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.strokeStyle=scoreColor(score,.18);ctx.lineWidth=1+Math.min(3,Math.abs(score)*4);ctx.stroke()});
-  ASSETS.forEach((c,i)=>{const p=ps[i],s=scores[c]||{score:0},r=NODE_R+Math.abs(s.score)*12;const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*2.5);g.addColorStop(0,scoreColor(s.score,.22));g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r*2.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle='rgba(13,16,23,.95)';ctx.fill();ctx.strokeStyle=scoreColor(s.score,.9);ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#EAFDFC';ctx.font='800 13px Inter';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(c,p.x,p.y);ctx.font='700 10px IBM Plex Mono';ctx.fillStyle=scoreColor(s.score,.9);ctx.fillText(fmtScore(s.score),p.x,p.y+r+13)})
-}
-function animate(){drawWheel(latest,window._fg||0);requestAnimationFrame(animate)}
-loadData();setInterval(loadData,60000);animate();
-</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fear & Greed Wheel - Perfect Entry</title>
+    <link rel="icon" href="assets/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0b0d10;
+        --bg2: #0f1216;
+        --bg3: #131720;
+        --teal: #01a0b8;
+        --teal-dark: #015662;
+        --text: #eafdfc;
+        --text-dim: rgba(234, 253, 252, 0.6);
+        --text-mute: rgba(234, 253, 252, 0.35);
+        --border: rgba(255, 255, 255, 0.08);
+        --orange: #ff6a2a;
+        --amber: #ffb700;
+        --green: #00e6aa;
+        --red: #ff9060;
+        --hard-red: #ff6060;
+        --mono: "IBM Plex Mono", monospace;
+      }
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        overflow-x: hidden;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        background: rgba(11, 13, 16, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 20px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 800;
+        font-size: 14px;
+      }
+      .nav-logo img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+      .nav-links {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: auto;
+      }
+      .nav-links a {
+        color: var(--text-dim);
+        transition: color 0.15s;
+      }
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--orange);
+      }
+      .nav-cta {
+        padding: 7px 16px;
+        border-radius: 10px;
+        border: 2px solid var(--teal-dark);
+        background: rgba(1, 86, 98, 0.15);
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .nav-cta:hover {
+        background: rgba(1, 86, 98, 0.35);
+      }
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+      }
+      .page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      h1 {
+        font-size: clamp(24px, 4vw, 42px);
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        color: var(--text-dim);
+        font-size: clamp(13px, 1.5vw, 16px);
+        line-height: 1.6;
+        max-width: 900px;
+        margin-bottom: 18px;
+      }
+      .era-pill {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        border: 1px solid rgba(1, 160, 184, 0.25);
+        background: rgba(1, 160, 184, 0.08);
+        border-radius: 999px;
+        color: var(--text-dim);
+        font: 600 11px var(--mono);
+        margin: 0 8px 24px 0;
+      }
+      .era-pill b {
+        color: var(--teal);
+      }
+      .section {
+        margin-bottom: 34px;
+      }
+      .section-title {
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .section-title span {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-mute);
+        font-family: var(--mono);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th {
+        padding: 8px 12px;
+        text-align: left;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-mute);
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .table-wrap {
+        overflow-x: auto;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 10px;
+      }
+      .small {
+        font-size: 10px;
+        color: var(--text-mute);
+      }
+      .disclaimer {
+        font-size: 11px;
+        color: var(--text-mute);
+        line-height: 1.7;
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+        margin-top: 40px;
+      }
+      .loading {
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+      .main-layout {
+        display: grid;
+        grid-template-columns: 1fr 310px;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+      @media (max-width: 1000px) {
+        .main-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .wheel-card {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .wheel-card h3,
+      .card h3,
+      .needles-section h3,
+      .snap-section h3 {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-mute);
+        margin-bottom: 16px;
+        align-self: flex-start;
+      }
+      #wheelCanvas {
+        width: 100%;
+        max-width: 620px;
+        height: min(620px, 90vw);
+        cursor: crosshair;
+      }
+      .wheel-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+      .wf-updated,
+      .wf-fg {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card,
+      .needles-section,
+      .snap-section {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+      }
+      .obs-list {
+        list-style: none;
+      }
+      .obs-list li {
+        font-size: 12px;
+        color: var(--text-dim);
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        line-height: 1.5;
+      }
+      .obs-list li::before {
+        content: "→ ";
+        color: var(--teal);
+      }
+      .needles-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      @media (max-width: 700px) {
+        .needles-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      .needle-cell {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+      }
+      .nc-name {
+        font-size: 12px;
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+      .bar {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        overflow: hidden;
+        margin: 6px 0;
+      }
+      .bar span {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+      }
+      .score {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .trend-up {
+        color: var(--green);
+      }
+      .trend-down {
+        color: var(--red);
+      }
+      .trend-flat {
+        color: var(--text-mute);
+      }
+      .state-pill {
+        display: inline-block;
+        min-width: 52px;
+        text-align: center;
+        padding: 3px 7px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-inner">
+        <a href="index.html" class="nav-logo"
+          ><img src="assets/logo.png" alt="Perfect Entry" /><span
+            >Perfect Entry</span
+          ></a
+        >
+        <div class="nav-links">
+          <a href="index.html">Home</a><a href="signals.html">Live Signals</a
+          ><a href="currencyai.html">Currency AI</a
+          ><a href="counterfactual.html">Counterfactual</a
+          ><a href="network.html">Network</a
+          ><a href="wheel.html" class="active">Fear & Greed</a
+          ><a href="ledger.html">Ledger</a>
+        </div>
+        <a
+          href="https://whop.com/perfect-entry/"
+          target="_blank"
+          class="nav-cta"
+          >Join Now</a
+        >
+      </div>
+    </nav>
+    <div class="page">
+      <div class="page-header">
+        <h1>Fear & Greed Wheel</h1>
+        <p class="subtitle">
+          Market-state wheel powered by the full verified-era collector stream.
+          It learns from every final M1 and M5 signal outcome, not only
+          CurrencyAI-approved trades. Open trades are excluded.
+        </p>
+        <div class="era-pill">
+          Verified era starts <b>5 Jul 2026 · 21:00 UTC</b>
+        </div>
+        <div class="era-pill">
+          Rolling memory <b>last 50 samples per currency side</b>
+        </div>
+      </div>
+      <div class="main-layout">
+        <div class="wheel-card">
+          <h3>Currency Pressure Network</h3>
+          <canvas id="wheelCanvas" width="620" height="620"></canvas>
+          <div class="wheel-footer">
+            <span class="wf-updated" id="lastUpdated">Waiting for data...</span
+            ><span class="wf-fg" id="fgScore"></span>
+          </div>
+        </div>
+        <div class="sidebar">
+          <div class="card">
+            <h3>Market Observations</h3>
+            <ul class="obs-list" id="obsList">
+              <li>Waiting for verified-era outcomes</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Wheel Logic</h3>
+            <div
+              style="font-size: 11px; color: var(--text-dim); line-height: 2"
+            >
+              <div>Node score = long WR − short WR</div>
+              <div>Current score uses last 50 samples</div>
+              <div style="color: var(--green)">Green = currency strength</div>
+              <div style="color: var(--red)">Red = currency weakness</div>
+              <div style="margin-top: 8px">
+                Timeline shows the same score at prior timestamps.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="needles-section section">
+        <h3>Individual Currency Scores</h3>
+        <div class="needles-grid" id="needlesGrid">
+          <div class="small loading" style="grid-column: 1/-1">Loading...</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          Currency Pressure Over Time
+          <span
+            >score = long WR − short WR, each point capped at last 50
+            samples</span
+          >
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Currency</th>
+                <th>Now</th>
+                <th>1h ago</th>
+                <th>4h ago</th>
+                <th>12h ago</th>
+                <th>Yesterday</th>
+                <th>Last week</th>
+                <th>Change</th>
+                <th>Samples now</th>
+              </tr>
+            </thead>
+            <tbody id="timelineRows">
+              <tr>
+                <td
+                  colspan="9"
+                  style="
+                    text-align: center;
+                    color: var(--text-mute);
+                    padding: 24px;
+                  "
+                >
+                  Loading...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="snap-section section">
+        <h3>Current Currency State</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Currency</th>
+                <th>Long WR</th>
+                <th>Short WR</th>
+                <th>Score</th>
+                <th>Samples</th>
+              </tr>
+            </thead>
+            <tbody id="stateRows">
+              <tr>
+                <td
+                  colspan="5"
+                  style="
+                    text-align: center;
+                    color: var(--text-mute);
+                    padding: 24px;
+                  "
+                >
+                  Loading...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="disclaimer">
+        This page uses collector-tracked verified-era outcomes from the public
+        signal feed. Scores are adaptive state indicators, not financial advice
+        or a guarantee of future performance.
+      </div>
+    </div>
+    <script>
+      const SUPABASE_URL = "https://nmfsqgqwjihpudiqnuwh.supabase.co";
+      const SUPABASE_ANON =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I";
+      const HDR = {
+        apikey: SUPABASE_ANON,
+        Authorization: "Bearer " + SUPABASE_ANON,
+      };
+      const VERIFIED_START = "2026-07-05T21:00:00Z";
+      const SPECIAL = {
+        XAUUSD: ["XAU", "USD"],
+        XAGUSD: ["XAG", "USD"],
+        BTCUSD: ["BTC", "USD"],
+        ETHUSD: ["ETH", "USD"],
+        NAS100: ["NAS", "USD"],
+      };
+      const ASSETS = [
+        "USD",
+        "EUR",
+        "GBP",
+        "JPY",
+        "AUD",
+        "CAD",
+        "CHF",
+        "NZD",
+        "XAU",
+        "XAG",
+        "BTC",
+        "ETH",
+      ];
+      const PAIRS = [
+        ["EUR", "USD"],
+        ["GBP", "USD"],
+        ["AUD", "USD"],
+        ["NZD", "USD"],
+        ["USD", "CAD"],
+        ["USD", "CHF"],
+        ["USD", "JPY"],
+        ["EUR", "GBP"],
+        ["EUR", "JPY"],
+        ["GBP", "JPY"],
+        ["AUD", "JPY"],
+        ["CAD", "JPY"],
+        ["XAU", "USD"],
+        ["XAG", "USD"],
+        ["BTC", "USD"],
+        ["ETH", "USD"],
+      ];
+      const LOOKBACK = 50,
+        MIN = 3;
+      const WINDOWS = [
+        ["now", 0],
+        ["1h", 1],
+        ["4h", 4],
+        ["12h", 12],
+        ["1d", 24],
+        ["7d", 168],
+      ];
+      const canvas = document.getElementById("wheelCanvas"),
+        ctx = canvas.getContext("2d");
+      const W = canvas.width,
+        H = canvas.height,
+        CX = W / 2,
+        CY = H / 2,
+        RING_R = 225,
+        NODE_R = 30;
+      let latest = {},
+        timeline = {},
+        rawRows = [],
+        loadRunning = false;
+      function getCcys(sym) {
+        const sp = SPECIAL[sym];
+        return sp ? sp : [sym.slice(0, 3), sym.slice(3)];
+      }
+      function scoreColor(s, a = 1) {
+        if (Math.abs(s) < 0.05) return `rgba(120,135,145,${a})`;
+        return s > 0 ? `rgba(0,230,170,${a})` : `rgba(255,96,96,${a})`;
+      }
+      function pos(i) {
+        const ang = (i / ASSETS.length) * Math.PI * 2 - Math.PI / 2;
+        return {
+          x: CX + Math.cos(ang) * RING_R,
+          y: CY + Math.sin(ang) * RING_R,
+          ang,
+        };
+      }
+      function calcFG(scores) {
+        const safe = ["USD", "JPY", "CHF", "XAU", "XAG"],
+          risk = ["AUD", "NZD", "CAD", "GBP", "EUR"];
+        const avg = (a) =>
+          a.reduce((s, c) => s + (scores[c]?.score || 0), 0) / a.length;
+        return avg(risk) - avg(safe);
+      }
+      function nval(v) {
+        if (v === null || v === undefined || v === "") return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      }
+      async function fetchAll(path, pageSize = 1000, maxRows = 50000) {
+        const all = [];
+        for (let offset = 0; offset < maxRows; offset += pageSize) {
+          const sep = path.includes("?") ? "&" : "?";
+          const res = await fetch(
+            SUPABASE_URL + `${path}${sep}offset=${offset}&limit=${pageSize}`,
+            { headers: HDR },
+          );
+          if (!res.ok) throw new Error(`public feed ${res.status}`);
+          const page = await res.json();
+          all.push(...page);
+          if (page.length < pageSize) break;
+        }
+        return all;
+      }
+      function pct(w) {
+        return w == null ? "—" : (w * 100).toFixed(0) + "%";
+      }
+      function fmtScore(s) {
+        if (s == null) return "—";
+        return (s >= 0 ? "+" : "") + (s * 100).toFixed(0);
+      }
+      function scoreClass(s) {
+        if (s == null) return "trend-flat";
+        return s > 0.05 ? "trend-up" : s < -0.05 ? "trend-down" : "trend-flat";
+      }
+      function buildScores(rows, cutoffMs = Date.now()) {
+        const long = {},
+          short = {};
+        rows
+          .filter((r) => r.ts <= cutoffMs)
+          .forEach((row) => {
+            const [base, quote] = getCcys(row.sym);
+            [base, quote].forEach((c) => {
+              long[c] || (long[c] = []);
+              short[c] || (short[c] = []);
+            });
+            if (row.dir === "buy") {
+              long[base].push(row.win);
+              short[quote].push(row.win);
+            } else {
+              short[base].push(row.win);
+              long[quote].push(row.win);
+            }
+          });
+        const scores = {};
+        ASSETS.forEach((c) => {
+          const l = (long[c] || []).slice(-LOOKBACK),
+            s = (short[c] || []).slice(-LOOKBACK);
+          const lw =
+            l.length >= MIN ? l.filter(Boolean).length / l.length : null;
+          const sw =
+            s.length >= MIN ? s.filter(Boolean).length / s.length : null;
+          const score =
+            lw != null && sw != null
+              ? lw - sw
+              : lw != null
+                ? lw - 0.5
+                : sw != null
+                  ? 0.5 - sw
+                  : 0;
+          scores[c] = {
+            longWR: lw,
+            shortWR: sw,
+            longTotal: l.length,
+            shortTotal: s.length,
+            score,
+          };
+        });
+        return scores;
+      }
+      async function loadData() {
+        if (loadRunning) return;
+        loadRunning = true;
+        try {
+          const path =
+            "/rest/v1/public_signal_feed?select=sym,tf,dir,r_result,shadow_r_result,display_r_result,created_at,display_closed_at,closed_at,shadow_closed_at&created_at=gte." +
+            encodeURIComponent(VERIFIED_START) +
+            "&tf=in.(1min,5min)&order=created_at.asc";
+          const raw = await fetchAll(path);
+          rawRows = raw
+            .map((x) => {
+              const closedAt =
+                x.display_closed_at ||
+                x.closed_at ||
+                x.shadow_closed_at ||
+                null;
+              const displayR = nval(x.display_r_result),
+                realR = nval(x.r_result),
+                shadowR = nval(x.shadow_r_result);
+              const r = !closedAt
+                ? null
+                : displayR !== null
+                  ? displayR
+                  : realR !== null
+                    ? realR
+                    : shadowR;
+              const ts = Date.parse(closedAt);
+              return { ...x, r, win: r > 0, ts };
+            })
+            .filter((x) => x.r !== null && Number.isFinite(x.ts));
+          if (!rawRows.length) {
+            document.getElementById("lastUpdated").textContent =
+              "No verified-era outcomes yet";
+            return;
+          }
+          const now = Date.now();
+          latest = buildScores(rawRows, now);
+          timeline = {};
+          WINDOWS.forEach(([label, hours]) => {
+            timeline[label] = buildScores(rawRows, now - hours * 3600 * 1000);
+          });
+          const fg = calcFG(latest);
+          window._fg = fg;
+          document.getElementById("lastUpdated").textContent =
+            "Updated from " + rawRows.length + " collector-tracked outcomes";
+          const fgEl = document.getElementById("fgScore");
+          fgEl.textContent =
+            fg > 0.2
+              ? "GREED / RISK ON"
+              : fg < -0.2
+                ? "FEAR / RISK OFF"
+                : "NEUTRAL";
+          fgEl.style.color =
+            fg > 0.2
+              ? "var(--green)"
+              : fg < -0.2
+                ? "var(--red)"
+                : "var(--text-mute)";
+          renderNeedles(latest);
+          renderTable(latest);
+          renderTimeline();
+          renderObs(latest, fg);
+        } catch (e) {
+          document.getElementById("lastUpdated").textContent = "Data error";
+          console.error(e);
+        } finally {
+          loadRunning = false;
+        }
+      }
+      function renderObs(scores, fg) {
+        const entries = Object.entries(scores).sort(
+          (a, b) => Math.abs(b[1].score) - Math.abs(a[1].score),
+        );
+        const top = entries
+          .slice(0, 4)
+          .map(
+            ([c, s]) =>
+              `${c} ${s.score >= 0 ? "strength" : "weakness"} ${fmtScore(s.score)}`,
+          )
+          .join(", ");
+        const movers = ASSETS.map((c) => ({
+          c,
+          delta:
+            (timeline.now?.[c]?.score ?? 0) - (timeline["4h"]?.[c]?.score ?? 0),
+        }))
+          .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+          .slice(0, 3)
+          .map(
+            (x) =>
+              `${x.c} ${x.delta >= 0 ? "+" : ""}${(x.delta * 100).toFixed(0)}`,
+          )
+          .join(", ");
+        document.getElementById("obsList").innerHTML = [
+          `Wheel sentiment: ${fg > 0.2 ? "risk on / greed" : fg < -0.2 ? "risk off / fear" : "neutral"}`,
+          top ? `Largest pressure: ${top}` : "Waiting for more samples",
+          movers
+            ? `Biggest 4h movers: ${movers}`
+            : "Waiting for movement history",
+          `Rolling lookback: last ${LOOKBACK} samples per currency side`,
+        ]
+          .map((x) => `<li>${x}</li>`)
+          .join("");
+      }
+      function renderNeedles(scores) {
+        document.getElementById("needlesGrid").innerHTML = ASSETS.map((c) => {
+          const s = scores[c] || { score: 0 };
+          const v = Math.max(-1, Math.min(1, s.score));
+          const width = Math.abs(v) * 100;
+          return `<div class="needle-cell"><div class="nc-name">${c}</div><div class="bar"><span style="width:${width}%;background:${scoreColor(v, 0.9)}"></span></div><div class="score" style="color:${scoreColor(v, 1)}">${fmtScore(v)}</div><div class="small">L ${pct(s.longWR)} · S ${pct(s.shortWR)}</div></div>`;
+        }).join("");
+      }
+      function renderTable(scores) {
+        document.getElementById("stateRows").innerHTML = ASSETS.map((c) => {
+          const s = scores[c];
+          return `<tr><td>${c}</td><td>${pct(s.longWR)}</td><td>${pct(s.shortWR)}</td><td class="${scoreClass(s.score)}">${fmtScore(s.score)}</td><td>${s.longTotal}L · ${s.shortTotal}S</td></tr>`;
+        }).join("");
+      }
+      function renderTimeline() {
+        document.getElementById("timelineRows").innerHTML = ASSETS.map((c) => {
+          const now = timeline.now?.[c]?.score ?? null;
+          const h1 = timeline["1h"]?.[c]?.score ?? null,
+            h4 = timeline["4h"]?.[c]?.score ?? null,
+            h12 = timeline["12h"]?.[c]?.score ?? null,
+            d1 = timeline["1d"]?.[c]?.score ?? null,
+            d7 = timeline["7d"]?.[c]?.score ?? null;
+          const delta = h4 == null || now == null ? null : now - h4;
+          const sample = timeline.now?.[c] || { longTotal: 0, shortTotal: 0 };
+          const cell = (v) =>
+            `<span class="state-pill ${scoreClass(v)}">${fmtScore(v)}</span>`;
+          return `<tr><td><b>${c}</b></td><td>${cell(now)}</td><td>${cell(h1)}</td><td>${cell(h4)}</td><td>${cell(h12)}</td><td>${cell(d1)}</td><td>${cell(d7)}</td><td class="${scoreClass(delta)}">${delta == null ? "—" : (delta >= 0 ? "+" : "") + (delta * 100).toFixed(0)}</td><td>${sample.longTotal}L · ${sample.shortTotal}S</td></tr>`;
+        }).join("");
+      }
+      function drawWheel(scores, fg) {
+        ctx.clearRect(0, 0, W, H);
+        const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, RING_R * 1.3);
+        bg.addColorStop(
+          0,
+          fg > 0.2
+            ? "rgba(0,230,170,.04)"
+            : fg < -0.2
+              ? "rgba(255,96,96,.04)"
+              : "rgba(1,160,184,.03)",
+        );
+        bg.addColorStop(1, "transparent");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+        const ps = ASSETS.map((_, i) => pos(i));
+        PAIRS.forEach(([a, b]) => {
+          const ai = ASSETS.indexOf(a),
+            bi = ASSETS.indexOf(b);
+          if (ai < 0 || bi < 0) return;
+          const pa = ps[ai],
+            pb = ps[bi];
+          const score = (scores[a]?.score || 0) - (scores[b]?.score || 0);
+          ctx.beginPath();
+          ctx.moveTo(pa.x, pa.y);
+          ctx.lineTo(pb.x, pb.y);
+          ctx.strokeStyle = scoreColor(score, 0.18);
+          ctx.lineWidth = 1 + Math.min(3, Math.abs(score) * 4);
+          ctx.stroke();
+        });
+        ASSETS.forEach((c, i) => {
+          const p = ps[i],
+            s = scores[c] || { score: 0 },
+            r = NODE_R + Math.abs(s.score) * 12;
+          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.5);
+          g.addColorStop(0, scoreColor(s.score, 0.22));
+          g.addColorStop(1, "transparent");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(13,16,23,.95)";
+          ctx.fill();
+          ctx.strokeStyle = scoreColor(s.score, 0.9);
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = "#EAFDFC";
+          ctx.font = "800 13px Inter";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(c, p.x, p.y);
+          ctx.font = "700 10px IBM Plex Mono";
+          ctx.fillStyle = scoreColor(s.score, 0.9);
+          ctx.fillText(fmtScore(s.score), p.x, p.y + r + 13);
+        });
+      }
+      function animate() {
+        drawWheel(latest, window._fg || 0);
+        requestAnimationFrame(animate);
+      }
+      loadData();
+      setInterval(loadData, 60000);
+      animate();
+    </script>
+  </body>
 </html>
