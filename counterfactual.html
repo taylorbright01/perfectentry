@@ -1,64 +1,900 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Counterfactual Verified Era — Perfect Entry</title><link rel="icon" href="assets/logo.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script><style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0b0d10;--bg2:#0f1216;--bg3:#131720;--teal:#01a0b8;--teal-dark:#015662;--text:#EAFDFC;--text-dim:rgba(234,253,252,0.6);--text-mute:rgba(234,253,252,0.35);--border:rgba(255,255,255,0.08);--orange:#FF6A2A;--amber:#ffb700;--green:#00e6aa;--red:#FF9060;--hard-red:#FF6060;--mono:'IBM Plex Mono',monospace}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}a{text-decoration:none;color:inherit}
-nav{position:sticky;top:0;z-index:200;background:rgba(11,13,16,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:10px 20px}.nav-logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:14px}.nav-logo img{width:24px;height:24px;object-fit:contain}.nav-links{display:flex;gap:16px;font-size:12px;font-weight:600;margin-left:auto}.nav-links a{color:var(--text-dim);transition:color .15s}.nav-links a:hover,.nav-links a.active{color:var(--orange)}.nav-cta{padding:7px 16px;border-radius:10px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);font-weight:800;font-size:12px;white-space:nowrap}.nav-cta:hover{background:rgba(1,86,98,.35)}@media(max-width:768px){.nav-links{display:none}}
-.page{max-width:1400px;margin:0 auto;padding:32px 20px 64px}h1{font-size:clamp(24px,4vw,42px);font-weight:900;margin-bottom:8px}.subtitle{color:var(--text-dim);font-size:clamp(13px,1.5vw,16px);line-height:1.6;max-width:850px;margin-bottom:24px}.era-pill{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid rgba(1,160,184,.25);background:rgba(1,160,184,.08);border-radius:999px;color:var(--text-dim);font:600 11px var(--mono);margin-bottom:24px}.era-pill b{color:var(--teal)}
-.hero-stats,.compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:32px}.hero-stat,.compare-card,.card,.chart-card,.section-card{border:1px solid var(--border);border-radius:14px;background:var(--bg2);padding:18px 16px}.hero-stat{text-align:center}.label,.cc-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute);margin-bottom:6px}.val,.s-val{font-size:clamp(19px,3vw,28px);font-weight:900;font-family:var(--mono)}.sub{font-size:10px;color:var(--text-mute);margin-top:4px}.val-green{color:var(--green)}.val-teal{color:var(--teal)}.val-amber{color:var(--amber)}.val-red{color:var(--red)}
-.section{margin-bottom:40px}.section-title{font-size:16px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}.section-title span{font-size:11px;font-weight:600;color:var(--text-mute);font-family:var(--mono)}.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card h3,.section-card h3{font-size:13px;font-weight:700;color:var(--text-mute);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}.metric-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}.metric-row:last-child{border:none}.metric-row .name{font-size:12px;color:var(--text-dim)}.metric-row .value{font-size:13px;font-weight:800;font-family:var(--mono)}.chart-wrap{position:relative;height:280px}
-table{width:100%;border-collapse:collapse;font-size:12px}th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute);border-bottom:1px solid var(--border)}td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:12px}tr:hover td{background:rgba(255,255,255,.02)}.table-wrap{overflow-x:auto}.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:.06em;font-family:var(--mono)}.badge-g{background:rgba(0,230,170,.12);color:var(--green)}.badge-r{background:rgba(255,96,96,.12);color:var(--hard-red)}.badge-a{background:rgba(255,183,0,.12);color:var(--amber)}
-.heatmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}.ccy-cell{border-radius:10px;padding:12px 8px;text-align:center;border:1px solid var(--border);background:rgba(255,255,255,.03)}.ccy-name{font-size:13px;font-weight:900;margin-bottom:5px}.ccy-row{display:flex;justify-content:space-between;font:700 10px var(--mono);margin:3px 0}.small{font-size:10px;color:var(--text-mute)}.disclaimer{font-size:11px;color:var(--text-mute);line-height:1.7;border-top:1px solid var(--border);padding-top:20px;margin-top:40px}.loading{animation:pulse 1.5s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@media(max-width:600px){.page{padding:20px 14px 48px}.chart-wrap{height:220px}}
-.compare-card.highlight{border-color:rgba(0,230,170,.3);background:rgba(0,230,170,.04)}.compare-card.dimmed{border-color:rgba(255,96,96,.2);background:rgba(255,96,96,.03)}.compare-card.delta{border-color:rgba(255,183,0,.3);background:rgba(255,183,0,.04)}.cc-stat{margin-bottom:12px}.cc-stat .s-label{font-size:10px;color:var(--text-mute);margin-bottom:3px}.footnote{font-size:11px;color:var(--text-mute);font-family:var(--mono);margin-top:8px}</style></head><body><nav><div class="nav-inner"><a href="index.html" class="nav-logo"><img src="assets/logo.png" alt="Perfect Entry"><span>Perfect Entry</span></a><div class="nav-links"><a href="index.html">Home</a><a href="signals.html">Live Signals</a><a href="currencyai.html" class="">Currency AI</a><a href="counterfactual.html" class="active">Counterfactual</a><a href="network.html" class="">Network</a><a href="wheel.html" class="">Fear & Greed</a><a href="ledger.html">Ledger</a></div><a href="https://whop.com/perfect-entry/" target="_blank" class="nav-cta">Join Now</a></div></nav><div class="page"><h1>Counterfactual Analysis — Verified Era</h1><p class="subtitle">What happened to the signals CurrencyAI rejected? This page starts from the rebuilt Timed Pulse era and compares approved Timed Pulse and 5 minute model results against the full matching raw signal stream tracked through shadow execution.</p><div class="era-pill">Verified era starts <b>5 Jul 2026 · 21:00 UTC</b></div><div class="compare-grid"><div class="compare-card highlight"><div class="cc-label">With CurrencyAI</div><div class="cc-stat"><div class="s-label">W / L</div><div class="s-val val-green" id="ai-wl">—</div></div><div class="cc-stat"><div class="s-label">Total R</div><div class="s-val val-green" id="ai-r">—</div></div><div class="cc-stat"><div class="s-label">Profit Factor</div><div class="s-val val-teal" id="ai-pf">—</div></div><div class="cc-stat"><div class="s-label">Win Rate</div><div class="s-val" id="ai-wr">—</div></div><div class="cc-stat"><div class="s-label">Max Drawdown</div><div class="s-val val-amber" id="ai-dd">—</div></div></div><div class="compare-card dimmed"><div class="cc-label">Raw signal stream</div><div class="cc-stat"><div class="s-label">W / L</div><div class="s-val" id="raw-wl">—</div></div><div class="cc-stat"><div class="s-label">Total R</div><div class="s-val" id="raw-r">—</div></div><div class="cc-stat"><div class="s-label">Profit Factor</div><div class="s-val val-teal" id="raw-pf">—</div></div><div class="cc-stat"><div class="s-label">Win Rate</div><div class="s-val" id="raw-wr">—</div></div><div class="cc-stat"><div class="s-label">Max Drawdown</div><div class="s-val val-amber" id="raw-dd">—</div></div></div><div class="compare-card delta"><div class="cc-label">Filter value</div><div class="cc-stat"><div class="s-label">R saved / lost</div><div class="s-val" id="delta-r">—</div></div><div class="cc-stat"><div class="s-label">PF improvement</div><div class="s-val" id="delta-pf">—</div></div><div class="cc-stat"><div class="s-label">WR improvement</div><div class="s-val" id="delta-wr">—</div></div><div class="cc-stat"><div class="s-label">DD improvement</div><div class="s-val" id="delta-dd">—</div></div><div class="cc-stat"><div class="s-label">Rejected signals tracked</div><div class="s-val val-amber" id="delta-filtered">—</div></div></div></div><div class="section"><div class="section-title">Equity Curve Comparison <span>approved vs full raw stream</span></div><div class="chart-card"><div class="chart-wrap"><canvas id="equityChart"></canvas></div></div></div><div class="section"><div class="section-title">Week by Week <span>filter vs no filter</span></div><div class="card table-wrap" style="padding:0"><table><thead><tr><th>Week</th><th>AI R</th><th>Raw R</th><th>Delta</th><th>AI PF</th><th>Raw PF</th><th>AI WR</th><th>Raw WR</th></tr></thead><tbody id="weekBody"><tr><td colspan="8" style="text-align:center;color:var(--text-mute);padding:24px">Loading...</td></tr></tbody></table></div></div><div class="section"><div class="section-title">Rejected Signals <span>what CurrencyAI blocked</span></div><div class="card table-wrap" style="padding:0"><table><thead><tr><th>Pair</th><th>W</th><th>L</th><th>WR</th><th>R</th><th>PF</th><th>Verdict</th></tr></thead><tbody id="suppressedBody"><tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">Loading...</td></tr></tbody></table></div><div class="footnote">Rejected rows use shadow_r_result. Approved rows use real r_result where available, otherwise collector shadow_r_result while the real copier is off. Legacy pre-5 July data is excluded.</div></div><div class="section"><div class="section-title">Day of Week <span>filter value by session day</span></div><div class="card table-wrap" style="padding:0"><table><thead><tr><th>Day</th><th>AI R</th><th>Raw R</th><th>Delta</th><th>AI PF</th><th>Raw PF</th><th>Rejected</th></tr></thead><tbody id="dowBody"><tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">Loading...</td></tr></tbody></table></div></div></div><script>
-const SUPABASE_URL='https://nmfsqgqwjihpudiqnuwh.supabase.co', SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I', HDR={apikey:SUPABASE_ANON,Authorization:'Bearer '+SUPABASE_ANON}, VERIFIED_START='2026-07-05T21:00:00Z'; let equityChart=null; function fmtR(r){r=Number(r||0);return (r>=0?'+':'')+r.toFixed(1)+'R'} function fmtPct(n){return Number(n||0).toFixed(1)+'%'} function fmtPFNum(p){return !Number.isFinite(p)?'—':p>=99?'∞':p.toFixed(3)} function metrics(rs){const vals=rs.map(r=>Number(r.r)).filter(Number.isFinite); if(!vals.length)return {w:0,l:0,r:0,pf:0,wr:0,dd:0,curve:[0],n:0}; const w=vals.filter(v=>v>0).length,l=vals.length-w,total=vals.reduce((a,b)=>a+b,0),gw=vals.filter(v=>v>0).reduce((a,b)=>a+b,0),gl=Math.abs(vals.filter(v=>v<=0).reduce((a,b)=>a+b,0)); let eq=0,peak=0,dd=0,curve=[0]; vals.forEach(v=>{eq+=v;curve.push(Number(eq.toFixed(4)));if(eq>peak)peak=eq;if(eq-peak<dd)dd=eq-peak}); return {w,l,r:total,pf:gl>0?gw/gl:gw>0?99:0,wr:w/vals.length*100,dd,curve,n:vals.length}} async function fetchSb(path){const r=await fetch(SUPABASE_URL+path,{headers:HDR}); if(!r.ok) throw new Error(await r.text()); return r.json()}
-function nval(v){
-  if(v === null || v === undefined || v === '') return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Counterfactual Verified Era — Perfect Entry</title>
+    <link rel="icon" href="assets/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0b0d10;
+        --bg2: #0f1216;
+        --bg3: #131720;
+        --teal: #01a0b8;
+        --teal-dark: #015662;
+        --text: #eafdfc;
+        --text-dim: rgba(234, 253, 252, 0.6);
+        --text-mute: rgba(234, 253, 252, 0.35);
+        --border: rgba(255, 255, 255, 0.08);
+        --orange: #ff6a2a;
+        --amber: #ffb700;
+        --green: #00e6aa;
+        --red: #ff9060;
+        --hard-red: #ff6060;
+        --mono: "IBM Plex Mono", monospace;
+      }
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        overflow-x: hidden;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        background: rgba(11, 13, 16, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 20px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 800;
+        font-size: 14px;
+      }
+      .nav-logo img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+      .nav-links {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: auto;
+      }
+      .nav-links a {
+        color: var(--text-dim);
+        transition: color 0.15s;
+      }
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--orange);
+      }
+      .nav-cta {
+        padding: 7px 16px;
+        border-radius: 10px;
+        border: 2px solid var(--teal-dark);
+        background: rgba(1, 86, 98, 0.15);
+        font-weight: 800;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .nav-cta:hover {
+        background: rgba(1, 86, 98, 0.35);
+      }
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+      }
+      .page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      h1 {
+        font-size: clamp(24px, 4vw, 42px);
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        color: var(--text-dim);
+        font-size: clamp(13px, 1.5vw, 16px);
+        line-height: 1.6;
+        max-width: 850px;
+        margin-bottom: 24px;
+      }
+      .era-pill {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        border: 1px solid rgba(1, 160, 184, 0.25);
+        background: rgba(1, 160, 184, 0.08);
+        border-radius: 999px;
+        color: var(--text-dim);
+        font: 600 11px var(--mono);
+        margin-bottom: 24px;
+      }
+      .era-pill b {
+        color: var(--teal);
+      }
+      .hero-stats,
+      .compare-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 32px;
+      }
+      .hero-stat,
+      .compare-card,
+      .card,
+      .chart-card,
+      .section-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--bg2);
+        padding: 18px 16px;
+      }
+      .hero-stat {
+        text-align: center;
+      }
+      .label,
+      .cc-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-mute);
+        margin-bottom: 6px;
+      }
+      .val,
+      .s-val {
+        font-size: clamp(19px, 3vw, 28px);
+        font-weight: 900;
+        font-family: var(--mono);
+      }
+      .sub {
+        font-size: 10px;
+        color: var(--text-mute);
+        margin-top: 4px;
+      }
+      .val-green {
+        color: var(--green);
+      }
+      .val-teal {
+        color: var(--teal);
+      }
+      .val-amber {
+        color: var(--amber);
+      }
+      .val-red {
+        color: var(--red);
+      }
+      .section {
+        margin-bottom: 40px;
+      }
+      .section-title {
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .section-title span {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-mute);
+        font-family: var(--mono);
+      }
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      .card h3,
+      .section-card h3 {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-mute);
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .metric-row:last-child {
+        border: none;
+      }
+      .metric-row .name {
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      .metric-row .value {
+        font-size: 13px;
+        font-weight: 800;
+        font-family: var(--mono);
+      }
+      .chart-wrap {
+        position: relative;
+        height: 280px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th {
+        padding: 8px 12px;
+        text-align: left;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-mute);
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        font-family: var(--mono);
+      }
+      .badge-g {
+        background: rgba(0, 230, 170, 0.12);
+        color: var(--green);
+      }
+      .badge-r {
+        background: rgba(255, 96, 96, 0.12);
+        color: var(--hard-red);
+      }
+      .badge-a {
+        background: rgba(255, 183, 0, 0.12);
+        color: var(--amber);
+      }
+      .heatmap {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+        gap: 8px;
+      }
+      .ccy-cell {
+        border-radius: 10px;
+        padding: 12px 8px;
+        text-align: center;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .ccy-name {
+        font-size: 13px;
+        font-weight: 900;
+        margin-bottom: 5px;
+      }
+      .ccy-row {
+        display: flex;
+        justify-content: space-between;
+        font: 700 10px var(--mono);
+        margin: 3px 0;
+      }
+      .small {
+        font-size: 10px;
+        color: var(--text-mute);
+      }
+      .disclaimer {
+        font-size: 11px;
+        color: var(--text-mute);
+        line-height: 1.7;
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+        margin-top: 40px;
+      }
+      .loading {
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+      @media (max-width: 600px) {
+        .page {
+          padding: 20px 14px 48px;
+        }
+        .chart-wrap {
+          height: 220px;
+        }
+      }
+      .compare-card.highlight {
+        border-color: rgba(0, 230, 170, 0.3);
+        background: rgba(0, 230, 170, 0.04);
+      }
+      .compare-card.dimmed {
+        border-color: rgba(255, 96, 96, 0.2);
+        background: rgba(255, 96, 96, 0.03);
+      }
+      .compare-card.delta {
+        border-color: rgba(255, 183, 0, 0.3);
+        background: rgba(255, 183, 0, 0.04);
+      }
+      .cc-stat {
+        margin-bottom: 12px;
+      }
+      .cc-stat .s-label {
+        font-size: 10px;
+        color: var(--text-mute);
+        margin-bottom: 3px;
+      }
+      .footnote {
+        font-size: 11px;
+        color: var(--text-mute);
+        font-family: var(--mono);
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-inner">
+        <a href="index.html" class="nav-logo"
+          ><img src="assets/logo.png" alt="Perfect Entry" /><span
+            >Perfect Entry</span
+          ></a
+        >
+        <div class="nav-links">
+          <a href="index.html">Home</a><a href="signals.html">Live Signals</a
+          ><a href="currencyai.html" class="">Currency AI</a
+          ><a href="counterfactual.html" class="active">Counterfactual</a
+          ><a href="network.html" class="">Network</a
+          ><a href="wheel.html" class="">Fear & Greed</a
+          ><a href="ledger.html">Ledger</a>
+        </div>
+        <a
+          href="https://whop.com/perfect-entry/"
+          target="_blank"
+          class="nav-cta"
+          >Join Now</a
+        >
+      </div>
+    </nav>
+    <div class="page">
+      <h1>Counterfactual Analysis — Verified Era</h1>
+      <p class="subtitle">
+        What happened to the signals CurrencyAI rejected? This page compares
+        approved M1 and M5 signal results with the full matching candidate
+        stream tracked through shadow execution. Open trades never count as wins
+        or losses.
+      </p>
+      <div class="era-pill">
+        Verified era starts <b>5 Jul 2026 · 21:00 UTC</b>
+      </div>
+      <div class="compare-grid">
+        <div class="compare-card highlight">
+          <div class="cc-label">With CurrencyAI</div>
+          <div class="cc-stat">
+            <div class="s-label">W / L</div>
+            <div class="s-val val-green" id="ai-wl">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Total R</div>
+            <div class="s-val val-green" id="ai-r">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Profit Factor</div>
+            <div class="s-val val-teal" id="ai-pf">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Win Rate</div>
+            <div class="s-val" id="ai-wr">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Max Drawdown</div>
+            <div class="s-val val-amber" id="ai-dd">—</div>
+          </div>
+        </div>
+        <div class="compare-card dimmed">
+          <div class="cc-label">Raw signal stream</div>
+          <div class="cc-stat">
+            <div class="s-label">W / L</div>
+            <div class="s-val" id="raw-wl">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Total R</div>
+            <div class="s-val" id="raw-r">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Profit Factor</div>
+            <div class="s-val val-teal" id="raw-pf">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Win Rate</div>
+            <div class="s-val" id="raw-wr">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Max Drawdown</div>
+            <div class="s-val val-amber" id="raw-dd">—</div>
+          </div>
+        </div>
+        <div class="compare-card delta">
+          <div class="cc-label">Filter value</div>
+          <div class="cc-stat">
+            <div class="s-label">R saved / lost</div>
+            <div class="s-val" id="delta-r">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">PF improvement</div>
+            <div class="s-val" id="delta-pf">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">WR improvement</div>
+            <div class="s-val" id="delta-wr">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">DD improvement</div>
+            <div class="s-val" id="delta-dd">—</div>
+          </div>
+          <div class="cc-stat">
+            <div class="s-label">Rejected signals tracked</div>
+            <div class="s-val val-amber" id="delta-filtered">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          Equity Curve Comparison <span>approved vs full raw stream</span>
+        </div>
+        <div class="chart-card">
+          <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          Week by Week <span>filter vs no filter</span>
+        </div>
+        <div class="card table-wrap" style="padding: 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Week</th>
+                <th>AI R</th>
+                <th>Raw R</th>
+                <th>Delta</th>
+                <th>AI PF</th>
+                <th>Raw PF</th>
+                <th>AI WR</th>
+                <th>Raw WR</th>
+              </tr>
+            </thead>
+            <tbody id="weekBody">
+              <tr>
+                <td
+                  colspan="8"
+                  style="
+                    text-align: center;
+                    color: var(--text-mute);
+                    padding: 24px;
+                  "
+                >
+                  Loading...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          Rejected Signals <span>what CurrencyAI blocked</span>
+        </div>
+        <div class="card table-wrap" style="padding: 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Pair</th>
+                <th>W</th>
+                <th>L</th>
+                <th>WR</th>
+                <th>R</th>
+                <th>PF</th>
+                <th>Verdict</th>
+              </tr>
+            </thead>
+            <tbody id="suppressedBody">
+              <tr>
+                <td
+                  colspan="7"
+                  style="
+                    text-align: center;
+                    color: var(--text-mute);
+                    padding: 24px;
+                  "
+                >
+                  Loading...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="footnote">
+          Rejected rows use their final collector result. Approved rows use a
+          final real result where available, otherwise the final collector
+          result. Rows without a close timestamp are excluded. Legacy pre-5 July
+          data is excluded.
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          Day of Week <span>filter value by session day</span>
+        </div>
+        <div class="card table-wrap" style="padding: 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>AI R</th>
+                <th>Raw R</th>
+                <th>Delta</th>
+                <th>AI PF</th>
+                <th>Raw PF</th>
+                <th>Rejected</th>
+              </tr>
+            </thead>
+            <tbody id="dowBody">
+              <tr>
+                <td
+                  colspan="7"
+                  style="
+                    text-align: center;
+                    color: var(--text-mute);
+                    padding: 24px;
+                  "
+                >
+                  Loading...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script>
+      const SUPABASE_URL = "https://nmfsqgqwjihpudiqnuwh.supabase.co",
+        SUPABASE_ANON =
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I",
+        HDR = {
+          apikey: SUPABASE_ANON,
+          Authorization: "Bearer " + SUPABASE_ANON,
+        },
+        VERIFIED_START = "2026-07-05T21:00:00Z";
+      let equityChart = null;
+      function fmtR(r) {
+        r = Number(r || 0);
+        return (r >= 0 ? "+" : "") + r.toFixed(1) + "R";
+      }
+      function fmtPct(n) {
+        return Number(n || 0).toFixed(1) + "%";
+      }
+      function fmtPFNum(p) {
+        return !Number.isFinite(p) ? "—" : p >= 99 ? "∞" : p.toFixed(3);
+      }
+      function metrics(rs) {
+        const vals = rs.map((r) => Number(r.r)).filter(Number.isFinite);
+        if (!vals.length)
+          return { w: 0, l: 0, r: 0, pf: 0, wr: 0, dd: 0, curve: [0], n: 0 };
+        const w = vals.filter((v) => v > 0).length,
+          l = vals.length - w,
+          total = vals.reduce((a, b) => a + b, 0),
+          gw = vals.filter((v) => v > 0).reduce((a, b) => a + b, 0),
+          gl = Math.abs(vals.filter((v) => v <= 0).reduce((a, b) => a + b, 0));
+        let eq = 0,
+          peak = 0,
+          dd = 0,
+          curve = [0];
+        vals.forEach((v) => {
+          eq += v;
+          curve.push(Number(eq.toFixed(4)));
+          if (eq > peak) peak = eq;
+          if (eq - peak < dd) dd = eq - peak;
+        });
+        return {
+          w,
+          l,
+          r: total,
+          pf: gl > 0 ? gw / gl : gw > 0 ? 99 : 0,
+          wr: (w / vals.length) * 100,
+          dd,
+          curve,
+          n: vals.length,
+        };
+      }
+      async function fetchSb(path) {
+        const r = await fetch(SUPABASE_URL + path, { headers: HDR });
+        if (!r.ok) throw new Error(await r.text());
+        return r.json();
+      }
+      async function fetchAll(path, pageSize = 1000, maxRows = 50000) {
+        const all = [];
+        for (let offset = 0; offset < maxRows; offset += pageSize) {
+          const sep = path.includes("?") ? "&" : "?";
+          const page = await fetchSb(
+            `${path}${sep}offset=${offset}&limit=${pageSize}`,
+          );
+          all.push(...page);
+          if (page.length < pageSize) break;
+        }
+        return all;
+      }
+      function nval(v) {
+        if (v === null || v === undefined || v === "") return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      }
 
-async function loadRows(){
-  const rows = await fetchSb(
-    '/rest/v1/signals?' +
-    'select=id,sym,tf,dir,created_at,closed_at,shadow_closed_at,currency_ai_pass,webhook_delivered,r_result,shadow_r_result,outcome,shadow_outcome,data_collector_delivered' +
-    '&created_at=gte.' + encodeURIComponent(VERIFIED_START) +
-    '&tf=in.(1min,5min)' +
-    '&or=(r_result.not.is.null,shadow_r_result.not.is.null)' +
-    '&order=created_at.asc&limit=5000'
-  );
+      async function loadRows() {
+        const rows = await fetchAll(
+          "/rest/v1/public_signal_feed?" +
+            "select=id,sym,tf,dir,created_at,display_closed_at,display_r_result,closed_at,shadow_closed_at,currency_ai_pass,r_result,shadow_r_result" +
+            "&created_at=gte." +
+            encodeURIComponent(VERIFIED_START) +
+            "&tf=in.(1min,5min)" +
+            "&order=created_at.asc",
+        );
 
-  return rows.map(x => {
-    const pass = x.currency_ai_pass === true;
-    const realR = nval(x.r_result);
-    const shadowR = nval(x.shadow_r_result);
+        return rows
+          .map((x) => {
+            const pass = x.currency_ai_pass === true;
+            const closed =
+              x.display_closed_at || x.closed_at || x.shadow_closed_at || null;
+            const displayR = nval(x.display_r_result);
+            const realR = nval(x.r_result);
+            const shadowR = nval(x.shadow_r_result);
 
-    // Approved CurrencyAI rows should use real R when available.
-    // If real SignalForge was off, fall back to the collector/shadow R.
-    // Rejected rows are counterfactual by definition, so they use shadow R.
-    const r = pass ? (realR !== null ? realR : shadowR) : shadowR;
+            // A result is final only after a real close timestamp exists.
+            const r = !closed
+              ? null
+              : pass
+                ? (displayR ?? realR ?? shadowR)
+                : (shadowR ?? displayR);
 
-    return {
-      ...x,
-      r,
-      closed: x.closed_at || x.shadow_closed_at || x.created_at,
-      win: Number(r) > 0
-    };
-  }).filter(x => Number.isFinite(x.r));
-}
-function setMetric(prefix,m){document.getElementById(prefix+'-wl').textContent=m.w+'W / '+m.l+'L';document.getElementById(prefix+'-r').textContent=fmtR(m.r);document.getElementById(prefix+'-pf').textContent=fmtPFNum(m.pf);document.getElementById(prefix+'-wr').textContent=fmtPct(m.wr);document.getElementById(prefix+'-dd').textContent=fmtR(m.dd)} function weekKey(d){const x=new Date(d);const day=x.getUTCDay(),diff=day===0?6:day-1;const mon=new Date(Date.UTC(x.getUTCFullYear(),x.getUTCMonth(),x.getUTCDate()-diff));const sun=new Date(mon.getTime()+6*86400000);return mon.toISOString().slice(0,10)+' → '+sun.toISOString().slice(0,10)} function dowName(d){return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d).getUTCDay()]}
-function renderChart(ai,raw){
-  const labels=Array.from({length:Math.max(ai.curve.length,raw.curve.length)},(_,i)=>i);
-  const ctx=document.getElementById('equityChart').getContext('2d');
-  if(equityChart) equityChart.destroy();
-  equityChart=new Chart(ctx,{
-    type:'line',
-    data:{labels,datasets:[
-      {label:'CurrencyAI approved',data:ai.curve,borderColor:'#00e6aa',borderWidth:2,pointRadius:0,tension:.2},
-      {label:'Raw stream',data:raw.curve,borderColor:'rgba(255,96,96,.65)',borderWidth:1.5,pointRadius:0,tension:.2,borderDash:[4,4]}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{color:'rgba(234,253,252,.55)',font:{family:'IBM Plex Mono',size:10}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtR(c.raw)}}},scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'rgba(234,253,252,.4)',font:{family:'IBM Plex Mono',size:10},callback:v=>fmtR(v)}}}}
-  });
-}
-function renderTables(rows){const aiRows=rows.filter(r=>r.currency_ai_pass===true), rawRows=rows, rejected=rows.filter(r=>r.currency_ai_pass===false); const byWeek={}; rows.forEach(r=>{const k=weekKey(r.closed); byWeek[k]||(byWeek[k]={ai:[],raw:[]}); byWeek[k].raw.push(r); if(r.currency_ai_pass===true)byWeek[k].ai.push(r)});document.getElementById('weekBody').innerHTML=Object.entries(byWeek).reverse().map(([wk,g])=>{const a=metrics(g.ai),rw=metrics(g.raw),d=a.r-rw.r;return `<tr><td>${wk}</td><td>${fmtR(a.r)}</td><td>${fmtR(rw.r)}</td><td style="color:${d>=0?'var(--green)':'var(--red)'}"><b>${fmtR(d)}</b></td><td>${fmtPFNum(a.pf)}</td><td>${fmtPFNum(rw.pf)}</td><td>${fmtPct(a.wr)}</td><td>${fmtPct(rw.wr)}</td></tr>`}).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text-mute);padding:24px">No verified-era outcomes yet.</td></tr>'; const bySym={}; rejected.forEach(r=>{bySym[r.sym]||(bySym[r.sym]=[]);bySym[r.sym].push(r)});document.getElementById('suppressedBody').innerHTML=Object.entries(bySym).sort((a,b)=>metrics(b[1]).r-metrics(a[1]).r).map(([sym,rs])=>{const m=metrics(rs), verdict=m.pf<1?'Filter correct':'Filter costly';return `<tr><td><b>${sym}</b></td><td style="color:var(--green)">${m.w}</td><td style="color:var(--red)">${m.l}</td><td>${fmtPct(m.wr)}</td><td style="color:${m.r>=0?'var(--amber)':'var(--red)'}">${fmtR(m.r)}</td><td>${fmtPFNum(m.pf)}</td><td><span class="badge ${m.pf<1?'badge-g':'badge-r'}">${verdict}</span></td></tr>`}).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">No rejected verified-era outcomes yet.</td></tr>'; const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; const byDow={}; rows.forEach(r=>{const d=dowName(r.closed);byDow[d]||(byDow[d]={ai:[],raw:[],rej:0});byDow[d].raw.push(r);if(r.currency_ai_pass===true)byDow[d].ai.push(r);else byDow[d].rej++}); document.getElementById('dowBody').innerHTML=days.map(d=>{const g=byDow[d]||{ai:[],raw:[],rej:0},a=metrics(g.ai),rw=metrics(g.raw),del=a.r-rw.r;return `<tr><td>${d}</td><td>${fmtR(a.r)}</td><td>${fmtR(rw.r)}</td><td style="color:${del>=0?'var(--green)':'var(--red)'}">${fmtR(del)}</td><td>${fmtPFNum(a.pf)}</td><td>${fmtPFNum(rw.pf)}</td><td>${g.rej}</td></tr>`}).join('')}
-async function init(){try{const rows=await loadRows(); const ai=metrics(rows.filter(r=>r.currency_ai_pass===true)), raw=metrics(rows); setMetric('ai',ai); setMetric('raw',raw); const dR=ai.r-raw.r,dPF=ai.pf-raw.pf,dWR=ai.wr-raw.wr,dDD=ai.dd-raw.dd,rejected=rows.filter(r=>r.currency_ai_pass===false).length;document.getElementById('delta-r').textContent=fmtR(dR);document.getElementById('delta-r').style.color=dR>=0?'var(--green)':'var(--red)';document.getElementById('delta-pf').textContent=(dPF>=0?'+':'')+dPF.toFixed(3);document.getElementById('delta-pf').style.color=dPF>=0?'var(--green)':'var(--red)';document.getElementById('delta-wr').textContent=(dWR>=0?'+':'')+dWR.toFixed(1)+'%';document.getElementById('delta-dd').textContent=fmtR(dDD);document.getElementById('delta-filtered').textContent=rejected; renderChart(ai,raw); renderTables(rows)}catch(e){console.error(e);document.getElementById('weekBody').innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Failed to load verified-era data.</td></tr>'}} init();
-</script></body></html>
+            return {
+              ...x,
+              r,
+              closed,
+              win: r !== null && r > 0,
+            };
+          })
+          .filter((x) => x.closed && x.r !== null);
+      }
+      function setMetric(prefix, m) {
+        document.getElementById(prefix + "-wl").textContent =
+          m.w + "W / " + m.l + "L";
+        document.getElementById(prefix + "-r").textContent = fmtR(m.r);
+        document.getElementById(prefix + "-pf").textContent = fmtPFNum(m.pf);
+        document.getElementById(prefix + "-wr").textContent = fmtPct(m.wr);
+        document.getElementById(prefix + "-dd").textContent = fmtR(m.dd);
+      }
+      function weekKey(d) {
+        const x = new Date(d);
+        const day = x.getUTCDay(),
+          diff = day === 0 ? 6 : day - 1;
+        const mon = new Date(
+          Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate() - diff),
+        );
+        const sun = new Date(mon.getTime() + 6 * 86400000);
+        return (
+          mon.toISOString().slice(0, 10) +
+          " → " +
+          sun.toISOString().slice(0, 10)
+        );
+      }
+      function dowName(d) {
+        return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+          new Date(d).getUTCDay()
+        ];
+      }
+      function renderChart(ai, raw) {
+        const labels = Array.from(
+          { length: Math.max(ai.curve.length, raw.curve.length) },
+          (_, i) => i,
+        );
+        const ctx = document.getElementById("equityChart").getContext("2d");
+        if (equityChart) equityChart.destroy();
+        equityChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "CurrencyAI approved",
+                data: ai.curve,
+                borderColor: "#00e6aa",
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.2,
+              },
+              {
+                label: "Raw stream",
+                data: raw.curve,
+                borderColor: "rgba(255,96,96,.65)",
+                borderWidth: 1.5,
+                pointRadius: 0,
+                tension: 0.2,
+                borderDash: [4, 4],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: {
+              legend: {
+                labels: {
+                  color: "rgba(234,253,252,.55)",
+                  font: { family: "IBM Plex Mono", size: 10 },
+                },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (c) => c.dataset.label + ": " + fmtR(c.raw),
+                },
+              },
+            },
+            scales: {
+              x: { display: false },
+              y: {
+                grid: { color: "rgba(255,255,255,.04)" },
+                ticks: {
+                  color: "rgba(234,253,252,.4)",
+                  font: { family: "IBM Plex Mono", size: 10 },
+                  callback: (v) => fmtR(v),
+                },
+              },
+            },
+          },
+        });
+      }
+      function renderTables(rows) {
+        const aiRows = rows.filter((r) => r.currency_ai_pass === true),
+          rawRows = rows,
+          rejected = rows.filter((r) => r.currency_ai_pass === false);
+        const byWeek = {};
+        rows.forEach((r) => {
+          const k = weekKey(r.closed);
+          byWeek[k] || (byWeek[k] = { ai: [], raw: [] });
+          byWeek[k].raw.push(r);
+          if (r.currency_ai_pass === true) byWeek[k].ai.push(r);
+        });
+        document.getElementById("weekBody").innerHTML =
+          Object.entries(byWeek)
+            .reverse()
+            .map(([wk, g]) => {
+              const a = metrics(g.ai),
+                rw = metrics(g.raw),
+                d = a.r - rw.r;
+              return `<tr><td>${wk}</td><td>${fmtR(a.r)}</td><td>${fmtR(rw.r)}</td><td style="color:${d >= 0 ? "var(--green)" : "var(--red)"}"><b>${fmtR(d)}</b></td><td>${fmtPFNum(a.pf)}</td><td>${fmtPFNum(rw.pf)}</td><td>${fmtPct(a.wr)}</td><td>${fmtPct(rw.wr)}</td></tr>`;
+            })
+            .join("") ||
+          '<tr><td colspan="8" style="text-align:center;color:var(--text-mute);padding:24px">No verified-era outcomes yet.</td></tr>';
+        const bySym = {};
+        rejected.forEach((r) => {
+          bySym[r.sym] || (bySym[r.sym] = []);
+          bySym[r.sym].push(r);
+        });
+        document.getElementById("suppressedBody").innerHTML =
+          Object.entries(bySym)
+            .sort((a, b) => metrics(b[1]).r - metrics(a[1]).r)
+            .map(([sym, rs]) => {
+              const m = metrics(rs),
+                verdict = m.pf < 1 ? "Filter correct" : "Filter costly";
+              return `<tr><td><b>${sym}</b></td><td style="color:var(--green)">${m.w}</td><td style="color:var(--red)">${m.l}</td><td>${fmtPct(m.wr)}</td><td style="color:${m.r >= 0 ? "var(--amber)" : "var(--red)"}">${fmtR(m.r)}</td><td>${fmtPFNum(m.pf)}</td><td><span class="badge ${m.pf < 1 ? "badge-g" : "badge-r"}">${verdict}</span></td></tr>`;
+            })
+            .join("") ||
+          '<tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:24px">No rejected verified-era outcomes yet.</td></tr>';
+        const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        const byDow = {};
+        rows.forEach((r) => {
+          const d = dowName(r.closed);
+          byDow[d] || (byDow[d] = { ai: [], raw: [], rej: 0 });
+          byDow[d].raw.push(r);
+          if (r.currency_ai_pass === true) byDow[d].ai.push(r);
+          else byDow[d].rej++;
+        });
+        document.getElementById("dowBody").innerHTML = days
+          .map((d) => {
+            const g = byDow[d] || { ai: [], raw: [], rej: 0 },
+              a = metrics(g.ai),
+              rw = metrics(g.raw),
+              del = a.r - rw.r;
+            return `<tr><td>${d}</td><td>${fmtR(a.r)}</td><td>${fmtR(rw.r)}</td><td style="color:${del >= 0 ? "var(--green)" : "var(--red)"}">${fmtR(del)}</td><td>${fmtPFNum(a.pf)}</td><td>${fmtPFNum(rw.pf)}</td><td>${g.rej}</td></tr>`;
+          })
+          .join("");
+      }
+      async function init() {
+        try {
+          const rows = await loadRows();
+          const ai = metrics(rows.filter((r) => r.currency_ai_pass === true)),
+            raw = metrics(rows);
+          setMetric("ai", ai);
+          setMetric("raw", raw);
+          const dR = ai.r - raw.r,
+            dPF = ai.pf - raw.pf,
+            dWR = ai.wr - raw.wr,
+            dDD = ai.dd - raw.dd,
+            rejected = rows.filter((r) => r.currency_ai_pass === false).length;
+          document.getElementById("delta-r").textContent = fmtR(dR);
+          document.getElementById("delta-r").style.color =
+            dR >= 0 ? "var(--green)" : "var(--red)";
+          document.getElementById("delta-pf").textContent =
+            (dPF >= 0 ? "+" : "") + dPF.toFixed(3);
+          document.getElementById("delta-pf").style.color =
+            dPF >= 0 ? "var(--green)" : "var(--red)";
+          document.getElementById("delta-wr").textContent =
+            (dWR >= 0 ? "+" : "") + dWR.toFixed(1) + "%";
+          document.getElementById("delta-dd").textContent = fmtR(dDD);
+          document.getElementById("delta-filtered").textContent = rejected;
+          renderChart(ai, raw);
+          renderTables(rows);
+        } catch (e) {
+          console.error(e);
+          document.getElementById("weekBody").innerHTML =
+            '<tr><td colspan="8" style="text-align:center;color:var(--red);padding:24px">Failed to load verified-era data.</td></tr>';
+        }
+      }
+      let refreshRunning = false;
+      async function refresh() {
+        if (refreshRunning) return;
+        refreshRunning = true;
+        try {
+          await init();
+        } finally {
+          refreshRunning = false;
+        }
+      }
+      refresh();
+      setInterval(refresh, 60000);
+    </script>
+  </body>
+</html>
