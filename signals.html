@@ -1,412 +1,1033 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Signals — Perfect Entry</title>
-<meta name="description" content="Perfect Entry live CurrencyAI M1 and M5 signals with current trade status and realised R tracking.">
-<link rel="canonical" href="https://perfectentry.store/signals.html">
-<link rel="icon" href="assets/logo.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0b0d10;--bg2:#0f1216;--bg3:#131720;
-  --teal:#01a0b8;--teal-dark:#015662;--teal-glow:rgba(1,160,184,0.15);
-  --text:#EAFDFC;--dim:rgba(234,253,252,0.58);--mute:rgba(234,253,252,0.32);
-  --border:rgba(255,255,255,0.08);--green:#00e6aa;--red:#FF9060;--orange:#FF6A2A;--amber:#ffb700;
-  --mono:'IBM Plex Mono',monospace;
-}
-html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-body{display:flex;flex-direction:column}
-a{text-decoration:none;color:inherit}
-nav{position:sticky;top:0;z-index:100;background:rgba(11,13,16,0.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.nav-inner{max-width:1500px;margin:0 auto;display:flex;align-items:center;gap:14px;height:46px;padding:0 18px}
-.nav-logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:12px}
-.nav-logo img{width:22px;height:22px;object-fit:contain}
-.nav-links{display:flex;gap:14px;font-size:11px;font-weight:600;margin-left:auto}
-.nav-links a{color:var(--dim)}
-.nav-links a.active{color:var(--orange)}
-.nav-cta{padding:5px 12px;border-radius:8px;border:2px solid var(--teal-dark);background:rgba(1,86,98,.15);font-weight:800;font-size:11px;white-space:nowrap}
-@media(max-width:760px){.nav-links{display:none}.nav-inner{padding:0 12px}}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Signals — Perfect Entry</title>
+    <meta
+      name="description"
+      content="Perfect Entry live CurrencyAI M1 and M5 signals with current trade status and realised R tracking."
+    />
+    <link rel="canonical" href="https://perfectentry.store/signals.html" />
+    <link rel="icon" href="assets/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0b0d10;
+        --bg2: #0f1216;
+        --bg3: #131720;
+        --teal: #01a0b8;
+        --teal-dark: #015662;
+        --teal-glow: rgba(1, 160, 184, 0.15);
+        --text: #eafdfc;
+        --dim: rgba(234, 253, 252, 0.58);
+        --mute: rgba(234, 253, 252, 0.32);
+        --border: rgba(255, 255, 255, 0.08);
+        --green: #00e6aa;
+        --red: #ff9060;
+        --orange: #ff6a2a;
+        --amber: #ffb700;
+        --mono: "IBM Plex Mono", monospace;
+      }
+      html,
+      body {
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Inter", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(11, 13, 16, 0.96);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-inner {
+        max-width: 1500px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 46px;
+        padding: 0 18px;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+        font-size: 12px;
+      }
+      .nav-logo img {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+      }
+      .nav-links {
+        display: flex;
+        gap: 14px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: auto;
+      }
+      .nav-links a {
+        color: var(--dim);
+      }
+      .nav-links a.active {
+        color: var(--orange);
+      }
+      .nav-cta {
+        padding: 5px 12px;
+        border-radius: 8px;
+        border: 2px solid var(--teal-dark);
+        background: rgba(1, 86, 98, 0.15);
+        font-weight: 800;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      @media (max-width: 760px) {
+        .nav-links {
+          display: none;
+        }
+        .nav-inner {
+          padding: 0 12px;
+        }
+      }
 
-.header{border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(15,18,22,0.98),rgba(11,13,16,0.98))}
-.header-inner{max-width:1500px;margin:0 auto;padding:22px 18px;display:flex;gap:18px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
-h1{font-size:clamp(24px,3.5vw,40px);font-weight:900;letter-spacing:-0.03em;margin-bottom:6px}
-.subtitle{font-size:13px;color:var(--dim);line-height:1.55;max-width:860px}
-.status-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.pill{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:5px 10px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--dim)}
-.pill.live{color:var(--green);border-color:rgba(0,230,170,.25);background:rgba(0,230,170,.07)}
-.pill.warn{color:var(--amber);border-color:rgba(255,183,0,.28);background:rgba(255,183,0,.07)}
-.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 1.8s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.45);opacity:.45}}
+      .header {
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(
+          180deg,
+          rgba(15, 18, 22, 0.98),
+          rgba(11, 13, 16, 0.98)
+        );
+      }
+      .header-inner {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 22px 18px;
+        display: flex;
+        gap: 18px;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: clamp(24px, 3.5vw, 40px);
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        margin-bottom: 6px;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: var(--dim);
+        line-height: 1.55;
+        max-width: 860px;
+      }
+      .status-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .pill {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--dim);
+      }
+      .pill.live {
+        color: var(--green);
+        border-color: rgba(0, 230, 170, 0.25);
+        background: rgba(0, 230, 170, 0.07);
+      }
+      .pill.warn {
+        color: var(--amber);
+        border-color: rgba(255, 183, 0, 0.28);
+        background: rgba(255, 183, 0, 0.07);
+      }
+      .dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        margin-right: 6px;
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.45);
+          opacity: 0.45;
+        }
+      }
 
-.top-stats{max-width:1500px;margin:0 auto;padding:14px 18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.stat{border:1px solid var(--border);background:var(--bg2);border-radius:14px;padding:14px}
-.stat-label{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
-.stat-val{font-family:var(--mono);font-size:19px;font-weight:800}
-.stat-sub{font-size:10px;color:var(--mute);margin-top:4px}
-@media(max-width:760px){.top-stats{grid-template-columns:repeat(2,1fr);padding:12px}.stat{padding:12px}}
+      .top-stats {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 14px 18px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .stat {
+        border: 1px solid var(--border);
+        background: var(--bg2);
+        border-radius: 14px;
+        padding: 14px;
+      }
+      .stat-label {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--mute);
+        margin-bottom: 6px;
+      }
+      .stat-val {
+        font-family: var(--mono);
+        font-size: 19px;
+        font-weight: 800;
+      }
+      .stat-sub {
+        font-size: 10px;
+        color: var(--mute);
+        margin-top: 4px;
+      }
+      @media (max-width: 760px) {
+        .top-stats {
+          grid-template-columns: repeat(2, 1fr);
+          padding: 12px;
+        }
+        .stat {
+          padding: 12px;
+        }
+      }
 
-.controls{max-width:1500px;margin:0 auto;padding:0 18px 16px;display:flex;gap:8px;flex-wrap:wrap}
-.btn{font-family:'Inter',sans-serif;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--dim);padding:7px 12px;border-radius:999px;font-size:11px;font-weight:800;cursor:pointer}
-.btn.on{background:rgba(1,160,184,.16);color:#7de3ff;border-color:rgba(1,160,184,.35)}
-.btn:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+      .controls {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 0 18px 16px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        font-family: "Inter", sans-serif;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--dim);
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .btn.on {
+        background: rgba(1, 160, 184, 0.16);
+        color: #7de3ff;
+        border-color: rgba(1, 160, 184, 0.35);
+      }
+      .btn:hover {
+        color: var(--text);
+        border-color: rgba(255, 255, 255, 0.18);
+      }
 
-.main{max-width:1500px;margin:0 auto;width:100%;padding:0 18px 28px;display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1}
-@media(max-width:900px){.main{grid-template-columns:1fr;padding:0 12px 28px}}
-.col{border:1px solid var(--border);background:rgba(15,18,22,.72);border-radius:18px;overflow:hidden;min-height:420px}
-.col-head{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.col-title{font-size:18px;font-weight:900;letter-spacing:-.02em}
-.col-sub{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.45}
-.col-count{font-family:var(--mono);font-size:12px;color:var(--teal);font-weight:800;white-space:nowrap}
-.list{padding:10px;display:flex;flex-direction:column;gap:8px}
-.empty{padding:40px 14px;text-align:center;color:var(--mute);font-size:12px;font-family:var(--mono);line-height:1.8}
+      .main {
+        max-width: 1500px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 0 18px 28px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        flex: 1;
+      }
+      @media (max-width: 900px) {
+        .main {
+          grid-template-columns: 1fr;
+          padding: 0 12px 28px;
+        }
+      }
+      .col {
+        border: 1px solid var(--border);
+        background: rgba(15, 18, 22, 0.72);
+        border-radius: 18px;
+        overflow: hidden;
+        min-height: 420px;
+      }
+      .col-head {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .col-title {
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+      }
+      .col-sub {
+        font-size: 11px;
+        color: var(--dim);
+        margin-top: 4px;
+        line-height: 1.45;
+      }
+      .col-count {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--teal);
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .list {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .empty {
+        padding: 40px 14px;
+        text-align: center;
+        color: var(--mute);
+        font-size: 12px;
+        font-family: var(--mono);
+        line-height: 1.8;
+      }
 
-.card{border:1px solid var(--border);background:var(--bg3);border-radius:13px;padding:12px;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
-.card.buy::before{background:var(--green)}
-.card.sell::before{background:var(--orange)}
-.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.sym{font-size:15px;font-weight:900;letter-spacing:.01em}
-.dir{font-size:10px;font-weight:900;letter-spacing:.05em;padding:3px 8px;border-radius:999px}
-.dir.buy{background:rgba(0,230,170,.12);color:var(--green);border:1px solid rgba(0,230,170,.28)}
-.dir.sell{background:rgba(255,106,42,.12);color:#FF9060;border:1px solid rgba(255,106,42,.28)}
-.type{font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:rgba(1,160,184,.12);color:#7de3ff;border:1px solid rgba(1,160,184,.28)}
-.status{font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
-.status.open{background:rgba(1,160,184,.12);color:#7de3ff;border:1px solid rgba(1,160,184,.28)}
-.status.win{background:rgba(0,230,170,.12);color:var(--green);border:1px solid rgba(0,230,170,.28)}
-.status.loss{background:rgba(255,106,42,.12);color:#FF9060;border:1px solid rgba(255,106,42,.28)}
-.status.waiting{background:rgba(255,183,0,.12);color:var(--amber);border:1px solid rgba(255,183,0,.28)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-.box{border:1px solid var(--border);background:rgba(255,255,255,.025);border-radius:10px;padding:9px}
-.label{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
-.value{font-family:var(--mono);font-size:13px;font-weight:800}
-.value.green{color:var(--green)}.value.red{color:#FF9060}.value.amber{color:var(--amber)}
-.footer{border-top:1px solid var(--border);padding-top:9px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.time{font-family:var(--mono);font-size:10px;color:var(--dim)}
-.countdown{font-family:var(--mono);font-size:10px;font-weight:900}
-.countdown.ok{color:var(--green)}
-.countdown.warn{color:var(--amber)}
-.countdown.done{color:#FF9060}
-.small-note{font-size:10px;color:var(--mute);line-height:1.45}
-.footer-note{max-width:1500px;margin:0 auto;padding:16px 18px 26px;color:var(--mute);font-size:11px;line-height:1.65;border-top:1px solid var(--border)}
-</style>
-</head>
-<body>
-<nav>
-  <div class="nav-inner">
-    <a class="nav-logo" href="index.html"><img src="assets/logo.png" alt="Perfect Entry"><span>Perfect Entry</span></a>
-    <div class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="screener.html">Screener</a>
-      <a href="signals.html" class="active">Live Signals</a>
-      <a href="currencyai.html">Currency AI</a>
-      <a href="counterfactual.html">Counterfactual</a>
-      <a href="ledger.html">Ledger</a>
-    </div>
-    <a class="nav-cta" href="https://whop.com/perfect-entry/" target="_blank">Join Now</a>
-  </div>
-</nav>
-
-<section class="header">
-  <div class="header-inner">
-    <div>
-      <h1>Live Signals</h1>
-      <p class="subtitle">
-        Today's approved CurrencyAI signals. M1 trades are managed dynamically as market conditions develop, while M5 trades run to their configured exit or the daily cutoff.
-      </p>
-    </div>
-    <div class="status-row">
-      <span class="pill live"><span class="dot"></span>Live</span>
-      <span class="pill" id="utcClock">UTC --:--:--</span>
-      <span class="pill warn" id="dayPill">Today UTC only</span>
-    </div>
-  </div>
-</section>
-
-<section class="top-stats">
-  <div class="stat"><div class="stat-label">Visible Signals</div><div class="stat-val" id="statTotal">--</div><div class="stat-sub" id="rangeSub">today UTC · CurrencyAI approved only</div></div>
-  <div class="stat"><div class="stat-label">Open</div><div class="stat-val" id="statOpen">--</div><div class="stat-sub">waiting for close result</div></div>
-  <div class="stat"><div class="stat-label">Closed W/L</div><div class="stat-val" id="statWL">--</div><div class="stat-sub">real result, or collector fallback</div></div>
-  <div class="stat"><div class="stat-label">Total R</div><div class="stat-val" id="statR">--</div><div class="stat-sub">display R result</div></div>
-</section>
-
-<section class="controls">
-  <button class="btn on" id="toggleOpen">Open</button>
-  <button class="btn on" id="toggleClosed">Closed</button>
-  <button class="btn on" id="togglePulse">M1 Signals</button>
-  <button class="btn on" id="toggleFive">M5 Signals</button>
-  <button class="btn" id="reloadBtn">Reload</button>
-</section>
-
-<main class="main">
-  <section class="col">
-    <div class="col-head">
-      <div>
-        <div class="col-title">M1 signals</div>
-        <div class="col-sub">Short-term signals with dynamically managed targets and exits.</div>
+      .card {
+        border: 1px solid var(--border);
+        background: var(--bg3);
+        border-radius: 13px;
+        padding: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+      .card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+      }
+      .card.buy::before {
+        background: var(--green);
+      }
+      .card.sell::before {
+        background: var(--orange);
+      }
+      .card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .left {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .sym {
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.01em;
+      }
+      .dir {
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.05em;
+        padding: 3px 8px;
+        border-radius: 999px;
+      }
+      .dir.buy {
+        background: rgba(0, 230, 170, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(0, 230, 170, 0.28);
+      }
+      .dir.sell {
+        background: rgba(255, 106, 42, 0.12);
+        color: #ff9060;
+        border: 1px solid rgba(255, 106, 42, 0.28);
+      }
+      .type {
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(1, 160, 184, 0.12);
+        color: #7de3ff;
+        border: 1px solid rgba(1, 160, 184, 0.28);
+      }
+      .status {
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 999px;
+      }
+      .status.open {
+        background: rgba(1, 160, 184, 0.12);
+        color: #7de3ff;
+        border: 1px solid rgba(1, 160, 184, 0.28);
+      }
+      .status.win {
+        background: rgba(0, 230, 170, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(0, 230, 170, 0.28);
+      }
+      .status.loss {
+        background: rgba(255, 106, 42, 0.12);
+        color: #ff9060;
+        border: 1px solid rgba(255, 106, 42, 0.28);
+      }
+      .status.waiting {
+        background: rgba(255, 183, 0, 0.12);
+        color: var(--amber);
+        border: 1px solid rgba(255, 183, 0, 0.28);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .box {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.025);
+        border-radius: 10px;
+        padding: 9px;
+      }
+      .label {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--mute);
+        margin-bottom: 4px;
+      }
+      .value {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .value.green {
+        color: var(--green);
+      }
+      .value.red {
+        color: #ff9060;
+      }
+      .value.amber {
+        color: var(--amber);
+      }
+      .footer {
+        border-top: 1px solid var(--border);
+        padding-top: 9px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .time {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--dim);
+      }
+      .countdown {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 900;
+      }
+      .countdown.ok {
+        color: var(--green);
+      }
+      .countdown.warn {
+        color: var(--amber);
+      }
+      .countdown.done {
+        color: #ff9060;
+      }
+      .small-note {
+        font-size: 10px;
+        color: var(--mute);
+        line-height: 1.45;
+      }
+      .footer-note {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 16px 18px 26px;
+        color: var(--mute);
+        font-size: 11px;
+        line-height: 1.65;
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-inner">
+        <a class="nav-logo" href="index.html"
+          ><img src="assets/logo.png" alt="Perfect Entry" /><span
+            >Perfect Entry</span
+          ></a
+        >
+        <div class="nav-links">
+          <a href="index.html">Home</a>
+          <a href="screener.html">Screener</a>
+          <a href="signals.html" class="active">Live Signals</a>
+          <a href="currencyai.html">Currency AI</a>
+          <a href="counterfactual.html">Counterfactual</a>
+          <a href="ledger.html">Ledger</a>
+        </div>
+        <a
+          class="nav-cta"
+          href="https://whop.com/perfect-entry/"
+          target="_blank"
+          >Join Now</a
+        >
       </div>
-      <div class="col-count" id="countPulse">--</div>
-    </div>
-    <div class="list" id="pulseList"><div class="empty">Loading M1 signals...</div></div>
-  </section>
+    </nav>
 
-  <section class="col">
-    <div class="col-head">
-      <div>
-        <div class="col-title">M5 signals</div>
-        <div class="col-sub">Approved five-minute signals managed to their configured exit or daily cutoff.</div>
+    <section class="header">
+      <div class="header-inner">
+        <div>
+          <h1>Live Signals</h1>
+          <p class="subtitle">
+            Today's approved CurrencyAI signals. M1 trades are managed
+            dynamically as market conditions develop, while M5 trades run to
+            their configured exit or the daily cutoff.
+          </p>
+        </div>
+        <div class="status-row">
+          <span class="pill live"><span class="dot"></span>Live</span>
+          <span class="pill" id="utcClock">UTC --:--:--</span>
+          <span class="pill warn" id="dayPill">Today UTC only</span>
+        </div>
       </div>
-      <div class="col-count" id="countFive">--</div>
-    </div>
-    <div class="list" id="fiveList"><div class="empty">Loading M5 signals...</div></div>
-  </section>
-</main>
+    </section>
 
-<footer class="footer-note">
-  Perfect Entry signals are provided for educational and informational purposes only. Nothing displayed here is financial advice. Trading involves significant risk. A chart timeframe identifies the signal source; it does not promise a fixed trade duration.
-</footer>
+    <section class="top-stats">
+      <div class="stat">
+        <div class="stat-label">Visible Signals</div>
+        <div class="stat-val" id="statTotal">--</div>
+        <div class="stat-sub" id="rangeSub">
+          today UTC · CurrencyAI approved only
+        </div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Open / Pending</div>
+        <div class="stat-val" id="statOpen">--</div>
+        <div class="stat-sub">not included in final results</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Closed W/L</div>
+        <div class="stat-val" id="statWL">--</div>
+        <div class="stat-sub">real result, or collector fallback</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total R</div>
+        <div class="stat-val" id="statR">--</div>
+        <div class="stat-sub">display R result</div>
+      </div>
+    </section>
 
-<script>
-const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
-const HEADERS = { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON };
-const VERIFIED_START = '2026-07-05T21:00:00Z';
-const TODAY_ONLY = true;
-const MAX_ROWS = 120;
-const PIP = {EURUSD:0.0001,GBPUSD:0.0001,AUDUSD:0.0001,NZDUSD:0.0001,USDCAD:0.0001,USDCHF:0.0001,EURGBP:0.0001,EURAUD:0.0001,EURCAD:0.0001,EURNZD:0.0001,EURJPY:0.01,GBPJPY:0.01,USDJPY:0.01,CADJPY:0.01,CHFJPY:0.01,AUDJPY:0.01,NZDJPY:0.01,AUDCAD:0.0001,AUDCHF:0.0001,AUDNZD:0.0001,GBPAUD:0.0001,GBPCAD:0.0001,GBPCHF:0.0001,GBPNZD:0.0001,NZDCAD:0.0001,NZDCHF:0.0001,XAUUSD:0.01,XAGUSD:0.01,NAS100:0.01,BTCUSD:1,ETHUSD:0.01};
+    <section class="controls">
+      <button class="btn on" id="toggleOpen">Open</button>
+      <button class="btn on" id="toggleClosed">Closed</button>
+      <button class="btn on" id="togglePulse">M1 Signals</button>
+      <button class="btn on" id="toggleFive">M5 Signals</button>
+      <button class="btn" id="reloadBtn">Reload</button>
+    </section>
 
-let rows = [];
-let showOpen = true, showClosed = true, showPulse = true, showFive = true;
+    <main class="main">
+      <section class="col">
+        <div class="col-head">
+          <div>
+            <div class="col-title">M1 signals</div>
+            <div class="col-sub">
+              Short-term signals with dynamically managed targets and exits.
+            </div>
+          </div>
+          <div class="col-count" id="countPulse">--</div>
+        </div>
+        <div class="list" id="pulseList">
+          <div class="empty">Loading M1 signals...</div>
+        </div>
+      </section>
 
+      <section class="col">
+        <div class="col-head">
+          <div>
+            <div class="col-title">M5 signals</div>
+            <div class="col-sub">
+              Approved five-minute signals managed to their configured exit or
+              daily cutoff.
+            </div>
+          </div>
+          <div class="col-count" id="countFive">--</div>
+        </div>
+        <div class="list" id="fiveList">
+          <div class="empty">Loading M5 signals...</div>
+        </div>
+      </section>
+    </main>
 
-function utcDayStartIso(date = new Date()){
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0)).toISOString();
-}
-function effectiveStartIso(){
-  const todayStart = utcDayStartIso();
-  return TODAY_ONLY && todayStart > VERIFIED_START ? todayStart : VERIFIED_START;
-}
-function tomorrowUtcStartIso(date = new Date()){
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()+1, 0, 0, 0)).toISOString();
-}
-function sameUtcDay(row){
-  if(!TODAY_ONLY) return true;
-  const start = new Date(effectiveStartIso()).getTime();
-  const t = new Date(row.created_at).getTime();
-  return Number.isFinite(t) && t >= start;
-}
-function fmtDateShort(iso){
-  const d = new Date(iso);
-  return pad(d.getUTCDate()) + '/' + pad(d.getUTCMonth()+1) + '/' + d.getUTCFullYear();
-}
+    <footer class="footer-note">
+      Perfect Entry signals are provided for educational and informational
+      purposes only. Nothing displayed here is financial advice. Trading
+      involves significant risk. A chart timeframe identifies the signal source;
+      it does not promise a fixed trade duration.
+    </footer>
 
-function pad(n){ return String(n).padStart(2,'0'); }
-function fmtTime(d){
-  const x = new Date(d);
-  return pad(x.getUTCHours()) + ':' + pad(x.getUTCMinutes()) + ' UTC';
-}
-function fmtDateTime(d){
-  const x = new Date(d);
-  return pad(x.getUTCDate()) + '/' + pad(x.getUTCMonth()+1) + ' ' + pad(x.getUTCHours()) + ':' + pad(x.getUTCMinutes()) + ' UTC';
-}
-function fmtPrice(sym,p){
-  if(p === null || p === undefined || Number.isNaN(Number(p))) return '--';
-  const pip = PIP[sym] || 0.0001;
-  if(pip >= 1) return Number(p).toFixed(0);
-  if(pip >= 0.01) return Number(p).toFixed(2);
-  return Number(p).toFixed(5);
-}
-function pips(sym,a,b){
-  if(a === null || b === null || a === undefined || b === undefined) return '--';
-  return (Math.abs(Number(a)-Number(b))/(PIP[sym]||0.0001)).toFixed(1) + 'p';
-}
-function displayOutcome(row){
-  return row.display_outcome || row.outcome || row.shadow_outcome || null;
-}
-function displayR(row){
-  const v = row.display_r_result ?? row.r_result ?? row.shadow_r_result;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-function displayClosedAt(row){
-  return row.display_closed_at || row.closed_at || row.shadow_closed_at || null;
-}
-function statusFor(row){
-  const out = displayOutcome(row);
-  const r = displayR(row);
-  if(out || r !== null){
-    if(r !== null) return r > 0 ? {label:'WIN', cls:'win'} : {label:'LOSS', cls:'loss'};
-    if(String(out).toLowerCase() === 'tp') return {label:'WIN', cls:'win'};
-    if(String(out).toLowerCase() === 'sl') return {label:'LOSS', cls:'loss'};
-    return {label:String(out).toUpperCase(), cls:'waiting'};
-  }
-  return {label:'OPEN', cls:'open'};
-}
-function countdownText(row){
-  const closedAt = displayClosedAt(row);
-  if(closedAt) return 'closed ' + fmtTime(closedAt);
-  return row.tf === '1min' ? 'dynamically managed' : 'managed signal';
-}
-function countdownClass(row){
-  const closedAt = displayClosedAt(row);
-  if(closedAt) return 'done';
-  return 'ok';
-}
-function rowType(row){
-  return row.tf === '1min' ? 'M1 Signal' : 'M5 Signal';
-}
-function isClosed(row){ return !!displayOutcome(row) || displayR(row) !== null || !!displayClosedAt(row); }
+    <script>
+      const SUPABASE_URL = "https://nmfsqgqwjihpudiqnuwh.supabase.co";
+      const SUPABASE_ANON =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I";
+      const HEADERS = {
+        apikey: SUPABASE_ANON,
+        Authorization: "Bearer " + SUPABASE_ANON,
+      };
+      const VERIFIED_START = "2026-07-05T21:00:00Z";
+      const TODAY_ONLY = true;
+      const MAX_ROWS = 2000;
+      const PIP = {
+        EURUSD: 0.0001,
+        GBPUSD: 0.0001,
+        AUDUSD: 0.0001,
+        NZDUSD: 0.0001,
+        USDCAD: 0.0001,
+        USDCHF: 0.0001,
+        EURGBP: 0.0001,
+        EURAUD: 0.0001,
+        EURCAD: 0.0001,
+        EURNZD: 0.0001,
+        EURJPY: 0.01,
+        GBPJPY: 0.01,
+        USDJPY: 0.01,
+        CADJPY: 0.01,
+        CHFJPY: 0.01,
+        AUDJPY: 0.01,
+        NZDJPY: 0.01,
+        AUDCAD: 0.0001,
+        AUDCHF: 0.0001,
+        AUDNZD: 0.0001,
+        GBPAUD: 0.0001,
+        GBPCAD: 0.0001,
+        GBPCHF: 0.0001,
+        GBPNZD: 0.0001,
+        NZDCAD: 0.0001,
+        NZDCHF: 0.0001,
+        XAUUSD: 0.01,
+        XAGUSD: 0.01,
+        NAS100: 0.01,
+        BTCUSD: 1,
+        ETHUSD: 0.01,
+      };
 
-function getSortTime(row){
-  // Newest activity first: closed trades by close time, open trades by entry time.
-  const ts = displayClosedAt(row) || row.created_at;
-  const t = new Date(ts).getTime();
-  if(Number.isFinite(t)) return t;
-  const fallback = new Date(row.created_at).getTime();
-  return Number.isFinite(fallback) ? fallback : 0;
-}
-function sortNewestFirst(list){
-  return list.slice().sort((a,b) => {
-    const tb = getSortTime(b), ta = getSortTime(a);
-    if(tb !== ta) return tb - ta;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
-}
-function activityLabel(row){
-  const closedAt = displayClosedAt(row);
-  if(closedAt) return 'Activity: closed ' + fmtDateTime(closedAt);
-  return 'Activity: opened ' + fmtDateTime(row.created_at);
-}
-function passesToggles(row){
-  if(row.tf === '1min' && !showPulse) return false;
-  if(row.tf === '5min' && !showFive) return false;
-  if(isClosed(row) && !showClosed) return false;
-  if(!isClosed(row) && !showOpen) return false;
-  return true;
-}
+      let rows = [];
+      let fetchRunning = false;
+      let showOpen = true,
+        showClosed = true,
+        showPulse = true,
+        showFive = true;
 
-function makeCard(row){
-  const dir = String(row.dir || '').toLowerCase();
-  const st = statusFor(row);
-  const r = displayR(row);
-  const closePrice = row.display_close_price ?? row.close_price ?? row.shadow_close_price;
-  const rr = r === null ? '--' : (r >= 0 ? '+' : '') + r.toFixed(2) + 'R';
-  const card = document.createElement('article');
-  card.className = 'card ' + dir;
-  card.dataset.id = row.id;
-  card.dataset.tf = row.tf;
-  card.dataset.closed = isClosed(row) ? 'true' : 'false';
-  card.innerHTML = `
+      function utcDayStartIso(date = new Date()) {
+        return new Date(
+          Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate(),
+            0,
+            0,
+            0,
+          ),
+        ).toISOString();
+      }
+      function effectiveStartIso() {
+        const todayStart = utcDayStartIso();
+        return TODAY_ONLY && todayStart > VERIFIED_START
+          ? todayStart
+          : VERIFIED_START;
+      }
+      function tomorrowUtcStartIso(date = new Date()) {
+        return new Date(
+          Date.UTC(
+            date.getUTCFullYear(),
+            date.getUTCMonth(),
+            date.getUTCDate() + 1,
+            0,
+            0,
+            0,
+          ),
+        ).toISOString();
+      }
+      function sameUtcDay(row) {
+        if (!TODAY_ONLY) return true;
+        const start = new Date(effectiveStartIso()).getTime();
+        const t = new Date(row.created_at).getTime();
+        return Number.isFinite(t) && t >= start;
+      }
+      function fmtDateShort(iso) {
+        const d = new Date(iso);
+        return (
+          pad(d.getUTCDate()) +
+          "/" +
+          pad(d.getUTCMonth() + 1) +
+          "/" +
+          d.getUTCFullYear()
+        );
+      }
+
+      function pad(n) {
+        return String(n).padStart(2, "0");
+      }
+      function fmtTime(d) {
+        const x = new Date(d);
+        return pad(x.getUTCHours()) + ":" + pad(x.getUTCMinutes()) + " UTC";
+      }
+      function fmtDateTime(d) {
+        const x = new Date(d);
+        return (
+          pad(x.getUTCDate()) +
+          "/" +
+          pad(x.getUTCMonth() + 1) +
+          " " +
+          pad(x.getUTCHours()) +
+          ":" +
+          pad(x.getUTCMinutes()) +
+          " UTC"
+        );
+      }
+      function fmtPrice(sym, p) {
+        if (p === null || p === undefined || Number.isNaN(Number(p)))
+          return "--";
+        const pip = PIP[sym] || 0.0001;
+        if (pip >= 1) return Number(p).toFixed(0);
+        if (pip >= 0.01) return Number(p).toFixed(2);
+        return Number(p).toFixed(5);
+      }
+      function pips(sym, a, b) {
+        if (a === null || b === null || a === undefined || b === undefined)
+          return "--";
+        return (
+          (Math.abs(Number(a) - Number(b)) / (PIP[sym] || 0.0001)).toFixed(1) +
+          "p"
+        );
+      }
+      function nval(v) {
+        if (v === null || v === undefined || v === "") return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      }
+      function displayClosedAt(row) {
+        return (
+          row.display_closed_at || row.closed_at || row.shadow_closed_at || null
+        );
+      }
+      function rawOutcome(row) {
+        return row.display_outcome || row.outcome || row.shadow_outcome || null;
+      }
+      function rawR(row) {
+        const v = row.display_r_result ?? row.r_result ?? row.shadow_r_result;
+        return nval(v);
+      }
+      function isClosed(row) {
+        return !!displayClosedAt(row);
+      }
+      function isFinalised(row) {
+        return (
+          isClosed(row) && (rawOutcome(row) !== null || rawR(row) !== null)
+        );
+      }
+      function displayOutcome(row) {
+        return isClosed(row) ? rawOutcome(row) : null;
+      }
+      function displayR(row) {
+        return isClosed(row) ? rawR(row) : null;
+      }
+      function statusFor(row) {
+        if (!isClosed(row)) return { label: "OPEN", cls: "open" };
+        const out = displayOutcome(row);
+        const r = displayR(row);
+        if (out || r !== null) {
+          if (r !== null)
+            return r > 0
+              ? { label: "WIN", cls: "win" }
+              : { label: "LOSS", cls: "loss" };
+          if (String(out).toLowerCase() === "tp")
+            return { label: "WIN", cls: "win" };
+          if (String(out).toLowerCase() === "sl")
+            return { label: "LOSS", cls: "loss" };
+          return { label: String(out).toUpperCase(), cls: "waiting" };
+        }
+        return { label: "PENDING", cls: "waiting" };
+      }
+      function countdownText(row) {
+        const closedAt = displayClosedAt(row);
+        if (closedAt) return "closed " + fmtTime(closedAt);
+        return row.tf === "1min" ? "dynamically managed" : "managed signal";
+      }
+      function countdownClass(row) {
+        const closedAt = displayClosedAt(row);
+        if (closedAt) return "done";
+        return "ok";
+      }
+      function rowType(row) {
+        return row.tf === "1min" ? "M1 Signal" : "M5 Signal";
+      }
+      function getSortTime(row) {
+        // Newest activity first: closed trades by close time, open trades by entry time.
+        const ts = displayClosedAt(row) || row.created_at;
+        const t = new Date(ts).getTime();
+        if (Number.isFinite(t)) return t;
+        const fallback = new Date(row.created_at).getTime();
+        return Number.isFinite(fallback) ? fallback : 0;
+      }
+      function sortNewestFirst(list) {
+        return list.slice().sort((a, b) => {
+          const tb = getSortTime(b),
+            ta = getSortTime(a);
+          if (tb !== ta) return tb - ta;
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        });
+      }
+      function activityLabel(row) {
+        const closedAt = displayClosedAt(row);
+        if (closedAt) return "Activity: closed " + fmtDateTime(closedAt);
+        return "Activity: opened " + fmtDateTime(row.created_at);
+      }
+      function passesToggles(row) {
+        if (row.tf === "1min" && !showPulse) return false;
+        if (row.tf === "5min" && !showFive) return false;
+        if (isClosed(row) && !showClosed) return false;
+        if (!isClosed(row) && !showOpen) return false;
+        return true;
+      }
+
+      function makeCard(row) {
+        const dir = String(row.dir || "").toLowerCase();
+        const st = statusFor(row);
+        const r = displayR(row);
+        const closePrice = isClosed(row)
+          ? (row.display_close_price ??
+            row.close_price ??
+            row.shadow_close_price)
+          : null;
+        const rr = r === null ? "--" : (r >= 0 ? "+" : "") + r.toFixed(2) + "R";
+        const card = document.createElement("article");
+        card.className = "card " + dir;
+        card.dataset.id = row.id;
+        card.dataset.tf = row.tf;
+        card.dataset.closed = isClosed(row) ? "true" : "false";
+        card.innerHTML = `
     <div class="card-head">
       <div class="left">
         <span class="sym">${row.sym}</span>
-        <span class="dir ${dir}">${String(row.dir || '').toUpperCase()}</span>
+        <span class="dir ${dir}">${String(row.dir || "").toUpperCase()}</span>
         <span class="type">${rowType(row)}</span>
       </div>
       <span class="status ${st.cls}">${st.label}</span>
     </div>
     <div class="grid">
-      <div class="box"><div class="label">Entry</div><div class="value">${fmtPrice(row.sym,row.entry)}</div></div>
-      <div class="box"><div class="label">Stop</div><div class="value red">${fmtPrice(row.sym,row.sl)}</div><div class="small-note">${pips(row.sym,row.entry,row.sl)}</div></div>
-      <div class="box"><div class="label">Target</div><div class="value green">${fmtPrice(row.sym,row.tp)}</div><div class="small-note">${pips(row.sym,row.entry,row.tp)}</div></div>
-      <div class="box"><div class="label">Close</div><div class="value">${fmtPrice(row.sym,closePrice)}</div></div>
-      <div class="box"><div class="label">Result</div><div class="value ${r !== null && r > 0 ? 'green' : r !== null && r <= 0 ? 'red' : ''}">${rr}</div></div>
-      <div class="box"><div class="label">Source</div><div class="value" style="font-size:11px">${row.outcome ? 'Real' : row.shadow_outcome ? 'Collector' : 'Open'}</div></div>
+      <div class="box"><div class="label">Entry</div><div class="value">${fmtPrice(row.sym, row.entry)}</div></div>
+      <div class="box"><div class="label">Stop</div><div class="value red">${fmtPrice(row.sym, row.sl)}</div><div class="small-note">${pips(row.sym, row.entry, row.sl)}</div></div>
+      <div class="box"><div class="label">Target</div><div class="value green">${fmtPrice(row.sym, row.tp)}</div><div class="small-note">${pips(row.sym, row.entry, row.tp)}</div></div>
+      <div class="box"><div class="label">Close</div><div class="value">${fmtPrice(row.sym, closePrice)}</div></div>
+      <div class="box"><div class="label">Result</div><div class="value ${r !== null && r > 0 ? "green" : r !== null && r <= 0 ? "red" : ""}">${rr}</div></div>
+      <div class="box"><div class="label">Source</div><div class="value" style="font-size:11px">${!isFinalised(row) ? "Pending" : row.outcome ? "Real" : row.shadow_outcome ? "Collector" : "Final"}</div></div>
     </div>
     <div class="footer">
       <div class="time">Entry: ${fmtDateTime(row.created_at)} · ${activityLabel(row)}</div>
       <div class="countdown ${countdownClass(row)}">${countdownText(row)}</div>
     </div>
   `;
-  return card;
-}
+        return card;
+      }
 
-async function fetchSignals(){
-  const since = effectiveStartIso();
-  const query =
-    '/rest/v1/public_signal_feed?' +
-    'select=*' +
-    '&created_at=gte.' + encodeURIComponent(since) +
-    (TODAY_ONLY ? '&created_at=lt.' + encodeURIComponent(tomorrowUtcStartIso()) : '') +
-    '&currency_ai_pass=eq.true' +
-    '&tf=in.(1min,5min)' +
-    '&order=created_at.desc' +
-    '&limit=' + MAX_ROWS;
-  const res = await fetch(SUPABASE_URL + query, {headers: HEADERS});
-  if(!res.ok) throw new Error(await res.text());
-  rows = (await res.json()).filter(sameUtcDay);
-  const dayPill = document.getElementById('dayPill');
-  if(dayPill) dayPill.textContent = TODAY_ONLY ? ('Today UTC · ' + fmtDateShort(since)) : 'Verified era from 05/07/2026';
-  const rangeSub = document.getElementById('rangeSub');
-  if(rangeSub) rangeSub.textContent = TODAY_ONLY ? 'today UTC · CurrencyAI approved only' : 'verified era · CurrencyAI approved only';
-  render();
-}
-function render(){
-  const pulseList = document.getElementById('pulseList');
-  const fiveList = document.getElementById('fiveList');
-  pulseList.innerHTML = '';
-  fiveList.innerHTML = '';
+      async function fetchSignals() {
+        if (fetchRunning) return;
+        fetchRunning = true;
+        try {
+          const since = effectiveStartIso();
+          const query =
+            "/rest/v1/public_signal_feed?" +
+            "select=*" +
+            "&created_at=gte." +
+            encodeURIComponent(since) +
+            (TODAY_ONLY
+              ? "&created_at=lt." + encodeURIComponent(tomorrowUtcStartIso())
+              : "") +
+            "&currency_ai_pass=eq.true" +
+            "&tf=in.(1min,5min)" +
+            "&order=created_at.desc";
+          const loaded = [];
+          const pageSize = 500;
+          for (let offset = 0; offset < MAX_ROWS; offset += pageSize) {
+            const res = await fetch(
+              SUPABASE_URL + query + `&offset=${offset}&limit=${pageSize}`,
+              { headers: HEADERS },
+            );
+            if (!res.ok) throw new Error(await res.text());
+            const page = await res.json();
+            loaded.push(...page);
+            if (page.length < pageSize) break;
+          }
+          rows = loaded.filter(sameUtcDay);
+          const dayPill = document.getElementById("dayPill");
+          if (dayPill)
+            dayPill.textContent = TODAY_ONLY
+              ? "Today UTC · " + fmtDateShort(since)
+              : "Verified era from 05/07/2026";
+          const rangeSub = document.getElementById("rangeSub");
+          if (rangeSub)
+            rangeSub.textContent = TODAY_ONLY
+              ? "today UTC · CurrencyAI approved only"
+              : "verified era · CurrencyAI approved only";
+          render();
+        } finally {
+          fetchRunning = false;
+        }
+      }
+      function render() {
+        const pulseList = document.getElementById("pulseList");
+        const fiveList = document.getElementById("fiveList");
+        pulseList.innerHTML = "";
+        fiveList.innerHTML = "";
 
-  const visible = rows.filter(passesToggles);
-  const pulse = sortNewestFirst(visible.filter(r => r.tf === '1min'));
-  const five = sortNewestFirst(visible.filter(r => r.tf === '5min'));
+        const visible = rows.filter(passesToggles);
+        const pulse = sortNewestFirst(visible.filter((r) => r.tf === "1min"));
+        const five = sortNewestFirst(visible.filter((r) => r.tf === "5min"));
 
-  if(!pulse.length) pulseList.innerHTML = '<div class="empty">No visible M1 signals yet.</div>';
-  else pulse.forEach(r => pulseList.appendChild(makeCard(r)));
+        if (!pulse.length)
+          pulseList.innerHTML =
+            '<div class="empty">No visible M1 signals yet.</div>';
+        else pulse.forEach((r) => pulseList.appendChild(makeCard(r)));
 
-  if(!five.length) fiveList.innerHTML = '<div class="empty">No visible M5 signals yet.</div>';
-  else five.forEach(r => fiveList.appendChild(makeCard(r)));
+        if (!five.length)
+          fiveList.innerHTML =
+            '<div class="empty">No visible M5 signals yet.</div>';
+        else five.forEach((r) => fiveList.appendChild(makeCard(r)));
 
-  document.getElementById('countPulse').textContent = pulse.length + ' shown';
-  document.getElementById('countFive').textContent = five.length + ' shown';
+        document.getElementById("countPulse").textContent =
+          pulse.length + " shown";
+        document.getElementById("countFive").textContent =
+          five.length + " shown";
 
-  const allVisible = visible;
-  const closed = allVisible.filter(isClosed);
-  const wins = closed.filter(r => (displayR(r) ?? 0) > 0).length;
-  const losses = closed.filter(r => (displayR(r) ?? 0) <= 0).length;
-  const totalR = closed.reduce((s,r) => s + (displayR(r) ?? 0), 0);
-  document.getElementById('statTotal').textContent = allVisible.length;
-  document.getElementById('statOpen').textContent = allVisible.filter(r => !isClosed(r)).length;
-  document.getElementById('statWL').textContent = wins + 'W / ' + losses + 'L';
-  document.getElementById('statR').textContent = (totalR >= 0 ? '+' : '') + totalR.toFixed(2) + 'R';
-}
-function updateClock(){
-  const n = new Date();
-  document.getElementById('utcClock').textContent = 'UTC ' + pad(n.getUTCHours()) + ':' + pad(n.getUTCMinutes()) + ':' + pad(n.getUTCSeconds());
-  document.querySelectorAll('.card').forEach(card => {
-    const row = rows.find(r => r.id === card.dataset.id);
-    if(!row) return;
-    const cd = card.querySelector('.countdown');
-    const stEl = card.querySelector('.status');
-    if(cd){ cd.textContent = countdownText(row); cd.className = 'countdown ' + countdownClass(row); }
-    if(stEl){ const st = statusFor(row); stEl.textContent = st.label; stEl.className = 'status ' + st.cls; }
-  });
-}
-function bindToggle(id, getterSetter){
-  const btn = document.getElementById(id);
-  btn.addEventListener('click', () => {
-    getterSetter();
-    btn.classList.toggle('on');
-    render();
-  });
-}
-bindToggle('toggleOpen', () => showOpen = !showOpen);
-bindToggle('toggleClosed', () => showClosed = !showClosed);
-bindToggle('togglePulse', () => showPulse = !showPulse);
-bindToggle('toggleFive', () => showFive = !showFive);
-document.getElementById('reloadBtn').addEventListener('click', fetchSignals);
+        const allVisible = visible;
+        const finalised = allVisible.filter(isFinalised);
+        const wins = finalised.filter((r) => statusFor(r).cls === "win").length;
+        const losses = finalised.filter(
+          (r) => statusFor(r).cls === "loss",
+        ).length;
+        const totalR = finalised.reduce((s, r) => s + (displayR(r) ?? 0), 0);
+        document.getElementById("statTotal").textContent = allVisible.length;
+        document.getElementById("statOpen").textContent = allVisible.filter(
+          (r) => !isFinalised(r),
+        ).length;
+        document.getElementById("statWL").textContent =
+          wins + "W / " + losses + "L";
+        document.getElementById("statR").textContent =
+          (totalR >= 0 ? "+" : "") + totalR.toFixed(2) + "R";
+      }
+      function updateClock() {
+        const n = new Date();
+        document.getElementById("utcClock").textContent =
+          "UTC " +
+          pad(n.getUTCHours()) +
+          ":" +
+          pad(n.getUTCMinutes()) +
+          ":" +
+          pad(n.getUTCSeconds());
+        document.querySelectorAll(".card").forEach((card) => {
+          const row = rows.find((r) => r.id === card.dataset.id);
+          if (!row) return;
+          const cd = card.querySelector(".countdown");
+          const stEl = card.querySelector(".status");
+          if (cd) {
+            cd.textContent = countdownText(row);
+            cd.className = "countdown " + countdownClass(row);
+          }
+          if (stEl) {
+            const st = statusFor(row);
+            stEl.textContent = st.label;
+            stEl.className = "status " + st.cls;
+          }
+        });
+      }
+      function bindToggle(id, getterSetter) {
+        const btn = document.getElementById(id);
+        btn.addEventListener("click", () => {
+          getterSetter();
+          btn.classList.toggle("on");
+          render();
+        });
+      }
+      bindToggle("toggleOpen", () => (showOpen = !showOpen));
+      bindToggle("toggleClosed", () => (showClosed = !showClosed));
+      bindToggle("togglePulse", () => (showPulse = !showPulse));
+      bindToggle("toggleFive", () => (showFive = !showFive));
+      async function refreshSignals() {
+        try {
+          await fetchSignals();
+        } catch (err) {
+          document.getElementById("pulseList").innerHTML =
+            '<div class="empty">Failed to load signals.<br>' +
+            String(err?.message || err).slice(0, 160) +
+            "</div>";
+          document.getElementById("fiveList").innerHTML =
+            '<div class="empty">Failed to load signals.</div>';
+        }
+      }
+      document
+        .getElementById("reloadBtn")
+        .addEventListener("click", refreshSignals);
 
-setInterval(updateClock, 1000);
-setInterval(fetchSignals, 30000);
-updateClock();
-fetchSignals().catch(err => {
-  document.getElementById('pulseList').innerHTML = '<div class="empty">Failed to load signals.<br>' + String(err.message || err).slice(0,160) + '</div>';
-  document.getElementById('fiveList').innerHTML = '<div class="empty">Failed to load signals.</div>';
-});
-</script>
-</body>
+      setInterval(updateClock, 1000);
+      setInterval(refreshSignals, 30000);
+      updateClock();
+      refreshSignals();
+    </script>
+  </body>
 </html>
