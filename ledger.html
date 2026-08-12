@@ -779,6 +779,7 @@
       const el = (id) => document.getElementById(id);
       let rows = [];
       let ledgerLoading = false;
+      let ledgerInitialised = false;
 
       function safe(v, fallback = "") {
         return v === null || v === undefined ? fallback : v;
@@ -868,7 +869,15 @@
             return;
           }
           notice.style.display = "none";
-          const url = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${LEDGER_VIEW}?select=*&order=sequence_no.desc&limit=500`;
+          const newestSequence = rows.reduce(
+            (max, row) => Math.max(max, Number(row.sequence_no) || 0),
+            0,
+          );
+          const deltaFilter =
+            ledgerInitialised && newestSequence > 0
+              ? `&sequence_no=gt.${newestSequence}`
+              : "";
+          const url = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${LEDGER_VIEW}?select=*${deltaFilter}&order=sequence_no.desc&limit=500`;
           const res = await fetch(url, {
             headers: {
               apikey: SUPABASE_ANON_KEY,
@@ -880,7 +889,18 @@
             notice.textContent = `Could not load ledger: ${res.status} ${await res.text()}`;
             return;
           }
-          rows = await res.json();
+          const incoming = await res.json();
+          if (!ledgerInitialised) {
+            rows = incoming;
+          } else if (incoming.length) {
+            const bySequence = new Map(
+              [...incoming, ...rows].map((row) => [String(row.sequence_no), row]),
+            );
+            rows = [...bySequence.values()]
+              .sort((a, b) => Number(b.sequence_no) - Number(a.sequence_no))
+              .slice(0, 500);
+          }
+          ledgerInitialised = true;
           render();
         } catch (error) {
           notice.style.display = "block";
@@ -1106,7 +1126,11 @@
       el("eventType").addEventListener("change", render);
       el("reload").addEventListener("click", loadLedger);
       loadLedger();
-      setInterval(loadLedger, 30000);
+      // The manual reload button remains immediate. Automatic refresh pauses
+      // while the tab is hidden and runs once per minute while visible.
+      setInterval(() => {
+        if (!document.hidden) loadLedger();
+      }, 60000);
     </script>
   </body>
 </html>
