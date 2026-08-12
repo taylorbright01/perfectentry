@@ -864,7 +864,9 @@
         requestAnimationFrame(animate);
       }
       loadData();
-      setInterval(loadData, 60000);
+      setInterval(() => {
+        if (!document.hidden) loadData();
+      }, 300000);
       animate();
     </script>
   </body>
