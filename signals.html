@@ -1025,7 +1025,10 @@
         .addEventListener("click", refreshSignals);
 
       setInterval(updateClock, 1000);
-      setInterval(refreshSignals, 30000);
+      // Keep the live page current without polling Supabase from background tabs.
+      setInterval(() => {
+        if (!document.hidden) refreshSignals();
+      }, 60000);
       updateClock();
       refreshSignals();
     </script>
