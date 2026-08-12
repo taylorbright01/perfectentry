@@ -773,7 +773,7 @@
       async function loadAllCollectorRows() {
         // Currency-state heatmap uses all collector-tracked verified-era outcomes, not only approved CurrencyAI trades.
         const cols =
-          "id,sym,tf,dir,created_at,display_closed_at,display_outcome,display_r_result,closed_at,outcome,r_result,shadow_closed_at,shadow_outcome,shadow_r_result,currency_ai_pass";
+          "id,sym,tf,dir,created_at,display_closed_at,display_outcome,display_r_result,closed_at,outcome,r_result,shadow_closed_at,shadow_outcome,shadow_r_result,currency_ai_pass,entry,sl,tp";
         const path =
           "/rest/v1/public_signal_feed?select=" +
           cols +
@@ -1126,10 +1126,12 @@
       }
       async function init() {
         try {
-          const [approvedRows, allRows] = await Promise.all([
-            loadRows(),
-            loadAllCollectorRows(),
-          ]);
+          // One superset fetch replaces the former pair of almost-identical
+          // verified-era downloads.
+          const allRows = await loadAllCollectorRows();
+          const approvedRows = allRows
+            .filter((row) => row.currency_ai_pass === true)
+            .sort((a, b) => new Date(rowClosedAt(a)) - new Date(rowClosedAt(b)));
           latestApprovedRows = approvedRows;
           render(metrics(approvedRows), approvedRows);
           renderHeatmap(allRows);
@@ -1153,7 +1155,12 @@
         }
       }
       refresh();
-      setInterval(refresh, 60000);
+      // This page downloads verified-era analytics, not a price tick. Five-minute
+      // visible-tab refreshes keep the metrics current without repeatedly pulling
+      // the complete history from abandoned/background tabs.
+      setInterval(() => {
+        if (!document.hidden) refresh();
+      }, 300000);
     </script>
   </body>
 </html>
