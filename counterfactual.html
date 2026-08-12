@@ -894,7 +894,9 @@
         }
       }
       refresh();
-      setInterval(refresh, 60000);
+      setInterval(() => {
+        if (!document.hidden) refresh();
+      }, 300000);
     </script>
   </body>
 </html>
