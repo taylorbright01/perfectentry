@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfect View Charting — Perfect Entry</title>
+  <meta name="description" content="The Perfect Entry charting workspace. Explore price structure, mark your levels and save your analysis.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="assets/logo.png">
+  <link rel="stylesheet" href="assets/perfect-view/style.css">
+  <script type="module" src="assets/perfect-view/app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#chart">Skip to chart</a>
+  <header class="site-header">
+    <a class="brand" href="index.html"><img src="assets/logo.png" alt=""><span>Perfect Entry</span></a>
+    <span class="brand-divider" aria-hidden="true"></span>
+    <h1>Perfect <span>View</span></h1>
+    <nav aria-label="Perfect Entry"><a href="index.html">Home</a><a href="signals.html">Signals</a></nav>
+    <a id="login" class="button" hidden>Sign in with Whop</a>
+    <span class="edition">Charting preview</span>
+  </header>
+
+  <main class="workspace">
+    <section class="market-toolbar" aria-label="Chart settings">
+      <div class="market-picker"><label class="sr-only" for="symbol">Market</label><select id="symbol">
+        <option>EURUSD</option><option>GBPUSD</option><option>USDJPY</option><option>XAUUSD</option>
+      </select><span class="muted">Forex &amp; gold</span></div>
+      <div id="timeframes" class="segmented" role="group" aria-label="Timeframe">
+        <button data-tf="60" aria-pressed="false">1m</button><button data-tf="300" aria-pressed="true">5m</button>
+        <button data-tf="900" aria-pressed="false">15m</button><button data-tf="3600" aria-pressed="false">1h</button>
+        <button data-tf="14400" aria-pressed="false">4h</button><button data-tf="86400" aria-pressed="false">1D</button>
+      </div>
+      <div class="toolbar-end">
+        <label class="sr-only" for="chart-mode">Chart style</label><select id="chart-mode"><option value="candles">Candles</option><option value="line">Line</option></select>
+        <button id="focus" class="button focus-button" aria-pressed="true">Focus view</button>
+        <button id="load" class="button">Load data</button>
+        <button id="panel-toggle" class="button mobile-panel" aria-expanded="false" aria-controls="side-panel">Workspace</button>
+      </div>
+    </section>
+
+    <div class="chart-workspace">
+      <aside class="drawing-toolbar" aria-label="Drawing tools">
+        <button data-tool="select" aria-pressed="true" title="Select or pan (Escape)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 3 13 9-6 2-3 7Z"/></svg><span class="sr-only">Select or pan</span></button>
+        <span class="tool-divider"></span>
+        <button data-tool="horizontal" aria-pressed="false" title="Horizontal level"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18"/><circle cx="8" cy="12" r="2"/></svg><span class="sr-only">Horizontal level</span></button>
+        <button data-tool="trend" aria-pressed="false" title="Trendline"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 18 14-12"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/></svg><span class="sr-only">Trendline</span></button>
+        <button data-tool="rectangle" aria-pressed="false" title="Price zone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1"/></svg><span class="sr-only">Price zone</span></button>
+        <button data-tool="text" aria-pressed="false" title="Text note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v15M8 20h8"/></svg><span class="sr-only">Text note</span></button>
+        <span class="tool-divider"></span>
+        <button id="undo" disabled title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4-5 5 5 5M4 9h10a6 6 0 0 1 0 12"/></svg><span class="sr-only">Undo</span></button>
+        <button id="redo" disabled title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 5 5-5 5M20 9H10a6 6 0 0 0 0 12"/></svg><span class="sr-only">Redo</span></button>
+        <button id="delete" disabled title="Delete selected drawing"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg><span class="sr-only">Delete selected drawing</span></button>
+      </aside>
+
+      <section class="chart-surface" aria-label="Price chart">
+        <div class="chart-heading"><div><strong id="chart-title">EURUSD</strong><span id="timeframe-label">5 minute</span><span class="source-pill" id="source-badge">Sample data · not live</span></div><span id="hover-time" class="muted"></span></div>
+        <div class="canvas-wrap"><canvas id="chart" tabindex="0" aria-label="Interactive price chart. Drag to pan, scroll to zoom, or use arrow and plus or minus keys." aria-describedby="chart-instructions chart-summary">Your browser needs canvas support to display this chart.</canvas></div>
+        <div class="chart-actions"><div class="zoom-controls"><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="latest">Latest candles</button></div><span class="chart-wordmark" aria-hidden="true">PERFECT VIEW</span></div>
+        <p id="chart-summary" class="sr-only"></p>
+        <details class="accessible-data"><summary>View candle data as a table</summary><p>The latest 20 displayed candles. Times are UTC.</p><div class="table-scroll"><table><caption class="sr-only">Latest chart candles</caption><thead><tr><th>Opening time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th></tr></thead><tbody id="candle-table"></tbody></table></div></details>
+      </section>
+
+      <aside id="side-panel" class="side-panel" aria-label="Your workspace" contenteditable="false">
+        <div class="panel-heading"><h2>Workspace</h2><span id="drawing-count">0 drawings</span></div>
+        <div class="panel-tabs" role="group" aria-label="Workspace section"><button data-panel="indicators" aria-pressed="true">Indicators</button><button data-panel="drawings" aria-pressed="false">Drawings</button></div>
+        <section id="indicators-panel">
+          <div class="panel-section-heading"><h3>Across all markets</h3><button id="add-indicator" class="text-button">Add</button></div>
+          <div id="indicator-list"></div>
+          <p class="panel-note">Your Perfect Entry indicators will be added here as they are converted.</p>
+        </section>
+        <section id="drawings-panel" hidden><p class="drawing-scope">Saved for this market. Restored when you return.</p><div id="drawing-list"></div></section>
+        <div class="panel-bottom">
+          <label class="checkbox"><input id="closed-only" type="checkbox" checked><span>Closed candles only</span></label>
+          <p class="muted">Wait for each candle to finish before it appears.</p>
+          <label class="refresh-label" for="refresh">Feed refresh<select id="refresh"><option value="60">Every minute</option><option value="30">Every 30 seconds</option></select></label>
+          <div class="workspace-transfer"><button id="export" class="text-button">Export drawings</button><button id="restore" class="text-button">Restore</button><input id="restore-file" type="file" accept=".json" hidden></div>
+          <p id="save-status" role="status">Saved in this browser</p>
+        </div>
+      </aside>
+    </div>
+    <footer class="workspace-footer"><span id="chart-instructions">Drag to explore. Scroll to zoom.</span><span id="data-status">Sample candles · UTC</span></footer>
+    <p id="message" role="status" class="message" hidden></p>
+  </main>
+
+  <dialog id="load-dialog"><form id="data-form">
+    <div class="dialog-heading"><h2>Load candle data</h2><button type="button" data-close="load-dialog" aria-label="Close">×</button></div>
+    <p>Load a CSV or JSON file from your broker. All opening times must be UTC. Files stay on this device.</p>
+    <label>Market<input id="import-symbol" value="EURUSD" pattern="[A-Za-z0-9._-]{2,24}" maxlength="24" required></label>
+    <label>Source candle size<select id="import-timeframe"><option value="60">1 minute</option><option value="300">5 minutes</option><option value="900">15 minutes</option><option value="3600">1 hour</option><option value="14400">4 hours</option><option value="86400">1 day</option></select></label>
+    <label class="file-picker">Candle file<input id="data-file" type="file" accept=".csv,.tsv,.json,.txt" required></label>
+    <p class="muted">CSV columns: time, open, high, low, close, volume. JSON can include symbol and baseTimeframe. MT5 tab-separated headers are supported.</p>
+    <p id="import-error" class="error" role="alert" hidden></p>
+    <div class="dialog-actions"><button type="button" id="sample-data" class="button">Use sample data</button><button type="submit" class="button primary">Open chart</button></div>
+  </form></dialog>
+
+  <dialog id="indicator-dialog"><form id="indicator-form">
+    <div class="dialog-heading"><h2>Add moving average</h2><button type="button" data-close="indicator-dialog" aria-label="Close">×</button></div>
+    <p>A native exponential moving average (EMA), calculated from this chart’s candles.</p>
+    <label>Period<input id="ema-period" type="number" min="1" max="500" step="1" value="20" required></label>
+    <label>Colour<input id="ema-color" type="color" value="#b4a2ff"></label>
+    <div class="dialog-actions"><button class="button primary" type="submit">Add to chart</button></div>
+  </form></dialog>
+
+  <dialog id="note-dialog"><form id="note-form">
+    <div class="dialog-heading"><h2>Chart note</h2><button type="button" data-close="note-dialog" aria-label="Close">×</button></div>
+    <label>Your note<textarea id="note-text" rows="3" maxlength="160" required placeholder="What are you looking for here?"></textarea></label>
+    <div class="dialog-actions"><button class="button primary" type="submit">Save note</button></div>
+  </form></dialog>
+  <dialog id="rename-dialog"><form id="rename-form">
+    <div class="dialog-heading"><h2>Rename workspace item</h2><button type="button" data-close="rename-dialog" aria-label="Close">×</button></div>
+    <label>Name<input id="rename-name" type="text" maxlength="80" required autocomplete="off"></label>
+    <div class="dialog-actions"><button class="button primary" type="submit">Save name</button></div>
+  </form></dialog>
+  <noscript><p class="message">Enable JavaScript to use Perfect View charting.</p></noscript>
+</body>
+</html>
