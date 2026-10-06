@@ -73,8 +73,8 @@
         <div class="panel-bottom">
           <label class="checkbox"><input id="closed-only" type="checkbox" checked><span>Closed candles only</span></label>
           <p class="muted">Turn off to show the forming candle. Indicators use completed candles.</p>
-          <label class="refresh-label" for="refresh">Recovery check<select id="refresh"><option value="60">Every minute</option><option value="30">Every 30 seconds</option></select></label>
-          <p class="muted">Candles update when data arrives. Recovery checks help if the connection drops.</p>
+          <label class="refresh-label" for="refresh">Update interval<select id="refresh"><option value="60">Every minute</option><option value="30">Every 30 seconds</option></select></label>
+          <p class="muted">Updates follow candle close. Existing candles stay visible if the feed is delayed.</p>
           <div class="workspace-transfer"><button id="export" class="text-button">Export drawings</button><button id="restore" class="text-button">Restore</button><input id="restore-file" type="file" accept=".json" hidden></div>
           <p id="save-status" role="status">Saved in this browser</p>
         </div>
