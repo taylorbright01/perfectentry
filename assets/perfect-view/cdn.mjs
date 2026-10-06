@@ -5,7 +5,7 @@ export function nextCdnCheck(now,seconds=30) {
  return Math.max(250,(Math.floor((now-phase)/period)+1)*period+phase-now);
 }
 export class CdnFeed {
- constructor({url,fetchImpl=fetch,readCache=async()=>null,writeCache=async()=>{},now=()=>Date.now(),locks=globalThis.navigator?.locks}) {
+ constructor({url,fetchImpl=globalThis.fetch.bind(globalThis),readCache=async()=>null,writeCache=async()=>{},now=()=>Date.now(),locks=globalThis.navigator?.locks}) {
   Object.assign(this,{url,fetchImpl,readCache,writeCache,now,locks});
   this.memory=new Map();
  }
