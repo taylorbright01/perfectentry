@@ -1,9 +1,9 @@
 // Public configuration only. Never put Whop secrets or Supabase service keys here.
 export const config = Object.freeze({
-  feedUrl: 'null',
-  // This stage serves public broker candles. Whop membership checks are not deployed yet.
-  realtimeUrl: 'null',
-  realtimeKey: 'null', // Existing public anon key; never a service-role key.
+  feedUrl: 'https://perfectview.th3flow.world/',
+  // Preserve existing drawing/workspace keys when switching data delivery.
+  workspaceFeedId: 'https://nmfsqgqwjihpudiqnuwh.supabase.co/functions/v1/perfect-view-feed',
+  // Public broker candles. Whop membership checks are a separate next stage.
   feedBaseTimeframe: 30,
   refreshSeconds: 30,
   availableSymbols: ['AUDCAD','AUDCHF','AUDNZD','AUDUSD','BTCUSD','CADJPY','CHFJPY','ETHUSD','EURAUD','EURCAD','EURGBP','EURJPY','EURNZD','EURUSD','GBPAUD','GBPCAD','GBPCHF','GBPJPY','GBPUSD','NAS100','NZDCAD','NZDCHF','NZDJPY','NZDUSD','USDCAD','USDCHF','USDJPY','XAGUSD','XAUUSD'],

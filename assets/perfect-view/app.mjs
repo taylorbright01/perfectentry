@@ -1,8 +1,7 @@
 import { aggregateBars, createDemoBars, indicators, parseDataset, validateDrawing, validateStudies, TIMEFRAMES } from './core.mjs';
 import { PerfectViewChart } from './chart.mjs';
 import { config } from './config.mjs';
-import { parseFeedResponse } from './feed.mjs';
-import { FeedNotifications, nextFeedCheck } from './realtime.mjs';
+import { CdnFeed, nextCdnCheck } from './cdn.mjs';
 
 const $ = id => document.getElementById(id);
 const chart = new PerfectViewChart($('chart'));
@@ -30,15 +29,8 @@ let dataset = null, kind = 'demo', datasetId = '', scope = '', studies = [], his
 let pollTimer = null, feedController = null, feedGeneration = 0, notePoint = null, saveTimer = null;
 let studyTemplateLoaded = false, renameTarget = null;
 const workspaceCache = new Map();
-let feedFetching = false, notificationQueued = false, notificationTimer = null, lastFeedFetched = 0;
-const notifications = new FeedNotifications({ url: config.realtimeUrl, key: config.realtimeKey,
-  onBatch: refreshOnArrival,
-  onStatus: ready => {
-    if (dataset && kind === 'feed') rebuild();
-    if (ready) refreshOnArrival(); // Catch up after joining/reconnecting.
-    scheduleFeed();
-  }
-});
+let feedFetching = false, feedFailures = 0;
+const cdn = new CdnFeed({url: config.feedUrl, readCache: readDataset, writeCache: cacheDataset});
 const labels = { 30: '30 seconds', 60: '1 minute', 300: '5 minute', 900: '15 minute', 3600: '1 hour', 14400: '4 hour', 86400: '1 day' };
 const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note' };
 
@@ -132,7 +124,7 @@ function rebuild({ reset = false } = {}) {
   if (delayed) $('source-badge').textContent = 'Broker feed · delayed';
   $('data-status').textContent = kind === 'demo' ? 'Synthetic sample · UTC · no live prices'
     : kind === 'import' ? `File data · ${last ? 'last candle ' + utc(last.time) : 'no complete candles'} · UTC`
-    : `${notifications.ready ? 'Updates on arrival' : preferences.refreshSeconds + 's recovery check'} · ${sourceLast ? 'feed candle ' + utc(sourceLast.time) : 'no feed candles'} · UTC${delayed ? ' · delayed or market closed' : ''}`;
+    : `${preferences.refreshSeconds}s updates · ${sourceLast ? 'feed candle ' + utc(sourceLast.time) : 'no feed candles'} · UTC${delayed ? ' · delayed or market closed' : ''}`;
   $('chart-summary').textContent = `${dataset.symbol}, ${labels[preferences.timeframe]} chart, ${bars.length} candles. ` +
     (last ? `Last candle opened ${utc(last.time)} UTC. Open ${last.open}, high ${last.high}, low ${last.low}, close ${last.close}. ` : '') +
     (kind === 'demo' ? 'Synthetic sample data, not live market prices.' : '');
@@ -148,7 +140,7 @@ function rebuild({ reset = false } = {}) {
 function useDataset(data, source, id, { reset = true, restoreViewport = false } = {}) {
   if (scope) save();
   dataset = data; kind = source; datasetId = id;
-  if (source !== 'feed') notifications.stop();
+  if (source !== 'feed') clearTimeout(pollTimer);
   scope = id + ':' + data.symbol;
   preferences.symbol = data.symbol;
   ensureSymbol(data.symbol);
@@ -262,7 +254,27 @@ function withDB(action) {
     };
   });
 }
+let lastCacheCleanup = 0;
+function pruneCdnCache() {
+  const now = Date.now();
+  if (now - lastCacheCleanup < 86400000) return;
+  lastCacheCleanup = now;
+  withDB((db, resolve, reject) => {
+    const tx = db.transaction('datasets', 'readwrite'), store = tx.objectStore('datasets');
+    const request = store.openKeyCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      const key = String(cursor.key), match = key.startsWith('cdn:') && /:hour:\d+:(\d+)$/.exec(key);
+      if (match && Number(match[1]) < now / 1000 - 7 * 86400) store.delete(cursor.key);
+      cursor.continue();
+    };
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  }).catch(() => {});
+}
 function cacheDataset(id, data) {
+  if (id.startsWith('cdn:')) pruneCdnCache();
   return withDB((db, resolve, reject) => {
     const tx = db.transaction('datasets', 'readwrite'); tx.objectStore('datasets').put(data, id);
     tx.oncomplete = () => { db.close(); resolve(); };
@@ -284,25 +296,17 @@ async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
   const controller = feedController;
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const url = new URL(config.feedUrl, location.href);
-    if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') throw new Error('The feed needs HTTPS.');
-    url.searchParams.set('symbol', symbol); url.searchParams.set('timeframe', String(config.feedBaseTimeframe ?? 60));
-    const id = 'feed:' + new URL(config.feedUrl, location.href).href;
+    const id = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href);
     const previous = kind === 'feed' && scope === id + ':' + symbol ? dataset : null;
-    if (previous?.candles.length) url.searchParams.set('since', String(Math.max(0, previous.candles.at(-1).time - 60)));
-    const response = await fetch(url, { credentials: 'include', cache: 'no-store', signal: controller.signal });
-    if (response.status === 401 || response.status === 403) throw new Error('Sign in with an eligible membership to load this feed.');
-    if (!response.ok) throw new Error('The broker feed is unavailable.');
-    const text = await response.text();
-    const data = parseFeedResponse(text, symbol, config.feedBaseTimeframe ?? 60, previous);
+    const data = await cdn.load(symbol, previous, {signal: controller.signal});
     if (generation !== feedGeneration) return;
     if (scope === id + ':' + symbol) { dataset = data; rebuild(); save(); }
     else useDataset(data, 'feed', id, { restoreViewport });
-    lastFeedFetched = Date.now();
-    if (!document.hidden) notifications.start();
+    feedFailures = 0;
     $('message').hidden = true;
   } catch (error) {
     if (generation !== feedGeneration) return;
+    feedFailures++;
     announce(error.name === 'AbortError' ? 'The feed timed out. Existing candles remain visible; they may be stale.' : error.message);
     $('data-status').textContent = 'Feed unavailable · displayed data may be stale';
     $('source-badge').textContent = 'Feed unavailable';
@@ -311,25 +315,21 @@ async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
     clearTimeout(timeout);
     if (generation === feedGeneration) {
       feedFetching = false;
-      if (notificationQueued) { notificationQueued = false; refreshOnArrival(); }
     }
   }
-}
-function refreshOnArrival() {
-  if (!config.feedUrl || document.hidden || (dataset && kind !== 'feed')) return;
-  if (feedFetching) { notificationQueued = true; return; }
-  clearTimeout(notificationTimer);
-  notificationTimer = setTimeout(() => {
-    if (!document.hidden && (!dataset || kind === 'feed')) fetchFeed().finally(scheduleFeed);
-  }, 100);
 }
 function scheduleFeed() {
   clearTimeout(pollTimer);
   if (!config.feedUrl || document.hidden || (dataset && kind !== 'feed')) return;
+  const delay = feedFailures ? Math.min(300000, 30000 * 2 ** Math.min(feedFailures - 1, 4))
+    : nextCdnCheck(Date.now(), preferences.refreshSeconds);
   pollTimer = setTimeout(async () => {
-    if (!document.hidden && !feedFetching && (!notifications.ready || Date.now() - lastFeedFetched > 55000)) await fetchFeed();
+    if (!document.hidden && !feedFetching) await fetchFeed();
     scheduleFeed();
-  }, notifications.ready ? 60000 : nextFeedCheck(Date.now(), preferences.refreshSeconds));
+  }, delay);
+}
+function pauseFeed() {
+  clearTimeout(pollTimer); feedController?.abort(); feedGeneration++; feedFetching = false;
 }
 
 document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => chart.setTool(button.dataset.tool)));
@@ -415,7 +415,7 @@ $('data-form').addEventListener('submit', async event => {
 });
 $('sample-data').addEventListener('click', () => {
   feedController?.abort(); feedGeneration++; clearTimeout(pollTimer);
-  feedFetching = false; notificationQueued = false; clearTimeout(notificationTimer); notifications.stop();
+  feedFetching = false;
   useDemo(); $('load-dialog').close();
 });
 $('export').addEventListener('click', () => {
@@ -440,10 +440,10 @@ document.addEventListener('keydown', event => {
   if (event.target.matches('input,textarea,select') || document.querySelector('dialog[open]')) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); travel(event.shiftKey ? 1 : -1); }
 });
-window.addEventListener('pagehide', () => { save(); clearTimeout(pollTimer); clearTimeout(notificationTimer); notifications.stop(); });
+window.addEventListener('pagehide', () => { save(); pauseFeed(); });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { save(); clearTimeout(pollTimer); clearTimeout(notificationTimer); notifications.stop(); }
-  else if (config.feedUrl && kind === 'feed') { notifications.start(); fetchFeed().finally(scheduleFeed); }
+  if (document.hidden) { save(); pauseFeed(); }
+  else if (config.feedUrl && (!dataset || kind === 'feed')) fetchFeed().finally(scheduleFeed);
 });
 if (config.loginUrl) { $('login').href = config.loginUrl; $('login').hidden = false; }
 
@@ -452,7 +452,6 @@ async function initialize() {
     for (const symbol of config.availableSymbols ?? []) ensureSymbol(symbol);
     ensureSymbol(preferences.symbol);
     await fetchFeed(preferences.symbol, true);
-    if (!document.hidden) notifications.start();
     scheduleFeed(); return;
   }
   if (preferences.source === 'import' && preferences.datasetId) {
