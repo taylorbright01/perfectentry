@@ -72,8 +72,9 @@
         <section id="drawings-panel" hidden><p class="drawing-scope">Saved for this market. Restored when you return.</p><div id="drawing-list"></div></section>
         <div class="panel-bottom">
           <label class="checkbox"><input id="closed-only" type="checkbox" checked><span>Closed candles only</span></label>
-          <p class="muted">Wait for each candle to finish before it appears.</p>
-          <label class="refresh-label" for="refresh">Feed refresh<select id="refresh"><option value="60">Every minute</option><option value="30">Every 30 seconds</option></select></label>
+          <p class="muted">Turn off to show the forming candle. Indicators use completed candles.</p>
+          <label class="refresh-label" for="refresh">Recovery check<select id="refresh"><option value="60">Every minute</option><option value="30">Every 30 seconds</option></select></label>
+          <p class="muted">Candles update when data arrives. Recovery checks help if the connection drops.</p>
           <div class="workspace-transfer"><button id="export" class="text-button">Export drawings</button><button id="restore" class="text-button">Restore</button><input id="restore-file" type="file" accept=".json" hidden></div>
           <p id="save-status" role="status">Saved in this browser</p>
         </div>
