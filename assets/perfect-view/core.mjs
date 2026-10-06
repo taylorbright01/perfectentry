@@ -1,5 +1,5 @@
 // Original Perfect View data and indicator foundation. No charting dependencies.
-export const TIMEFRAMES = [60, 300, 900, 3600, 14400, 86400];
+export const TIMEFRAMES = [30, 60, 300, 900, 3600, 14400, 86400];
 export const MAX_BARS = 50000;
 
 export function timestamp(value) {

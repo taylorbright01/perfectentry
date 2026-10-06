@@ -1,7 +1,10 @@
 // Public configuration only. Never put Whop secrets or Supabase service keys here.
 export const config = Object.freeze({
-  feedUrl: null, // Protected HTTPS endpoint returning the contract in docs/perfect-view.md.
-  refreshSeconds: 60,
+  feedUrl: 'https://nmfsqgqwjihpudiqnuwh.supabase.co/functions/v1/perfect-view-feed',
+  // This stage serves public broker candles. Whop membership checks are not deployed yet.
+  feedBaseTimeframe: 30,
+  refreshSeconds: 30,
+  availableSymbols: ['AUDCAD','AUDCHF','AUDNZD','AUDUSD','BTCUSD','CADJPY','CHFJPY','ETHUSD','EURAUD','EURCAD','EURGBP','EURJPY','EURNZD','EURUSD','GBPAUD','GBPCAD','GBPCHF','GBPJPY','GBPUSD','NAS100','NZDCAD','NZDCHF','NZDJPY','NZDUSD','USDCAD','USDCHF','USDJPY','XAGUSD','XAUUSD'],
   loginUrl: null, // Set when the shared server-side Whop OAuth flow is deployed.
   workspaceUrl: null // Reserved for authenticated, per-account server persistence.
 });

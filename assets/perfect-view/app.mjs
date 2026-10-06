@@ -1,6 +1,7 @@
 import { aggregateBars, createDemoBars, indicators, parseDataset, validateDrawing, validateStudies, TIMEFRAMES } from './core.mjs';
 import { PerfectViewChart } from './chart.mjs';
 import { config } from './config.mjs';
+import { parseFeedResponse } from './feed.mjs';
 
 const $ = id => document.getElementById(id);
 const chart = new PerfectViewChart($('chart'));
@@ -28,7 +29,7 @@ let dataset = null, kind = 'demo', datasetId = '', scope = '', studies = [], his
 let pollTimer = null, feedController = null, feedGeneration = 0, notePoint = null, saveTimer = null;
 let studyTemplateLoaded = false, renameTarget = null;
 const workspaceCache = new Map();
-const labels = { 60: '1 minute', 300: '5 minute', 900: '15 minute', 3600: '1 hour', 14400: '4 hour', 86400: '1 day' };
+const labels = { 30: '30 seconds', 60: '1 minute', 300: '5 minute', 900: '15 minute', 3600: '1 hour', 14400: '4 hour', 86400: '1 day' };
 const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note' };
 
 function announce(text) { $('message').textContent = text; $('message').hidden = false; }
@@ -87,7 +88,7 @@ function precision(symbol, bars) {
   return price >= 100 ? 2 : price < 0.1 ? 6 : 5;
 }
 function utc(time) {
-  return new Date(time * 1000).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC', hour12: false });
+  return new Date(time * 1000).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC', hour12: false });
 }
 function ensureSymbol(symbol) {
   if (![...$('symbol').options].some(o => o.value === symbol)) {
@@ -116,9 +117,12 @@ function rebuild({ reset = false } = {}) {
   $('source-badge').textContent = kind === 'demo' ? 'Sample data · not live' : kind === 'import' ? 'Imported candles' : 'Broker feed';
   $('source-badge').dataset.source = kind;
   const last = bars.at(-1);
+  const sourceLast = dataset.candles.at(-1);
+  const delayed = kind === 'feed' && (!sourceLast || Date.now() / 1000 - sourceLast.time - dataset.baseTimeframe > Math.max(90, preferences.refreshSeconds * 3));
+  if (delayed) $('source-badge').textContent = 'Broker feed · delayed';
   $('data-status').textContent = kind === 'demo' ? 'Synthetic sample · UTC · no live prices'
     : kind === 'import' ? `File data · ${last ? 'last candle ' + utc(last.time) : 'no complete candles'} · UTC`
-    : `${preferences.refreshSeconds}s refresh · ${last ? 'last candle ' + utc(last.time) : 'no complete candles'} · UTC`;
+    : `${preferences.refreshSeconds}s refresh · ${sourceLast ? 'feed candle ' + utc(sourceLast.time) : 'no feed candles'} · UTC${delayed ? ' · delayed or market closed' : ''}`;
   $('chart-summary').textContent = `${dataset.symbol}, ${labels[preferences.timeframe]} chart, ${bars.length} candles. ` +
     (last ? `Last candle opened ${utc(last.time)} UTC. Open ${last.open}, high ${last.high}, low ${last.low}, close ${last.close}. ` : '') +
     (kind === 'demo' ? 'Synthetic sample data, not live market prices.' : '');
@@ -267,15 +271,16 @@ async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
   try {
     const url = new URL(config.feedUrl, location.href);
     if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') throw new Error('The feed needs HTTPS.');
-    url.searchParams.set('symbol', symbol); url.searchParams.set('timeframe', '60');
+    url.searchParams.set('symbol', symbol); url.searchParams.set('timeframe', String(config.feedBaseTimeframe ?? 60));
+    const id = 'feed:' + new URL(config.feedUrl, location.href).href;
+    const previous = kind === 'feed' && scope === id + ':' + symbol ? dataset : null;
+    if (previous?.candles.length) url.searchParams.set('since', String(Math.max(0, previous.candles.at(-1).time - 60)));
     const response = await fetch(url, { credentials: 'include', cache: 'no-store', signal: controller.signal });
     if (response.status === 401 || response.status === 403) throw new Error('Sign in with an eligible membership to load this feed.');
     if (!response.ok) throw new Error('The broker feed is unavailable.');
-    const text = await response.text(); if (text.length > 8 * 1024 * 1024) throw new Error('Feed response is too large.');
-    const data = parseDataset(text, symbol);
-    if (data.symbol !== symbol) throw new Error('The feed returned a different market.');
+    const text = await response.text();
+    const data = parseFeedResponse(text, symbol, config.feedBaseTimeframe ?? 60, previous);
     if (generation !== feedGeneration) return;
-    const id = 'feed:' + new URL(config.feedUrl, location.href).href;
     if (scope === id + ':' + symbol) { dataset = data; rebuild(); save(); }
     else useDataset(data, 'feed', id, { restoreViewport });
     $('message').hidden = true;
@@ -411,7 +416,11 @@ document.addEventListener('visibilitychange', () => {
 if (config.loginUrl) { $('login').href = config.loginUrl; $('login').hidden = false; }
 
 async function initialize() {
-  if (config.feedUrl) { await fetchFeed(preferences.symbol, true); scheduleFeed(); return; }
+  if (config.feedUrl) {
+    for (const symbol of config.availableSymbols ?? []) ensureSymbol(symbol);
+    ensureSymbol(preferences.symbol);
+    await fetchFeed(preferences.symbol, true); scheduleFeed(); return;
+  }
   if (preferences.source === 'import' && preferences.datasetId) {
     try {
       const cached = await readDataset(preferences.datasetId);
