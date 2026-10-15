@@ -19,7 +19,7 @@ export function average(values,period,method='sma') {
  return out;
 }
 const points=(bars,values)=>bars.map((b,i)=>({time:b.time,value:values[i]}));
-const line=(bars,values,color)=>({points:points(bars,values),color});
+const line=(bars,values,color,name)=>({points:points(bars,values),color,...(name?{name}:{})});
 const base=(pane='price')=>({pane,lines:[],zones:[],markers:[],histograms:[],levels:[]});
 export function rsiValues(values,period) {
  const gain=values.map((v,i)=>i?Math.max(0,v-values[i-1]):null);
@@ -45,20 +45,20 @@ for(const [id,name] of [['sma','Simple MA'],['ema','Exponential MA'],['wma','Wei
 definitions.push({id:'rsi',name:'RSI',pane:'oscillator',inputs:{period:number('Period',14),upper:number('Overbought',70,0,100),lower:number('Oversold',30,0,100),showLine:toggle('RSI'),showLevels:toggle('Reference levels')},defaults:{period:14,upper:70,lower:30,showLine:true,showLevels:true,color:'#80cec6'},calculate:(b,s)=>({...base('oscillator'),range:[0,100],lines:s.showLine?[line(b,rsiValues(b.map(x=>x.close),s.period),s.color)]:[],levels:s.showLevels?[s.lower,50,s.upper]:[]})});
 definitions.push({id:'stochrsi',name:'Stochastic RSI',pane:'oscillator',inputs:{period:number('RSI period',14),length:number('Stochastic period',14),smoothK:number('K smoothing',3),smoothD:number('D smoothing',3),showK:toggle('K line'),showD:toggle('D line')},defaults:{period:14,length:14,smoothK:3,smoothD:3,showK:true,showD:true,color:'#80cec6'},calculate:(b,s)=>{
  const r=rsiValues(b.map(x=>x.close),s.period),raw=r.map((v,i)=>{const w=r.slice(Math.max(0,i-s.length+1),i+1);if(w.length<s.length||w.some(x=>x===null))return null;const min=Math.min(...w),max=Math.max(...w);return max===min?50:100*(v-min)/(max-min);});
- const k=average(raw,s.smoothK),d=average(k,s.smoothD);return {...base('oscillator'),range:[0,100],levels:[20,80],lines:[...(s.showK?[line(b,k,s.color)]:[]),...(s.showD?[line(b,d,'#e3b975')]:[])]};
+ const k=average(raw,s.smoothK),d=average(k,s.smoothD);return {...base('oscillator'),range:[0,100],levels:[20,80],lines:[...(s.showK?[line(b,k,s.color,'K')]:[]),...(s.showD?[line(b,d,'#e3b975','D')]:[])]};
 }});
 definitions.push({id:'macd',name:'MACD',pane:'oscillator',inputs:{fast:number('Fast EMA',12),slow:number('Slow EMA',26),signal:number('Signal EMA',9),showMacd:toggle('MACD line'),showSignal:toggle('Signal line'),showHistogram:toggle('Histogram')},defaults:{fast:12,slow:26,signal:9,showMacd:true,showSignal:true,showHistogram:true,color:'#b4a2ff'},calculate:(b,s)=>{
  const close=b.map(x=>x.close),fast=average(close,s.fast,'ema'),slow=average(close,s.slow,'ema'),macd=fast.map((v,i)=>v-slow[i]),signal=average(macd,s.signal,'ema');
- return {...base('oscillator'),levels:[0],lines:[...(s.showMacd?[line(b,macd,s.color)]:[]),...(s.showSignal?[line(b,signal,'#e3b975')]:[])],histograms:s.showHistogram?[{points:points(b,macd.map((v,i)=>v-signal[i])),positive:'#74c8bb',negative:'#ce8585'}]:[]};
+ return {...base('oscillator'),levels:[0],lines:[...(s.showMacd?[line(b,macd,s.color,'MACD')]:[]),...(s.showSignal?[line(b,signal,'#e3b975','Signal')]:[])],histograms:s.showHistogram?[{points:points(b,macd.map((v,i)=>v-signal[i])),positive:'#74c8bb',negative:'#ce8585'}]:[]};
 }});
 definitions.push({id:'bb',name:'Bollinger Bands',inputs:{period:number('Period',20),deviation:number('Standard deviations',2,.1,10,.1),showMiddle:toggle('Middle band'),showBands:toggle('Outer bands')},defaults:{period:20,deviation:2,showMiddle:true,showBands:true,color:'#b4a2ff'},calculate:(b,s)=>{
  const close=b.map(x=>x.close),mid=average(close,s.period),sd=mid.map((m,i)=>m===null?null:Math.sqrt(close.slice(i-s.period+1,i+1).reduce((sum,v)=>sum+(v-m)**2,0)/s.period));
- return {...base(),lines:[...(s.showMiddle?[line(b,mid,s.color)]:[]),...(s.showBands?[line(b,mid.map((v,i)=>v===null?null:v+s.deviation*sd[i]),'#80cec6'),line(b,mid.map((v,i)=>v===null?null:v-s.deviation*sd[i]),'#80cec6')]:[])]};
+ return {...base(),lines:[...(s.showMiddle?[line(b,mid,s.color,'Basis')]:[]),...(s.showBands?[line(b,mid.map((v,i)=>v===null?null:v+s.deviation*sd[i]),'#80cec6','Upper'),line(b,mid.map((v,i)=>v===null?null:v-s.deviation*sd[i]),'#80cec6','Lower')]:[])]};
 }});
 definitions.push({id:'atr',name:'ATR',pane:'oscillator',inputs:{period:number('Period',14),showLine:toggle('ATR')},defaults:{period:14,showLine:true,color:'#e3b975'},calculate:(b,s)=>({...base('oscillator'),lines:s.showLine?[line(b,average(trueRanges(b),s.period,'rma'),s.color)]:[]})});
 definitions.push({id:'stochastic',name:'Stochastic',pane:'oscillator',inputs:{period:number('Lookback',14),smoothK:number('K smoothing',3),smoothD:number('D smoothing',3),showK:toggle('K line'),showD:toggle('D line')},defaults:{period:14,smoothK:3,smoothD:3,showK:true,showD:true,color:'#80cec6'},calculate:(b,s)=>{
  const raw=b.map((bar,i)=>{if(i+1<s.period)return null;const w=b.slice(i-s.period+1,i+1),lo=Math.min(...w.map(x=>x.low)),hi=Math.max(...w.map(x=>x.high));return hi===lo?50:100*(bar.close-lo)/(hi-lo);});const k=average(raw,s.smoothK),d=average(k,s.smoothD);
- return {...base('oscillator'),range:[0,100],levels:[20,80],lines:[...(s.showK?[line(b,k,s.color)]:[]),...(s.showD?[line(b,d,'#e3b975')]:[])]};
+ return {...base('oscillator'),range:[0,100],levels:[20,80],lines:[...(s.showK?[line(b,k,s.color,'K')]:[]),...(s.showD?[line(b,d,'#e3b975','D')]:[])]};
 }});
 definitions.push({id:'volume',name:'Tick volume',pane:'oscillator',inputs:{showHistogram:toggle('Volume')},defaults:{showHistogram:true,color:'#80cec6'},calculate:(b,s)=>({...base('oscillator'),levels:[0],histograms:s.showHistogram?[{points:points(b,b.map(x=>x.volume)),positive:s.color,negative:s.color}]:[]})});
 export function validateStudy(raw,registry) {

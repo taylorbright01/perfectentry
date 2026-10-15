@@ -14,7 +14,7 @@ const account = new Account(config.accountApiUrl);
 const $ = id => document.getElementById(id);
 const chart = new PerfectViewChart($('chart'));
 const PREFIX = 'perfect-view:v1:';
-const defaults = { symbol: 'EURUSD', timeframe: 300, focus: true, mode: 'candles', closedOnly: true,
+const defaults = { symbol: 'EURUSD', timeframe: 300, focus: true, crosshair: true, mode: 'candles', closedOnly: true,
   refreshSeconds: config.refreshSeconds === 30 ? 30 : 60, source: 'demo', datasetId: null, drawingColor: '#e3b975' };
 let storageOkay = true, preferences = { ...defaults };
 try {
@@ -24,6 +24,7 @@ try {
     symbol: /^[A-Z0-9._-]{2,24}$/.test(raw.symbol) ? raw.symbol : defaults.symbol,
     timeframe: TIMEFRAMES.includes(raw.timeframe) ? raw.timeframe : defaults.timeframe,
     focus: typeof raw.focus === 'boolean' ? raw.focus : true,
+    crosshair: typeof raw.crosshair === 'boolean' ? raw.crosshair : true,
     closedOnly: typeof raw.closedOnly === 'boolean' ? raw.closedOnly : true,
     mode: raw.mode === 'line' ? 'line' : 'candles',
     refreshSeconds: raw.refreshSeconds === 30 ? 30 : 60,
@@ -140,6 +141,7 @@ function rebuild({ reset = false } = {}) {
   const bars = displayedBars();
   chart.setBars(bars, { timeframe: preferences.timeframe, precision: precision(dataset.symbol, bars), reset });
   chart.setFocus(preferences.focus); chart.setMode(preferences.mode);
+  chart.setCrosshair(preferences.crosshair);$('crosshair').setAttribute('aria-pressed',String(preferences.crosshair));
   $('chart-title').textContent = dataset.symbol;
   $('timeframe-label').textContent = labels[preferences.timeframe];
   $('focus').setAttribute('aria-pressed', String(preferences.focus));
@@ -208,10 +210,19 @@ function calculateStudies() {
   const completed = displayedBars(true);
   for (const study of studies) {
     if (study.enabled === false) continue;
-    try { models.push({ ...indicators.calculate(study.id, completed, study), key: study.key, title: itemName(study, 'study') }); }
+    try { models.push({ ...indicators.calculate(study.id, completed, study), id: study.id, key: study.key, title: itemName(study, 'study') }); }
     catch { announce('An indicator could not be calculated. Remove it and try again.'); }
   }
   chart.setModels(models);
+  updateStudyValues(chart.readout());
+}
+function updateStudyValues(readout){
+  const byKey=new Map(readout.models.map(model=>[model.key,model]));
+  document.querySelectorAll('[data-study-values]').forEach(element=>{
+    const model=byKey.get(element.dataset.studyValues),values=model?.values??[];
+    element.textContent=model?(values.length?values.map(v=>(values.length>1?v.name+' ':'')+v.text).join(' · '):'No visible components'):'Hidden';
+    element.title=(readout.latest?'Latest closed candle':'Cursor candle')+' · '+element.textContent;
+  });
 }
 function itemName(item, type) {
   return item.name || (type === 'study' ? `${item.id.startsWith('pe_') ? indicators.definitions.get(item.id)?.name ?? item.id : item.id.toUpperCase()}${item.period ? ' ' + item.period : ''}` : item.text || names[item.type]);
@@ -248,6 +259,7 @@ function renderStudies() {
     const row = document.createElement('div'); row.className = 'entry-row';
     const label = itemName(study, 'study');
     const title = document.createElement('span'); title.className = 'item-title'; title.textContent = label; title.title = label;
+    const heading=document.createElement('div');heading.className='study-heading';const values=document.createElement('small');values.className='study-values';values.dataset.studyValues=study.key;heading.append(title,values);
     const remove = document.createElement('button'); remove.textContent = '×'; remove.setAttribute('aria-label', `Remove ${label}`);
     remove.addEventListener('click', () => { studies = studies.filter(s => s.key !== study.key); calculateStudies(); renderStudies(); checkpoint(); });
     const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.checked = study.enabled !== false;
@@ -257,8 +269,9 @@ function renderStudies() {
       study.enabled = enabled.checked; calculateStudies(); checkpoint(); });
     const settings = document.createElement('button'); settings.textContent = '⚙'; settings.setAttribute('aria-label', `Settings for ${label}`);
     settings.addEventListener('click', () => openIndicator(study));
-    row.append(enabled, title, colourPicker(study, 'study'), settings, renameButton('study', study.key, label), remove); list.append(row);
+    row.append(enabled, heading, colourPicker(study, 'study'), settings, renameButton('study', study.key, label), remove); list.append(row);
   }
+  updateStudyValues(chart.readout());
 }
 function renderDrawings() {
   const list = $('drawing-list'); list.replaceChildren();
@@ -502,6 +515,7 @@ chart.addEventListener('tool', ({ detail }) => {
 });
 chart.addEventListener('drawings', () => { renderDrawings(); checkpoint(); openPanel(chart.activePosition()?'risk':'drawings'); });
 chart.addEventListener('selection', renderDrawings);
+chart.addEventListener('readout',({detail})=>updateStudyValues(detail));
 chart.addEventListener('viewport', () => {$('price-reset').setAttribute('aria-pressed',String(!chart.getPriceRange()));scheduleSave();});
 chart.addEventListener('positionpreview',({detail})=>renderRiskReadout(detail.drawing));
 chart.addEventListener('message', ({detail}) => announce(detail.text));
@@ -530,6 +544,7 @@ $('symbol').addEventListener('change', async () => {
   else useDemo(symbol);
 });
 $('focus').addEventListener('click', () => { preferences.focus = !preferences.focus; chart.setFocus(preferences.focus); $('focus').setAttribute('aria-pressed', String(preferences.focus)); $('hover-time').textContent = ''; save(); });
+$('crosshair').addEventListener('click',()=>{preferences.crosshair=!preferences.crosshair;chart.setCrosshair(preferences.crosshair);$('crosshair').setAttribute('aria-pressed',String(preferences.crosshair));save();});
 $('chart-mode').addEventListener('change', () => { preferences.mode = $('chart-mode').value; chart.setMode(preferences.mode); save(); });
 $('closed-only').addEventListener('change', () => { preferences.closedOnly = $('closed-only').checked; rebuild(); save(); });
 $('refresh').addEventListener('change', () => { preferences.refreshSeconds = Number($('refresh').value); rebuild(); save(); scheduleFeed(); });
@@ -640,7 +655,7 @@ function layoutDocument(name) {
     if (state) markets[symbol] = {drawings: state.drawings ?? [], viewport: state.viewport ?? null};
   }
   if (dataset) markets[dataset.symbol] = {drawings: structuredClone(chart.drawings), viewport: state().viewport};
-  return validateLayout({version:2,name,preferences:{symbol:preferences.symbol,timeframe:preferences.timeframe,mode:preferences.mode,focus:preferences.focus,closedOnly:preferences.closedOnly,refreshSeconds:preferences.refreshSeconds},studies,markets});
+  return validateLayout({version:2,name,preferences:{symbol:preferences.symbol,timeframe:preferences.timeframe,mode:preferences.mode,focus:preferences.focus,crosshair:preferences.crosshair,closedOnly:preferences.closedOnly,refreshSeconds:preferences.refreshSeconds},studies,markets});
 }
 async function listLayouts() {
   const result = await account.request('/layouts');

@@ -5,6 +5,7 @@ export function validateLayout(raw, registry) {
  if(raw?.version!==2||typeof raw.name!=='string'||!raw.name.trim()||raw.name.length>80||!raw.preferences||!raw.markets||Array.isArray(raw.markets)||typeof raw.markets!=='object')fail();
  const p=raw.preferences;
  if(!/^[A-Z0-9._-]{2,24}$/.test(p.symbol??'')||!TIMEFRAMES.includes(p.timeframe)||!['candles','line'].includes(p.mode)||typeof p.focus!=='boolean'||typeof p.closedOnly!=='boolean'||![30,60].includes(p.refreshSeconds))fail();
+ if(p.crosshair!==undefined&&typeof p.crosshair!=='boolean')fail();
  if(!Array.isArray(raw.studies)||raw.studies.length>12)fail();const studies=validateStudies(raw.studies,registry);if(studies.length!==raw.studies.length)fail();
  if(studies.filter(s=>s.enabled!==false&&((registry??indicators).definitions.get(s.id)?.pane==='oscillator')).length>4)fail();
  const markets={};let count=0;
@@ -17,5 +18,5 @@ export function validateLayout(raw, registry) {
   markets[symbol]={drawings,viewport};
  }
  if(count>3000)fail();
- return {version:2,name:raw.name.trim(),preferences:{symbol:p.symbol,timeframe:p.timeframe,mode:p.mode,focus:p.focus,closedOnly:p.closedOnly,refreshSeconds:p.refreshSeconds},studies,markets};
+ return {version:2,name:raw.name.trim(),preferences:{symbol:p.symbol,timeframe:p.timeframe,mode:p.mode,focus:p.focus,crosshair:p.crosshair??true,closedOnly:p.closedOnly,refreshSeconds:p.refreshSeconds},studies,markets};
 }
