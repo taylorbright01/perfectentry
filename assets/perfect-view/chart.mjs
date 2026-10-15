@@ -1,5 +1,6 @@
 // Original Canvas 2D renderer, authored for Perfect Entry.
 // Drawings are anchored to market timestamps and prices, never screen pixels.
+import {defaultFib,fibPrices,validatePriceRange} from './drawings.mjs';
 export class PerfectViewChart extends EventTarget {
   constructor(canvas) {
     super();
@@ -10,6 +11,7 @@ export class PerfectViewChart extends EventTarget {
     this.mode = 'candles'; this.focus = true; this.tool = 'select';
     this.selected = null; this.pending = null; this.pendingStop = null; this.cursor = null;
     this.drawingColor = '#e3b975';
+    this.fibSettings = defaultFib(); this.priceRange = null; this.positionSizer = null;
     this.drag = null; this.frame = null; this.width = 0; this.height = 0;
     this.abort = new AbortController();
     const opts = { signal: this.abort.signal };
@@ -21,14 +23,15 @@ export class PerfectViewChart extends EventTarget {
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
       const p = this.position(e);
-      this.zoom(e.deltaY > 0 ? 1.14 : 0.88, p.x);
+      if(e.shiftKey||e.altKey||this.plot&&p.x>this.plot.right)this.zoomPrice(e.deltaY>0?1.14:.88,p.y);
+      else this.zoom(e.deltaY > 0 ? 1.14 : 0.88, p.x);
     }, { ...opts, passive: false });
     canvas.addEventListener('keydown', e => {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault(); this.end += (e.key === 'ArrowLeft' ? -1 : 1) * this.count * 0.15;
         this.clamp(); this.requestDraw(); this.emit('viewport');
-      } else if (e.key === '+' || e.key === '=') { e.preventDefault(); this.zoom(0.8); }
-      else if (e.key === '-') { e.preventDefault(); this.zoom(1.25); }
+      } else if (e.key === '+' || e.key === '=') { e.preventDefault(); e.altKey?this.zoomPrice(.8):this.zoom(0.8); }
+      else if (e.key === '-') { e.preventDefault(); e.altKey?this.zoomPrice(1.25):this.zoom(1.25); }
       else if (e.key === 'Escape') { this.setTool('select'); this.selected = null; this.requestDraw(); this.emit('selection'); }
       else if ((e.key === 'Delete' || e.key === 'Backspace') && this.selected) {
         e.preventDefault(); this.removeDrawing(this.selected);
@@ -61,8 +64,8 @@ export class PerfectViewChart extends EventTarget {
     this.bars = bars; this.timeframe = timeframe; this.precision = precision;
     if (reset || !anchor || atLatest) this.end = bars.length;
     else this.end = this.indexAt(anchor) + 1;
-    if (reset) this.count = 110;
-    this.pending = null;
+    if (reset) {this.count = 110; this.priceRange = null;}
+    if(reset){this.pending=null;this.pendingStop=null;}
     this.clamp(); this.requestDraw();
   }
   setModels(models) {
@@ -70,10 +73,28 @@ export class PerfectViewChart extends EventTarget {
     if(this.canvas.parentElement) this.canvas.parentElement.style.minHeight = panes ? (260 + Math.min(4, panes) * 100) + 'px' : '';
     this.requestDraw();
   }
-  setDrawings(drawings) { this.drawings = structuredClone(drawings); this.selected = null; this.pending = null; this.requestDraw(); }
+  setDrawings(drawings) { this.drawings = structuredClone(drawings); this.selected = null; this.pending = null; this.pendingStop=null;this.requestDraw(); }
   setTool(tool) { this.tool = tool; this.pending = null; this.pendingStop = null; this.canvas.dataset.tool = tool; this.requestDraw(); this.emit('tool', { tool }); }
   setFocus(focus) { this.focus = focus; this.requestDraw(); }
   setMode(mode) { this.mode = mode; this.requestDraw(); }
+  getPriceRange() { return this.priceRange ? {...this.priceRange} : null; }
+  setPriceRange(range) {this.priceRange=validatePriceRange(range);this.requestDraw();this.emit('viewport');}
+  resetPriceScale() {this.priceRange=null;this.requestDraw();this.emit('viewport');}
+  zoomPrice(factor,y=this.plot?(this.plot.top+this.plot.bottom)/2:0) {
+    if(!this.bars.length||!this.plot||!Number.isFinite(this.min)||!Number.isFinite(this.max)||!Number.isFinite(factor)||factor<=0)return;
+    const fraction=Math.max(0,Math.min(1,(this.plot.bottom-y)/this.plot.height)),span=this.max-this.min;
+    const anchor=this.min+fraction*span,next=Math.max(Math.max(1e-10,Math.abs(anchor)*1e-10),Math.min(1e14,span*factor));
+    const range=validatePriceRange({min:anchor-fraction*next,max:anchor+(1-fraction)*next});
+    if(range){this.priceRange=range;this.min=range.min;this.max=range.max;this.requestDraw();this.emit('viewport');}
+  }
+  activePosition() {
+    if(['long','short'].includes(this.tool)&&this.pending&&this.cursor&&this.inPlot(this.cursor)){
+      const point=this.marketPoint(this.cursor),stop=this.pendingStop??point,direction=this.tool==='long'?1:-1;
+      const target=this.pendingStop?point:{time:point.time,price:this.pending.price+direction*Math.abs(this.pending.price-stop.price)*2};
+      return {type:this.tool,points:[this.pending,stop,target]};
+    }
+    return this.drawings.find(d=>d.id===this.selected&&['long','short'].includes(d.type))??null;
+  }
   clamp() {
     this.count = Math.max(12, Math.min(1500, this.count));
     this.end = Math.max(Math.min(this.count, this.bars.length), Math.min(this.bars.length + this.count * 0.15, this.end));
@@ -132,6 +153,7 @@ export class PerfectViewChart extends EventTarget {
     this.min = Math.min(...visible.map(b => b.low)); this.max = Math.max(...visible.map(b => b.high));
     const pad = Math.max((this.max - this.min) * 0.14, this.max * 0.00002);
     this.min -= pad; this.max += pad;
+    if(this.priceRange){this.min=this.priceRange.min;this.max=this.priceRange.max;}
     c.font = '12px system-ui'; c.lineWidth = 1; c.textBaseline = 'middle';
     for (let i = 0; i <= 5; i++) {
       const y = this.plot.top + i / 5 * this.plot.height;
@@ -279,7 +301,18 @@ export class PerfectViewChart extends EventTarget {
       for (const [name, point, price, colour] of [['Entry',p,d.points[0].price,d.color],['Stop',stop,d.points[1].price,'#ce8585'],['Target',target,d.points[2].price,'#74c8bb']]) {
         c.strokeStyle = colour; c.beginPath(); c.moveTo(p.x, point.y); c.lineTo(right, point.y); c.stroke(); c.fillStyle = colour; c.fillText(name + ' ' + price.toFixed(this.precision), p.x + 5, point.y - 8);
       }
-      c.fillStyle = '#c8d4df'; c.fillText(risk > 0 ? 'R:R ' + (reward / risk).toFixed(2) : 'Set stop', p.x + 5, p.y + 13);
+      const size=this.positionSizer?.(d);
+      c.fillStyle = '#c8d4df'; c.fillText(risk > 0 ? (size?.ok?'Est. R:R ':'R:R ') + (size?.ok?size.rr:reward / risk).toFixed(2) : 'Set stop', p.x + 5, p.y + 13);
+      if(size?.ok){c.fillText(size.lots.toLocaleString('en-GB',{maximumFractionDigits:8})+' lots'+(size.units==null?'':' · '+size.units.toLocaleString('en-GB',{maximumFractionDigits:2})+' units'),p.x+5,p.y+28);}
+    } else if (d.type === 'fib') {
+      const q=this.xy(d.points[1]),settings=d.fib??this.fibSettings,left=Math.min(p.x,q.x),right=settings.extend?this.plot.right:Math.max(p.x,q.x);
+      c.save();c.font='11px system-ui';c.textAlign='left';c.lineWidth=settings.width;
+      for(const level of fibPrices(d.points,settings)){
+        const y=this.y(level.price);c.globalAlpha=settings.opacity*level.opacity;c.strokeStyle=level.color;c.fillStyle=level.color;
+        c.beginPath();c.moveTo(left,y);c.lineTo(right,y);c.stroke();
+        if(settings.labels)c.fillText((level.value*100).toLocaleString('en-GB',{maximumFractionDigits:3})+'%  '+level.price.toFixed(this.precision),Math.max(this.plot.left+4,left+5),y-8);
+      }
+      c.globalAlpha=.45;c.strokeStyle=d.color;c.lineWidth=1;c.setLineDash([4,5]);c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();c.restore();
     } else if (d.type === 'vertical') {
       c.beginPath(); c.moveTo(p.x, this.plot.top); c.lineTo(p.x, this.plot.bottom); c.stroke();
     } else if (d.type === 'horizontal') {
@@ -305,6 +338,10 @@ export class PerfectViewChart extends EventTarget {
       const handle = d.points.findIndex(point => { const q = this.xy(point); return Math.hypot(q.x - p.x, q.y - p.y) < 10; });
       if (handle >= 0) return { d, handle };
       if (d.type === 'vertical' && Math.abs(p.x - a.x) < 8) return {d, handle:-1};
+      if(d.type==='fib'){
+        const b=this.xy(d.points[1]),settings=d.fib??this.fibSettings,l=Math.min(a.x,b.x),r=settings.extend?this.plot.right:Math.max(a.x,b.x);
+        if(p.x>=l-7&&p.x<=r+7&&fibPrices(d.points,settings).some(level=>Math.abs(p.y-this.y(level.price))<Math.max(7,settings.width+3)))return {d,handle:-1};
+      }
       if (['long', 'short'].includes(d.type)) {const q=this.xy(d.points[2]), stop=this.xy(d.points[1]);if(p.x>=a.x-7&&p.x<=Math.max(a.x+35,q.x)+7&&p.y>=Math.min(q.y,stop.y)-8&&p.y<=Math.max(q.y,stop.y)+8)return {d,handle:-1};}
       if (d.type === 'horizontal' && Math.abs(p.y - a.y) < 8) return { d, handle: -1 };
       if (d.type === 'text' && p.x >= a.x && p.x <= a.x + this.ctx.measureText(d.text).width + 16 && Math.abs(p.y - a.y) < 12) return { d, handle: -1 };
@@ -314,7 +351,7 @@ export class PerfectViewChart extends EventTarget {
           const l = Math.min(a.x, b.x), r = Math.max(a.x, b.x), t = Math.min(a.y, b.y), bot = Math.max(a.y, b.y);
           if (p.x >= l - 7 && p.x <= r + 7 && p.y >= t - 7 && p.y <= bot + 7 &&
               (Math.abs(p.x - l) < 7 || Math.abs(p.x - r) < 7 || Math.abs(p.y - t) < 7 || Math.abs(p.y - bot) < 7)) return { d, handle: -1 };
-        } else {
+        } else if(d.type!=='fib') {
           const dx = b.x - a.x, dy = b.y - a.y;
           const fraction = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
           if (Math.hypot(p.x - a.x - fraction * dx, p.y - a.y - fraction * dy) < 8) return { d, handle: -1 };
@@ -325,12 +362,16 @@ export class PerfectViewChart extends EventTarget {
   }
   onDown(e) {
     if (e.button !== 0 || this.drag) return;
-    const p = this.position(e); if (!this.inPlot(p) || !this.bars.length) return;
+    const p = this.position(e); if (!this.plot||!this.bars.length) return;this.cursor=p;
+    if(p.x>this.plot.right&&p.y>=this.plot.top&&p.y<=this.plot.bottom){
+      this.canvas.setPointerCapture(e.pointerId);this.drag={id:e.pointerId,start:p,scale:true,range:{min:this.min,max:this.max},previousRange:this.getPriceRange(),moved:false};return;
+    }
+    if(!this.inPlot(p))return;
     this.canvas.focus({ preventScroll: true }); this.canvas.setPointerCapture(e.pointerId);
     if (this.tool === 'select') {
-      const hit = this.hit(p); this.selected = hit?.d.id ?? null;
+      const hit = e.shiftKey?null:this.hit(p); if(!e.shiftKey)this.selected = hit?.d.id ?? null;
       this.drag = { id: e.pointerId, start: p, end: this.end, hit, before: hit ? structuredClone(hit.d.points) : null,
-        market: this.marketPoint(p), moved: false };
+        market: this.marketPoint(p), moved: false,pricePan:e.shiftKey&&!hit,range:{min:this.min,max:this.max},previousRange:this.getPriceRange() };
       this.emit('selection', { id: this.selected }); this.requestDraw(); return;
     }
     const point = this.marketPoint(p);
@@ -347,15 +388,23 @@ export class PerfectViewChart extends EventTarget {
         this.addDrawing({type:this.tool,points:[this.pending,this.pendingStop,point]}); this.setTool('select');
       }
     } else {
+      if(this.tool==='fib'&&point.price===this.pending.price){this.emit('message',{text:'Choose a second anchor at a different price.'});return;}
       this.addDrawing({ type: this.tool, points: [this.pending, point] }); this.setTool('select');
     }
   }
   onMove(e) {
     const p = this.position(e); this.cursor = p;
+    this.canvas.style.cursor=this.plot&&p.x>this.plot.right&&p.y<=this.plot.bottom?'ns-resize':'';
     if (this.drag && this.drag.id === e.pointerId) {
       const delta = p.x - this.drag.start.x;
       this.drag.moved ||= Math.hypot(delta, p.y - this.drag.start.y) > 3;
-      if (this.drag.hit && this.drag.moved) {
+      if((this.drag.scale||this.drag.pricePan)&&this.drag.moved){
+        const before=this.drag.range,span=before.max-before.min,center=(before.min+before.max)/2,dy=p.y-this.drag.start.y;
+        const next=this.drag.scale?Math.max(Math.abs(center)*1e-10,Math.min(1e14,span*Math.exp(Math.max(-8,Math.min(8,dy*.008))))):span;
+        const shift=this.drag.pricePan?dy/this.plot.height*span:0;
+        const range=validatePriceRange({min:center-next/2+shift,max:center+next/2+shift});
+        if(range){this.priceRange=range;this.min=range.min;this.max=range.max;}
+      }else if (this.drag.hit && this.drag.moved) {
         const { d, handle } = this.drag.hit, point = this.marketPoint(p);
         if (handle >= 0) {
           if (['long','short'].includes(d.type)) {
@@ -364,16 +413,17 @@ export class PerfectViewChart extends EventTarget {
             if(handle===2 && (point.price-entry)*direction<=0)return;
             if(handle===0 && !((d.points[1].price-point.price)*direction<0&&(d.points[2].price-point.price)*direction>0))return;
           }
+          if(d.type==='fib'&&d.points[1-handle].price===point.price)return;
           d.points[handle] = point;
         }
-        else d.points = this.drag.before.map(a => ({ time: Math.max(0, a.time + point.time - this.drag.market.time),
-          price: Math.max(1e-10, a.price + point.price - this.drag.market.price) }));
-      } else if (!this.drag.hit) { this.end = this.drag.end - delta / this.plot.width * this.count; this.clamp(); }
+        else {const moved=this.drag.before.map(a=>({time:Math.max(0,a.time+point.time-this.drag.market.time),price:a.price+point.price-this.drag.market.price}));if(moved.every(a=>a.price>0))d.points=moved;}
+      } else if (!this.drag.hit&&!this.drag.scale&&!this.drag.pricePan) { this.end = this.drag.end - delta / this.plot.width * this.count; this.clamp(); }
     }
     if (this.inPlot(p) && this.bars.length) {
       const index = Math.round(this.end - this.count + (p.x - this.plot.left) / this.plot.width * this.count - 0.5);
       this.emit('hover', { bar: this.bars[index] ?? null });
     } else this.emit('hover', { bar: null });
+    this.emit('positionpreview',{drawing:this.activePosition()});
     this.requestDraw();
   }
   onUp(e) {
@@ -384,11 +434,13 @@ export class PerfectViewChart extends EventTarget {
   onCancel(e) {
     if (!this.drag || this.drag.id !== e.pointerId) return;
     if (this.drag.hit) this.drag.hit.d.points = this.drag.before;
-    this.drag = null; this.requestDraw();
+    if(this.drag.scale||this.drag.pricePan)this.priceRange=this.drag.previousRange;
+    this.drag = null; this.requestDraw();this.emit('positionpreview',{drawing:this.activePosition()});
   }
   addDrawing(d) {
     if (this.drawings.length >= 300) { this.emit('limit'); return; }
     const drawing = { ...d, id: crypto.randomUUID(), color: d.color ?? this.drawingColor, name: d.name ?? '', text: d.text ?? '' };
+    if(d.type==='fib')drawing.fib=structuredClone(d.fib??this.fibSettings);
     this.drawings.push(drawing); this.selected = drawing.id; this.requestDraw(); this.emit('drawings'); this.emit('selection', { id: drawing.id });
   }
   removeDrawing(id) {

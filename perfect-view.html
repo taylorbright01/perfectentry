@@ -48,6 +48,7 @@
         <button data-tool="horizontal" aria-pressed="false" title="Horizontal level"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18"/><circle cx="8" cy="12" r="2"/></svg><span class="sr-only">Horizontal level</span></button>
         <button data-tool="trend" aria-pressed="false" title="Trendline"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 18 14-12"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/></svg><span class="sr-only">Trendline</span></button>
         <button data-tool="rectangle" aria-pressed="false" title="Price zone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1"/></svg><span class="sr-only">Price zone</span></button>
+        <button data-tool="fib" aria-pressed="false" title="Fibonacci retracement"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18M3 10h18M3 14h18M3 20h18M5 20 19 4"/></svg><span class="sr-only">Fibonacci retracement</span></button>
         <button data-tool="text" aria-pressed="false" title="Text note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v15M8 20h8"/></svg><span class="sr-only">Text note</span></button>
         <button data-tool="vertical" aria-pressed="false" title="Vertical line"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/></svg><span class="sr-only">Vertical line</span></button>
         <button data-tool="ray" aria-pressed="false" title="Ray"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 19 18-16M15 3h6v6"/></svg><span class="sr-only">Ray</span></button>
@@ -62,20 +63,43 @@
       <section class="chart-surface" aria-label="Price chart">
         <div class="chart-heading"><div><strong id="chart-title">EURUSD</strong><span id="timeframe-label">5 minute</span><span class="source-pill" id="source-badge">Sample data · not live</span></div><span id="hover-time" class="muted"></span></div>
         <div class="canvas-wrap"><canvas id="chart" tabindex="0" aria-label="Interactive price chart. Drag to pan, scroll to zoom, or use arrow and plus or minus keys." aria-describedby="chart-instructions chart-summary">Your browser needs canvas support to display this chart.</canvas></div>
-        <div class="chart-actions"><div class="zoom-controls"><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="latest">Latest candles</button></div><span class="chart-wordmark" aria-hidden="true">PERFECT VIEW</span></div>
+        <div class="chart-actions"><div class="zoom-controls"><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="latest">Latest candles</button></div><div class="zoom-controls price-zoom"><span>Price</span><button id="price-zoom-out" aria-label="Zoom price out" title="Compress the price scale">−</button><button id="price-zoom-in" aria-label="Zoom price in" title="Expand the price scale">+</button><button id="price-reset" title="Fit the visible candles vertically">Auto scale</button></div><span class="chart-wordmark" aria-hidden="true">PERFECT VIEW</span></div>
         <p id="chart-summary" class="sr-only"></p>
         <details class="accessible-data"><summary>View candle data as a table</summary><p>The latest 20 displayed candles. Times are UTC.</p><div class="table-scroll"><table><caption class="sr-only">Latest chart candles</caption><thead><tr><th>Opening time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th></tr></thead><tbody id="candle-table"></tbody></table></div></details>
       </section>
 
       <aside id="side-panel" class="side-panel" aria-label="Your workspace" contenteditable="false">
         <div class="panel-heading"><h2>Workspace</h2><span id="drawing-count">0 drawings</span></div>
-        <div class="panel-tabs" role="group" aria-label="Workspace section"><button data-panel="indicators" aria-pressed="true">Indicators</button><button data-panel="drawings" aria-pressed="false">Drawings</button></div>
+        <div class="panel-tabs" role="group" aria-label="Workspace section"><button data-panel="indicators" aria-pressed="true">Indicators</button><button data-panel="drawings" aria-pressed="false">Drawings</button><button data-panel="risk" aria-pressed="false">Risk</button></div>
         <section id="indicators-panel">
           <div class="panel-section-heading"><h3>Across all markets</h3><button id="add-indicator" class="text-button">Add</button></div>
           <div id="indicator-list"></div>
           <p class="panel-note">Your Perfect Entry indicators will be added here as they are converted.</p>
         </section>
         <section id="drawings-panel" hidden><p class="drawing-scope">Saved for this market. Restored when you return.</p><div id="drawing-list"></div></section>
+        <section id="risk-panel" hidden>
+          <div class="panel-section-heading"><h3>Session risk</h3><button id="risk-new-session" class="text-button" type="button">New day</button></div>
+          <p class="panel-note">Set your balance once, then draw or select a position. Sizes follow its entry and stop.</p>
+          <form id="risk-form" class="risk-fields">
+            <label>Account currency<select id="risk-currency"><option>USD</option><option>GBP</option><option>EUR</option><option>JPY</option><option>AUD</option><option>CAD</option><option>CHF</option><option>NZD</option></select></label>
+            <label>Session balance<input id="risk-balance" type="number" min="0" max="1000000000000" step="any" placeholder="e.g. 10000" inputmode="decimal"></label>
+            <div class="risk-pair"><label>Risk mode<select id="risk-mode"><option value="percent">% of balance</option><option value="cash">Cash amount</option></select></label><label id="risk-value-label">Risk<input id="risk-value" type="number" min="0.000001" step="any" value="1" inputmode="decimal"></label></div>
+            <p id="risk-session-date" class="panel-note"></p>
+            <details id="risk-contract"><summary>Broker settings · <span id="risk-market">EURUSD</span></summary>
+              <p id="risk-preset-note" class="panel-note"></p>
+              <label>Calculation<select id="risk-calculation"><option value="contract">Contract units</option><option value="tick">Account-currency tick value</option></select></label>
+              <label>Contract units per lot<input id="risk-contract-size" type="number" min="0" step="any" inputmode="decimal"></label>
+              <label class="contract-field">Profit currency<select id="risk-profit-currency"><option>USD</option><option>GBP</option><option>EUR</option><option>JPY</option><option>AUD</option><option>CAD</option><option>CHF</option><option>NZD</option></select></label>
+              <div class="tick-field" hidden><label>Tick size (price)<input id="risk-tick-size" type="number" min="0" step="any" inputmode="decimal"></label><label>Loss tick value / lot (account currency)<input id="risk-tick-value" type="number" min="0" step="any" inputmode="decimal"></label></div>
+              <div class="risk-pair"><label>Minimum lots<input id="risk-min-lot" type="number" min="0" step="any" inputmode="decimal"></label><label>Lot step<input id="risk-lot-step" type="number" min="0" step="any" inputmode="decimal"></label></div>
+              <label>Maximum lots (0 = unset)<input id="risk-max-lot" type="number" min="0" step="any" inputmode="decimal"></label>
+              <label>Round-trip commission / lot (account currency)<input id="risk-commission" type="number" min="0" step="any" inputmode="decimal"></label>
+            </details>
+            <label id="risk-conversion-label" hidden><span id="risk-conversion-title">Conversion rate</span><input id="risk-conversion" type="number" min="0" step="any" inputmode="decimal" placeholder="Enter conversion rate"></label>
+          </form>
+          <div id="risk-readout" class="risk-readout" aria-live="polite"><p>Enter your balance, then draw a position.</p></div>
+          <p class="panel-note">Estimate using your broker settings. Spread, slippage and swaps are excluded. Balance and sizing settings stay on this device.</p>
+        </section>
         <div class="panel-bottom">
           <label class="checkbox"><input id="closed-only" type="checkbox" checked><span>Closed candles only</span></label>
           <p class="muted">Turn off to show the forming candle. Indicators use completed candles.</p>
@@ -119,6 +143,15 @@
     <div class="dialog-heading"><h2>Rename workspace item</h2><button type="button" data-close="rename-dialog" aria-label="Close">×</button></div>
     <label>Name<input id="rename-name" type="text" maxlength="80" required autocomplete="off"></label>
     <div class="dialog-actions"><button class="button primary" type="submit">Save name</button></div>
+  </form></dialog>
+  <dialog id="fib-dialog"><form id="fib-form">
+    <div class="dialog-heading"><h2>Fibonacci retracement</h2><button type="button" data-close="fib-dialog" aria-label="Close">×</button></div>
+    <p>0 is the second anchor; 1 is the first. Change a level to add your own ratios. These settings also become the default for new fibs.</p>
+    <div class="risk-pair"><label>Line thickness<input id="fib-width" type="number" min="0.5" max="5" step="0.5" required></label><label>Overall brightness<input id="fib-opacity" type="range" min="10" max="100" step="5"></label></div>
+    <div class="fib-options"><label class="checkbox"><input id="fib-extend" type="checkbox"><span>Extend lines right</span></label><label class="checkbox"><input id="fib-labels" type="checkbox"><span>Show ratios and prices</span></label></div>
+    <div class="fib-level-head" aria-hidden="true"><span>Show</span><span>Ratio</span><span>Colour</span><span>Brightness</span><span></span></div><div id="fib-levels"></div>
+    <button id="fib-add-level" class="text-button" type="button">+ Add level</button><p id="fib-error" class="error" role="alert" hidden></p>
+    <div class="dialog-actions"><button id="fib-defaults" class="button" type="button">Reset levels</button><button type="submit" class="button primary">Save fib settings</button></div>
   </form></dialog>
   <dialog id="layout-dialog"><form id="layout-form">
     <div class="dialog-heading"><h2>Save layout</h2><button type="button" data-close="layout-dialog" aria-label="Close">×</button></div>

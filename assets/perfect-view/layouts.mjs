@@ -1,4 +1,5 @@
 import {TIMEFRAMES,validateDrawing,validateStudies,indicators} from './core.mjs';
+import {validatePriceRange} from './drawings.mjs';
 export function validateLayout(raw, registry) {
  const fail=()=>{throw new Error('Invalid layout.');};
  if(raw?.version!==2||typeof raw.name!=='string'||!raw.name.trim()||raw.name.length>80||!raw.preferences||!raw.markets||Array.isArray(raw.markets)||typeof raw.markets!=='object')fail();
@@ -12,7 +13,7 @@ export function validateLayout(raw, registry) {
   if(!/^[A-Z0-9._-]{2,24}$/.test(symbol)||!Array.isArray(state?.drawings)||state.drawings.length>300)fail();
   const drawings=state.drawings.map(validateDrawing);if(drawings.some(d=>!d))fail();count+=drawings.length;
   let viewport=null;
-  if(state.viewport!=null){const v=state.viewport;if(!Number.isFinite(v.count)||v.count<12||v.count>1500||!(v.endTime===null||(Number.isFinite(v.endTime)&&v.endTime>=0&&v.endTime<4102444800)))fail();viewport={count:v.count,endTime:v.endTime};}
+  if(state.viewport!=null){const v=state.viewport;if(!Number.isFinite(v.count)||v.count<12||v.count>1500||!(v.endTime===null||(Number.isFinite(v.endTime)&&v.endTime>=0&&v.endTime<4102444800)))fail();const priceRange=validatePriceRange(v.priceRange);if(v.priceRange!=null&&!priceRange)fail();viewport={count:v.count,endTime:v.endTime,...(priceRange?{priceRange}:{})};}
   markets[symbol]={drawings,viewport};
  }
  if(count>3000)fail();

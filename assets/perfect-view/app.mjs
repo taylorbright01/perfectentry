@@ -6,6 +6,8 @@ registerCustomIndicators(indicators);
 import { Account, showMembershipGate } from './account.mjs';
 import { validateLayout } from './layouts.mjs';
 import { CdnFeed, nextCdnCheck } from './cdn.mjs';
+import {defaultFib,validateFib,validatePriceRange} from './drawings.mjs';
+import {instrumentPreset,validateRiskSession,calculatePositionSize} from './risk.mjs';
 
 const account = new Account(config.accountApiUrl);
 const $ = id => document.getElementById(id);
@@ -31,6 +33,13 @@ try {
 } catch { storageOkay = false; }
 
 let activeLayoutId = null, activeLayoutRevision = 0;
+let editingFibId=null;
+let riskSession=validateRiskSession(getSaved('risk-session'))??{currency:'USD',balance:0,mode:'percent',risk:1,updated:''};
+let riskProfiles=getSaved('risk-profiles')??{},conversionRates=getSaved('risk-rates')??{};
+if(!riskProfiles||Array.isArray(riskProfiles)||typeof riskProfiles!=='object')riskProfiles={};
+if(!conversionRates||Array.isArray(conversionRates)||typeof conversionRates!=='object')conversionRates={};
+chart.fibSettings=validateFib(getSaved('fib-settings'))??defaultFib();
+chart.positionSizer=drawing=>positionSize(drawing);
 const archiveCache = new Map();
 let dataset = null, kind = 'demo', datasetId = '', scope = '', studies = [], history = [], historyIndex = 0;
 let pollTimer = null, feedController = null, feedGeneration = 0, notePoint = null, saveTimer = null;
@@ -39,7 +48,7 @@ const workspaceCache = new Map();
 let feedFetching = false, feedFailures = 0;
 const cdn = new CdnFeed({url: config.feedUrl, readCache: readDataset, writeCache: cacheDataset});
 const labels = { 30: '30 seconds', 60: '1 minute', 300: '5 minute', 900: '15 minute', 3600: '1 hour', 14400: '4 hour', 86400: '1 day' };
-const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note', vertical: 'Vertical line', ray: 'Ray', long: 'Long position', short: 'Short position' };
+const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note', vertical: 'Vertical line', ray: 'Ray', long: 'Long position', short: 'Short position', fib: 'Fibonacci retracement' };
 
 function announce(text) { $('message').textContent = text; $('message').hidden = false; }
 function store(key, value) {
@@ -53,15 +62,17 @@ function getSaved(key) {
 }
 function state() {
   return { version: 1, drawings: structuredClone(chart.drawings), studies: structuredClone(studies),
-    viewport: { count: chart.count, endTime: chart.bars.length ? chart.timeAt(chart.end - 1) : null } };
+    viewport: { count: chart.count, endTime: chart.bars.length ? chart.timeAt(chart.end - 1) : null, ...(chart.getPriceRange()?{priceRange:chart.getPriceRange()}:{}) } };
 }
 function validatedState(raw) {
   if (!raw || raw.version !== 1 || !Array.isArray(raw.drawings) || raw.drawings.length > 300) throw new Error('Invalid workspace file.');
   const drawings = raw.drawings.map(validateDrawing);
   if (drawings.some(d => !d)) throw new Error('A drawing contains invalid coordinates.');
   const savedStudies = validateStudies(raw.studies);
+  const priceRange=validatePriceRange(raw.viewport?.priceRange);
+  if(raw.viewport?.priceRange!=null&&!priceRange)throw new Error('Invalid price scale.');
   const viewport = raw.viewport && Number.isFinite(raw.viewport.count) && Number.isFinite(raw.viewport.endTime)
-    ? { count: Math.max(12, Math.min(1500, raw.viewport.count)), endTime: raw.viewport.endTime } : null;
+    ? { count: Math.max(12, Math.min(1500, raw.viewport.count)), endTime: raw.viewport.endTime,...(priceRange?{priceRange}:{}) } : null;
   return { version: 1, drawings, studies: savedStudies, viewport };
 }
 function save() {
@@ -179,12 +190,13 @@ function useDataset(data, source, id, { reset = true, restoreViewport = false } 
   }
   chart.drawingColor = preferences.drawingColor;
   rebuild({ reset });
+  if(saved?.viewport?.priceRange)chart.setPriceRange(saved.viewport.priceRange);
   if (restoreViewport && saved?.viewport && chart.bars.length) {
     chart.count = saved.viewport.count; chart.end = chart.indexAt(saved.viewport.endTime) + 1;
     chart.clamp(); chart.requestDraw();
   }
   history = [{ drawings: structuredClone(chart.drawings), studies: structuredClone(studies) }]; historyIndex = 0;
-  chart.setTool('select'); renderStudies(); renderDrawings(); updateUndo(); save();
+  chart.setTool('select'); renderStudies(); renderDrawings(); renderRiskForm(); updateUndo(); save();
 }
 function useDemo(symbol = preferences.symbol, restoreViewport = false) {
   if (!['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'].includes(symbol)) symbol = 'EURUSD';
@@ -221,6 +233,7 @@ function colourPicker(item, type) {
   picker.addEventListener('change', () => {
     item.color = picker.value;
     if (type === 'drawing') {
+      if(item.type==='fib')item.fib={...(item.fib??defaultFib()),levels:(item.fib??defaultFib()).levels.map(level=>({...level,color:picker.value}))};
       preferences.drawingColor = picker.value; chart.drawingColor = picker.value; chart.requestDraw();
     } else calculateStudies();
     checkpoint();
@@ -262,13 +275,100 @@ function renderDrawings() {
     });
     const remove = document.createElement('button'); remove.textContent = '×'; remove.setAttribute('aria-label', `Delete ${label}`);
     remove.addEventListener('click', () => chart.removeDrawing(drawing.id));
-    row.append(select, colourPicker(drawing, 'drawing'), renameButton('drawing', drawing.id, label), remove); list.append(row);
+    row.append(select, colourPicker(drawing, 'drawing'));
+    if(drawing.type==='fib'){const settings=document.createElement('button');settings.textContent='⚙';settings.title='Edit Fibonacci levels and brightness';settings.setAttribute('aria-label','Settings for '+label);settings.addEventListener('click',()=>openFibSettings(drawing));row.append(settings);}
+    row.append(renameButton('drawing', drawing.id, label), remove); list.append(row);
   }
+  renderRiskReadout();
 }
 function openPanel(name) {
   document.querySelectorAll('[data-panel]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.panel === name)));
-  $('indicators-panel').hidden = name !== 'indicators'; $('drawings-panel').hidden = name !== 'drawings';
+  $('indicators-panel').hidden = name !== 'indicators'; $('drawings-panel').hidden = name !== 'drawings';$('risk-panel').hidden=name!=='risk';
+  if(name==='risk'){renderRiskReadout();if(['long','short'].includes(chart.tool)){$('side-panel').classList.add('open');$('panel-toggle').setAttribute('aria-expanded','true');}}
 }
+
+function addFibLevel(level={value:1,color:'#80cec6',opacity:1,visible:true}) {
+  if($('fib-levels').children.length>=24)return;
+  const row=document.createElement('div');row.className='fib-level-row';
+  for(const [field,type] of [['visible','checkbox'],['value','number'],['color','color'],['opacity','range']]){
+    const input=document.createElement('input');input.type=type;input.dataset.fib=field;input.setAttribute('aria-label',field==='value'?'Level ratio':field==='visible'?'Show level':field==='color'?'Level colour':'Level brightness');
+    if(field==='visible')input.checked=level.visible;
+    else if(field==='opacity'){input.min=10;input.max=100;input.step=5;input.value=level.opacity*100;}
+    else{input.value=level[field];if(field==='value'){input.min=-10;input.max=10;input.step='any';input.required=true;}}
+    row.append(input);
+  }
+  const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Remove level');remove.addEventListener('click',()=>row.remove());row.append(remove);$('fib-levels').append(row);
+}
+function fillFibSettings(settings) {
+  $('fib-width').value=settings.width;$('fib-opacity').value=settings.opacity*100;$('fib-extend').checked=settings.extend;$('fib-labels').checked=settings.labels;
+  $('fib-levels').replaceChildren();settings.levels.forEach(addFibLevel);$('fib-error').hidden=true;
+}
+function openFibSettings(drawing) {
+  editingFibId=drawing.id;fillFibSettings(drawing.fib??chart.fibSettings);$('fib-dialog').showModal();
+}
+$('fib-add-level').addEventListener('click',()=>addFibLevel());
+$('fib-defaults').addEventListener('click',()=>fillFibSettings(defaultFib()));
+$('fib-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  const settings=validateFib({opacity:Number($('fib-opacity').value)/100,width:Number($('fib-width').value),extend:$('fib-extend').checked,labels:$('fib-labels').checked,levels:[...$('fib-levels').children].map(row=>({value:Number(row.querySelector('[data-fib="value"]').value),color:row.querySelector('[data-fib="color"]').value,opacity:Number(row.querySelector('[data-fib="opacity"]').value)/100,visible:row.querySelector('[data-fib="visible"]').checked}))});
+  if(!settings){$('fib-error').textContent='Use 1–24 valid levels and keep at least one visible.';$('fib-error').hidden=false;return;}
+  const drawing=chart.drawings.find(d=>d.id===editingFibId&&d.type==='fib');
+  if(drawing)drawing.fib=structuredClone(settings);
+  chart.fibSettings=settings;store('fib-settings',settings);chart.requestDraw();checkpoint();$('fib-dialog').close();
+});
+
+function currentRiskProfile() {
+  const symbol=dataset?.symbol??preferences.symbol;
+  return {...instrumentPreset(symbol),...(riskProfiles[symbol+':'+riskSession.currency]??{})};
+}
+function positionSize(drawing) {
+  const profile=currentRiskProfile(),key=profile.profitCurrency+':'+riskSession.currency;
+  return calculatePositionSize(drawing,riskSession,profile,dataset?.symbol??preferences.symbol,conversionRates[key]);
+}
+function renderRiskForm() {
+  const p=currentRiskProfile(),symbol=dataset?.symbol??preferences.symbol;
+  $('risk-currency').value=riskSession.currency;$('risk-balance').value=riskSession.balance||'';$('risk-mode').value=riskSession.mode;$('risk-value').value=riskSession.risk;
+  for(const [id,field] of [['risk-contract-size','contractSize'],['risk-min-lot','minLot'],['risk-lot-step','lotStep'],['risk-max-lot','maxLot'],['risk-tick-size','tickSize'],['risk-tick-value','tickValue'],['risk-commission','commissionPerLot']])$(id).value=p[field]||'';
+  $('risk-max-lot').value=p.maxLot;$('risk-commission').value=p.commissionPerLot;
+  $('risk-calculation').value=p.mode;$('risk-profit-currency').value=p.profitCurrency;$('risk-market').textContent=symbol;
+  $('risk-preset-note').textContent=riskProfiles[symbol+':'+riskSession.currency]?'Using your saved settings. Keep these matched to the MT5 symbol specification.':p.forex?'FX preset: 100,000 units/lot and 0.01 steps. Match these to your MT5 symbol specification.':'Enter the contract size and volume limits from this instrument’s MT5 specification.';
+  if(!p.forex&&!p.contractSize)$('risk-contract').open=true;
+  $('risk-conversion').value=conversionRates[p.profitCurrency+':'+riskSession.currency]??'';
+  updateRiskVisibility();renderRiskReadout();
+}
+function updateRiskVisibility() {
+  const p=currentRiskProfile(),symbol=dataset?.symbol??preferences.symbol;
+  const manual=p.mode==='contract'&&p.profitCurrency!==riskSession.currency&&!(symbol.length===6&&symbol.slice(0,3)===riskSession.currency&&symbol.slice(3)===p.profitCurrency);
+  $('risk-conversion-label').hidden=!manual;$('risk-conversion-title').textContent='1 '+p.profitCurrency+' in '+riskSession.currency;
+  document.querySelectorAll('.contract-field').forEach(el=>el.hidden=p.mode!=='contract');document.querySelectorAll('.tick-field').forEach(el=>el.hidden=p.mode!=='tick');
+  $('risk-value').max=riskSession.mode==='percent'?'100':'1000000000000';
+  $('risk-value').setAttribute('aria-label',riskSession.mode==='percent'?'Risk percent of balance':'Risk amount in '+riskSession.currency);
+  $('risk-session-date').textContent=riskSession.updated?'Balance/risk updated '+new Date(riskSession.updated).toLocaleDateString('en-GB')+' · saved on this device':'Enter your balance to start this session.';
+}
+function readRiskForm(event) {
+  if($('risk-currency').value!==riskSession.currency){riskSession.currency=$('risk-currency').value;renderRiskForm();}
+  riskSession={currency:$('risk-currency').value,balance:Number($('risk-balance').value),mode:$('risk-mode').value,risk:Number($('risk-value').value),updated:new Date().toISOString()};
+  const p={...currentRiskProfile(),mode:$('risk-calculation').value,profitCurrency:$('risk-profit-currency').value};
+  for(const [id,field] of [['risk-contract-size','contractSize'],['risk-min-lot','minLot'],['risk-lot-step','lotStep'],['risk-max-lot','maxLot'],['risk-tick-size','tickSize'],['risk-tick-value','tickValue'],['risk-commission','commissionPerLot']])p[field]=Number($(id).value);
+  riskProfiles[(dataset?.symbol??preferences.symbol)+':'+riskSession.currency]=p;
+  const rateKey=p.profitCurrency+':'+riskSession.currency;
+  if(event?.target?.id==='risk-profit-currency')$('risk-conversion').value=conversionRates[rateKey]??'';
+  if(!$('risk-conversion-label').hidden||event?.target?.id==='risk-conversion')conversionRates[rateKey]=Number($('risk-conversion').value);
+  if(validateRiskSession(riskSession))store('risk-session',riskSession);store('risk-profiles',riskProfiles);store('risk-rates',conversionRates);
+  updateRiskVisibility();renderRiskReadout();chart.requestDraw();
+}
+function renderRiskReadout(drawing=chart.activePosition()) {
+  const result=positionSize(drawing),holder=$('risk-readout');holder.replaceChildren();
+  if(!result.ok){const p=document.createElement('p');p.textContent=result.message;holder.append(p);return;}
+  const numbers=new Intl.NumberFormat('en-GB',{maximumFractionDigits:8}),money=n=>new Intl.NumberFormat('en-GB',{style:'currency',currency:result.currency,maximumFractionDigits:2}).format(n);
+  const title=document.createElement('strong');title.className='risk-size';title.textContent=numbers.format(result.lots)+' lots';holder.append(title);
+  const rows=[['Units',result.units==null?'Set contract size':numbers.format(result.units)],['Risk budget',money(result.budget)],['Est. stop loss',money(result.loss)],['Est. target P/L',money(result.reward)],['Est. reward / risk',result.rr.toFixed(2)],['Stop distance',result.distance.toFixed(chart.precision)]];
+  const dl=document.createElement('dl');for(const [label,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;dl.append(dt,dd);}holder.append(dl);
+  const note=document.createElement('p');note.textContent=result.message||result.conversion;holder.append(note);
+}
+$('risk-form').addEventListener('submit',event=>event.preventDefault());
+$('risk-form').addEventListener('input',readRiskForm);$('risk-form').addEventListener('change',readRiskForm);
+$('risk-new-session').addEventListener('click',()=>{riskSession={...riskSession,balance:0,updated:new Date().toISOString()};store('risk-session',riskSession);renderRiskForm();$('risk-balance').focus();});
 
 // Imported candles are kept in IndexedDB, separate from small workspace documents.
 function withDB(action) {
@@ -364,16 +464,20 @@ function pauseFeed() {
 document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => chart.setTool(button.dataset.tool)));
 chart.addEventListener('tool', ({ detail }) => {
   document.querySelectorAll('[data-tool]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.tool === detail.tool)));
-  $('chart-instructions').textContent = detail.tool === 'select' ? 'Drag to explore. Scroll to zoom.'
+  if(['long','short'].includes(detail.tool))openPanel('risk');
+  renderRiskReadout();
+  $('chart-instructions').textContent = detail.tool === 'select' ? 'Scroll to zoom time. Shift + scroll to zoom price. Shift + drag to move price.'
     : detail.tool === 'horizontal' ? 'Click the chart to mark a level.'
     : ['long','short'].includes(detail.tool) ? (detail.stop ? 'Choose the target. Escape to cancel.' : detail.pending ? 'Choose the stop. Escape to cancel.' : 'Choose the entry, then stop, then target.')
     : detail.tool === 'vertical' ? 'Click to mark a time.'
+    : detail.tool === 'fib' ? (detail.pending?'Choose the swing end. 0 will sit here.':'Choose the swing start, then the swing end. Edit levels in Drawings.')
     : detail.tool === 'text' ? 'Click where you want to leave a note.'
     : detail.pending ? 'Choose the second point. Escape to cancel.' : 'Choose the first point. Escape to cancel.';
 });
-chart.addEventListener('drawings', () => { renderDrawings(); checkpoint(); openPanel('drawings'); });
+chart.addEventListener('drawings', () => { renderDrawings(); checkpoint(); openPanel(chart.activePosition()?'risk':'drawings'); });
 chart.addEventListener('selection', renderDrawings);
-chart.addEventListener('viewport', scheduleSave);
+chart.addEventListener('viewport', () => {$('price-reset').setAttribute('aria-pressed',String(!chart.getPriceRange()));scheduleSave();});
+chart.addEventListener('positionpreview',({detail})=>renderRiskReadout(detail.drawing));
 chart.addEventListener('message', ({detail}) => announce(detail.text));
 chart.addEventListener('limit', () => announce('This workspace supports up to 300 drawings. Export or remove some before adding more.'));
 chart.addEventListener('hover', ({ detail }) => {
@@ -389,6 +493,7 @@ $('note-form').addEventListener('submit', event => {
 $('undo').addEventListener('click', () => travel(-1)); $('redo').addEventListener('click', () => travel(1));
 $('delete').addEventListener('click', () => { if (chart.selected) chart.removeDrawing(chart.selected); });
 $('zoom-in').addEventListener('click', () => chart.zoom(0.8)); $('zoom-out').addEventListener('click', () => chart.zoom(1.25));
+$('price-zoom-in').addEventListener('click',()=>chart.zoomPrice(.8));$('price-zoom-out').addEventListener('click',()=>chart.zoomPrice(1.25));$('price-reset').addEventListener('click',()=>chart.resetPriceScale());
 $('latest').addEventListener('click', () => chart.latest());
 document.querySelectorAll('[data-tf]').forEach(button => button.addEventListener('click', () => {
   preferences.timeframe = Number(button.dataset.tf); chart.setTool('select'); rebuild({ reset: true }); save(); loadArchive();
