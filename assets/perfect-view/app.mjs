@@ -1,8 +1,13 @@
 import { aggregateBars, createDemoBars, indicators, parseDataset, validateDrawing, validateStudies, TIMEFRAMES } from './core.mjs';
 import { PerfectViewChart } from './chart.mjs';
 import { config } from './config.mjs';
+import { registerCustomIndicators } from './custom-indicators.mjs';
+registerCustomIndicators(indicators);
+import { Account, showMembershipGate } from './account.mjs';
+import { validateLayout } from './layouts.mjs';
 import { CdnFeed, nextCdnCheck } from './cdn.mjs';
 
+const account = new Account(config.accountApiUrl);
 const $ = id => document.getElementById(id);
 const chart = new PerfectViewChart($('chart'));
 const PREFIX = 'perfect-view:v1:';
@@ -25,14 +30,16 @@ try {
   };
 } catch { storageOkay = false; }
 
+let activeLayoutId = null, activeLayoutRevision = 0;
+const archiveCache = new Map();
 let dataset = null, kind = 'demo', datasetId = '', scope = '', studies = [], history = [], historyIndex = 0;
 let pollTimer = null, feedController = null, feedGeneration = 0, notePoint = null, saveTimer = null;
-let studyTemplateLoaded = false, renameTarget = null;
+let studyTemplateLoaded = false, renameTarget = null, editingStudy = null;
 const workspaceCache = new Map();
 let feedFetching = false, feedFailures = 0;
 const cdn = new CdnFeed({url: config.feedUrl, readCache: readDataset, writeCache: cacheDataset});
 const labels = { 30: '30 seconds', 60: '1 minute', 300: '5 minute', 900: '15 minute', 3600: '1 hour', 14400: '4 hour', 86400: '1 day' };
-const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note' };
+const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note', vertical: 'Vertical line', ray: 'Ray', long: 'Long position', short: 'Short position' };
 
 function announce(text) { $('message').textContent = text; $('message').hidden = false; }
 function store(key, value) {
@@ -98,12 +105,27 @@ function ensureSymbol(symbol) {
   }
   $('symbol').value = symbol;
 }
+function displayedBars(closedOnly = preferences.closedOnly) {
+  if (!dataset) return [];
+  const live = aggregateBars(dataset.candles, preferences.timeframe, {baseTimeframe:dataset.baseTimeframe,closedOnly});
+  const cached = kind === 'feed' ? archiveCache.get(dataset.symbol + ':' + preferences.timeframe)?.data : null;
+  if (!cached) return live;
+  const older = aggregateBars(cached.candles, preferences.timeframe, {baseTimeframe:cached.baseTimeframe,closedOnly:true});
+  return [...new Map([...older,...live].map(b => [b.time,b])).values()].sort((a,b) => a.time-b.time);
+}
+async function loadArchive() {
+  if (kind !== 'feed' || ![3600,14400,86400].includes(preferences.timeframe)) return;
+  const symbol=dataset.symbol,tf=preferences.timeframe,key=symbol+':'+tf,cached=archiveCache.get(key);
+  // Archive files change hourly; a five-minute recheck avoids extra reads on every candle.
+  if (cached && Date.now()-cached.checked<300000) return;
+  archiveCache.set(key,{...cached,checked:Date.now()});
+  try {const data=await cdn.history(symbol,tf);archiveCache.set(key,{checked:Date.now(),data});if(dataset?.symbol===symbol&&preferences.timeframe===tf)rebuild();}
+  catch(error){announce('Older history could not be loaded. Recent candles remain available.');}
+}
 function rebuild({ reset = false } = {}) {
   if (!dataset) return;
   if (preferences.timeframe < dataset.baseTimeframe) preferences.timeframe = dataset.baseTimeframe;
-  const bars = aggregateBars(dataset.candles, preferences.timeframe, {
-    baseTimeframe: dataset.baseTimeframe, closedOnly: preferences.closedOnly
-  });
+  const bars = displayedBars();
   chart.setBars(bars, { timeframe: preferences.timeframe, precision: precision(dataset.symbol, bars), reset });
   chart.setFocus(preferences.focus); chart.setMode(preferences.mode);
   $('chart-title').textContent = dataset.symbol;
@@ -170,17 +192,16 @@ function useDemo(symbol = preferences.symbol, restoreViewport = false) {
 }
 function calculateStudies() {
   const models = [];
-  const completed = dataset ? aggregateBars(dataset.candles, preferences.timeframe, {
-    baseTimeframe: dataset.baseTimeframe, closedOnly: true
-  }) : [];
+  const completed = displayedBars(true);
   for (const study of studies) {
-    try { models.push(indicators.calculate(study.id, completed, study)); }
+    if (study.enabled === false) continue;
+    try { models.push({ ...indicators.calculate(study.id, completed, study), key: study.key, title: itemName(study, 'study') }); }
     catch { announce('An indicator could not be calculated. Remove it and try again.'); }
   }
   chart.setModels(models);
 }
 function itemName(item, type) {
-  return item.name || (type === 'study' ? `EMA ${item.period}` : item.text || names[item.type]);
+  return item.name || (type === 'study' ? `${item.id.startsWith('pe_') ? indicators.definitions.get(item.id)?.name ?? item.id : item.id.toUpperCase()}${item.period ? ' ' + item.period : ''}` : item.text || names[item.type]);
 }
 function renameButton(type, id, label) {
   const button = document.createElement('button'); button.className = 'rename-button';
@@ -212,10 +233,17 @@ function renderStudies() {
   for (const study of studies) {
     const row = document.createElement('div'); row.className = 'entry-row';
     const label = itemName(study, 'study');
-    const title = document.createElement('span'); title.className = 'item-title'; title.textContent = label; title.title = `${label} · EMA ${study.period}`;
+    const title = document.createElement('span'); title.className = 'item-title'; title.textContent = label; title.title = label;
     const remove = document.createElement('button'); remove.textContent = '×'; remove.setAttribute('aria-label', `Remove ${label}`);
     remove.addEventListener('click', () => { studies = studies.filter(s => s.key !== study.key); calculateStudies(); renderStudies(); checkpoint(); });
-    row.append(title, colourPicker(study, 'study'), renameButton('study', study.key, label), remove); list.append(row);
+    const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.checked = study.enabled !== false;
+    enabled.setAttribute('aria-label', `Show ${label}`);
+    enabled.addEventListener('change', () => {
+      if(enabled.checked && indicators.definitions.get(study.id)?.pane === 'oscillator' && studies.filter(s => s.key !== study.key && s.enabled !== false && indicators.definitions.get(s.id)?.pane === 'oscillator').length >= 4) {enabled.checked=false;announce('Show up to four oscillator panels at once.');return;}
+      study.enabled = enabled.checked; calculateStudies(); checkpoint(); });
+    const settings = document.createElement('button'); settings.textContent = '⚙'; settings.setAttribute('aria-label', `Settings for ${label}`);
+    settings.addEventListener('click', () => openIndicator(study));
+    row.append(enabled, title, colourPicker(study, 'study'), settings, renameButton('study', study.key, label), remove); list.append(row);
   }
 }
 function renderDrawings() {
@@ -304,6 +332,7 @@ async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
     else useDataset(data, 'feed', id, { restoreViewport });
     feedFailures = 0;
     $('message').hidden = true;
+    loadArchive();
   } catch (error) {
     if (generation !== feedGeneration) return;
     feedFailures++;
@@ -337,12 +366,15 @@ chart.addEventListener('tool', ({ detail }) => {
   document.querySelectorAll('[data-tool]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.tool === detail.tool)));
   $('chart-instructions').textContent = detail.tool === 'select' ? 'Drag to explore. Scroll to zoom.'
     : detail.tool === 'horizontal' ? 'Click the chart to mark a level.'
+    : ['long','short'].includes(detail.tool) ? (detail.stop ? 'Choose the target. Escape to cancel.' : detail.pending ? 'Choose the stop. Escape to cancel.' : 'Choose the entry, then stop, then target.')
+    : detail.tool === 'vertical' ? 'Click to mark a time.'
     : detail.tool === 'text' ? 'Click where you want to leave a note.'
     : detail.pending ? 'Choose the second point. Escape to cancel.' : 'Choose the first point. Escape to cancel.';
 });
 chart.addEventListener('drawings', () => { renderDrawings(); checkpoint(); openPanel('drawings'); });
 chart.addEventListener('selection', renderDrawings);
 chart.addEventListener('viewport', scheduleSave);
+chart.addEventListener('message', ({detail}) => announce(detail.text));
 chart.addEventListener('limit', () => announce('This workspace supports up to 300 drawings. Export or remove some before adding more.'));
 chart.addEventListener('hover', ({ detail }) => {
   const b = detail.bar;
@@ -359,7 +391,7 @@ $('delete').addEventListener('click', () => { if (chart.selected) chart.removeDr
 $('zoom-in').addEventListener('click', () => chart.zoom(0.8)); $('zoom-out').addEventListener('click', () => chart.zoom(1.25));
 $('latest').addEventListener('click', () => chart.latest());
 document.querySelectorAll('[data-tf]').forEach(button => button.addEventListener('click', () => {
-  preferences.timeframe = Number(button.dataset.tf); chart.setTool('select'); rebuild({ reset: true }); save();
+  preferences.timeframe = Number(button.dataset.tf); chart.setTool('select'); rebuild({ reset: true }); save(); loadArchive();
 }));
 $('symbol').addEventListener('change', async () => {
   const symbol = $('symbol').value;
@@ -387,15 +419,38 @@ $('rename-form').addEventListener('submit', event => {
   renameTarget = null; $('rename-dialog').close();
 });
 $('load').addEventListener('click', () => { $('import-symbol').value = dataset?.symbol ?? preferences.symbol; $('import-error').hidden = true; $('load-dialog').showModal(); });
-$('add-indicator').addEventListener('click', () => {
-  if (studies.length >= 8) { announce('Up to eight moving averages can be shown at once.'); return; }
-  $('indicator-dialog').showModal();
-});
+function indicatorInputs(study = null) {
+  const id = $('indicator-type').value, definition = indicators.definitions.get(id);
+  const holder = $('indicator-inputs'); holder.replaceChildren();
+  for (const [key, schema] of Object.entries(definition.inputs ?? {})) {
+    const label = document.createElement('label'), input = document.createElement('input');
+    label.textContent = schema.label; input.dataset.setting = key;
+    input.id = key === 'period' ? 'ema-period' : 'study-' + key;
+    if (schema.type === 'boolean') { input.type = 'checkbox'; input.checked = study?.[key] ?? schema.default; }
+    else { input.type = 'number'; input.min = schema.min; input.max = schema.max; input.step = schema.step; input.value = study?.[key] ?? schema.default; input.required = true; }
+    label.append(input); holder.append(label);
+  }
+  $('ema-color').value = study?.color ?? definition.defaults.color ?? '#b4a2ff';
+}
+function openIndicator(study = null) {
+  if (!study && studies.length >= 12) { announce('Up to twelve indicators can be saved in a layout.'); return; }
+  editingStudy = study;
+  $('indicator-type').replaceChildren(...[...indicators.definitions.values()].map(d => {const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; return o;}));
+  $('indicator-type').value = study?.id ?? 'ema'; $('indicator-type').disabled = !!study;
+  $('indicator-heading').textContent = study ? 'Indicator settings' : 'Add an indicator';
+  indicatorInputs(study); $('indicator-dialog').showModal();
+}
+$('add-indicator').addEventListener('click', () => openIndicator());
+$('indicator-type').addEventListener('change', () => indicatorInputs());
 $('indicator-form').addEventListener('submit', event => {
-  event.preventDefault(); const period = Number($('ema-period').value);
-  if (!Number.isInteger(period) || period < 1 || period > 500) return;
-  studies.push({ id: 'ema', key: crypto.randomUUID(), period, color: $('ema-color').value });
-  calculateStudies(); renderStudies(); checkpoint(); $('indicator-dialog').close();
+  event.preventDefault(); const raw = {id: $('indicator-type').value, key: editingStudy?.key ?? crypto.randomUUID(),
+    color: $('ema-color').value, name: editingStudy?.name ?? '', enabled: editingStudy?.enabled ?? true};
+  for (const input of $('indicator-inputs').querySelectorAll('[data-setting]')) raw[input.dataset.setting] = input.type === 'checkbox' ? input.checked : Number(input.value);
+  const validated = validateStudies([raw])[0];
+  if (!validated) { announce('Check the indicator settings. RSI lower must be below upper; MACD fast must be below slow.'); return; }
+  const next = editingStudy ? studies.map(s => s.key === editingStudy.key ? validated : s) : [...studies, validated];
+  if (next.filter(s => s.enabled !== false && indicators.definitions.get(s.id)?.pane === 'oscillator').length > 4) { announce('Show up to four oscillator panels at once. Hide one before adding another.'); return; }
+  studies = next; calculateStudies(); renderStudies(); checkpoint(); $('indicator-dialog').close(); editingStudy = null;
 });
 $('data-form').addEventListener('submit', async event => {
   event.preventDefault(); const file = $('data-file').files[0]; if (!file) return;
@@ -447,6 +502,65 @@ document.addEventListener('visibilitychange', () => {
 });
 if (config.loginUrl) { $('login').href = config.loginUrl; $('login').hidden = false; }
 
+function layoutDocument(name) {
+  save(); const markets = {}, id = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href);
+  for (const symbol of config.availableSymbols ?? [preferences.symbol]) {
+    const state = workspaceCache.get(id + ':' + symbol) ?? getSaved('workspace:' + id + ':' + symbol);
+    if (state) markets[symbol] = {drawings: state.drawings ?? [], viewport: state.viewport ?? null};
+  }
+  if (dataset) markets[dataset.symbol] = {drawings: structuredClone(chart.drawings), viewport: state().viewport};
+  return validateLayout({version:2,name,preferences:{symbol:preferences.symbol,timeframe:preferences.timeframe,mode:preferences.mode,focus:preferences.focus,closedOnly:preferences.closedOnly,refreshSeconds:preferences.refreshSeconds},studies,markets});
+}
+async function listLayouts() {
+  const result = await account.request('/layouts');
+  $('layout-picker').replaceChildren(new Option('Choose a saved layout', ''), ...result.layouts.map(l => new Option(l.name, l.id)));
+  if (activeLayoutId) $('layout-picker').value = activeLayoutId;
+}
+$('save-layout').addEventListener('click', async () => {
+  if (!account.user) { if (config.accountApiUrl) await account.signIn(); else announce('Account sync will be available when Whop sign-in is connected. Your drawings are still saved in this browser.'); return; }
+  if(kind !== 'feed') {announce('Account layouts use the broker feed. Export drawings separately for imported charts.');return;}
+  $('layout-save-copy').checked = false; $('delete-layout').hidden = !activeLayoutId;
+  $('layout-name').value = activeLayoutId ? $('layout-picker').selectedOptions[0]?.textContent ?? 'My layout' : 'My layout'; $('layout-dialog').showModal();
+});
+$('delete-layout').addEventListener('click', async () => {
+  if (!activeLayoutId || !window.confirm('Delete this saved account layout? Your current chart will stay open.')) return;
+  try {await account.request('/layouts/' + activeLayoutId,{method:'DELETE',headers:{'If-Match':String(activeLayoutRevision)}});activeLayoutId=null;activeLayoutRevision=0;await listLayouts();$('layout-dialog').close();announce('Saved layout deleted.');}
+  catch(error) {announce(error.message);}
+});
+$('layout-form').addEventListener('submit', async event => {
+  event.preventDefault(); const button = $('save-layout-confirm'); button.disabled = true;
+  try {
+    const copy = $('layout-save-copy').checked, id = copy || !activeLayoutId ? crypto.randomUUID() : activeLayoutId;
+    const result = await account.request('/layouts/' + id, {method:'PUT',headers:{'If-Match':String(copy || !activeLayoutId ? 0 : activeLayoutRevision)},body:JSON.stringify(layoutDocument($('layout-name').value))});
+    activeLayoutId = id; activeLayoutRevision = result.revision; await listLayouts(); $('layout-dialog').close(); announce('Layout saved to your Whop account.');
+  } catch(e) { announce(e.message); } finally { button.disabled = false; }
+});
+$('layout-picker').addEventListener('change', async () => {
+  const id = $('layout-picker').value; if (!id) return;
+  try {
+    const result = await account.request('/layouts/' + id), layout = validateLayout(result.layout);
+    save(); const source = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href);
+    for (const symbol of config.availableSymbols ?? []) { const item=layout.markets[symbol] ?? {drawings:[],viewport:null};const data={version:1,...item,studies:layout.studies};workspaceCache.set(source+':'+symbol,data);store('workspace:'+source+':'+symbol,data); }
+    // Clear the active scope so useDataset cannot overwrite the incoming layout with old drawings.
+    scope = ''; preferences = {...preferences,...layout.preferences}; studies = layout.studies; store('studies',studies); studyTemplateLoaded = true;
+    activeLayoutId = id; activeLayoutRevision = result.revision; await fetchFeed(preferences.symbol,true); scheduleFeed(); renderStudies(); announce('Layout loaded.');
+  } catch(e) { announce(e.message); }
+});
+async function initializeAccount() {
+  if (!config.accountApiUrl) return true;
+  try {
+    await account.initialize(); $('login').hidden = false; $('login').href = '#';
+    $('login').textContent = account.user ? account.user.name + ' · Sign out' : 'Sign in with Whop';
+    $('login').addEventListener('click', async event => {event.preventDefault();if(account.user){await account.signOut();location.reload();}else await account.signIn();});
+    if (config.requireMembership && !showMembershipGate(account,'perfectView')) return false;
+    if (account.access.perfectView) {
+      try { await account.loadPremium(indicators); } catch(error) { announce(error.message); }
+      $('layout-picker').hidden = false; try { await listLayouts(); } catch(error) { announce(error.message); }
+    }
+    return true;
+  } catch(e) {announce(e.message);if(config.requireMembership) {showMembershipGate(account,'perfectView');return false;}return true;}
+}
+
 async function initialize() {
   if (config.feedUrl) {
     for (const symbol of config.availableSymbols ?? []) ensureSymbol(symbol);
@@ -466,4 +580,11 @@ async function initialize() {
   }
   useDemo(preferences.symbol, true);
 }
-await initialize();
+if (await initializeAccount()) {
+  await initialize();
+  if (config.requireMembership && config.accountApiUrl) {const membershipTimer = setInterval(async () => {
+    if(document.hidden)return;
+    try{const profile=await account.request('/me');account.user=profile.user;account.access=profile.access;if(!profile.access.perfectView){clearInterval(membershipTimer);save();pauseFeed();showMembershipGate(account,'perfectView');}}
+    catch(error){if(error.status===401||error.status===403){clearInterval(membershipTimer);save();pauseFeed();account.user=null;account.access={};showMembershipGate(account,'perfectView');}}
+  },300000);}
+}

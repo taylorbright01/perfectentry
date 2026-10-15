@@ -8,7 +8,7 @@ export class PerfectViewChart extends EventTarget {
     this.bars = []; this.drawings = []; this.models = [];
     this.count = 110; this.end = 0; this.timeframe = 300; this.precision = 5;
     this.mode = 'candles'; this.focus = true; this.tool = 'select';
-    this.selected = null; this.pending = null; this.cursor = null;
+    this.selected = null; this.pending = null; this.pendingStop = null; this.cursor = null;
     this.drawingColor = '#e3b975';
     this.drag = null; this.frame = null; this.width = 0; this.height = 0;
     this.abort = new AbortController();
@@ -65,9 +65,13 @@ export class PerfectViewChart extends EventTarget {
     this.pending = null;
     this.clamp(); this.requestDraw();
   }
-  setModels(models) { this.models = models; this.requestDraw(); }
+  setModels(models) {
+    this.models = models; const panes = models.filter(m => m.pane === 'oscillator').length;
+    if(this.canvas.parentElement) this.canvas.parentElement.style.minHeight = panes ? (260 + Math.min(4, panes) * 100) + 'px' : '';
+    this.requestDraw();
+  }
   setDrawings(drawings) { this.drawings = structuredClone(drawings); this.selected = null; this.pending = null; this.requestDraw(); }
-  setTool(tool) { this.tool = tool; this.pending = null; this.canvas.dataset.tool = tool; this.requestDraw(); this.emit('tool', { tool }); }
+  setTool(tool) { this.tool = tool; this.pending = null; this.pendingStop = null; this.canvas.dataset.tool = tool; this.requestDraw(); this.emit('tool', { tool }); }
   setFocus(focus) { this.focus = focus; this.requestDraw(); }
   setMode(mode) { this.mode = mode; this.requestDraw(); }
   clamp() {
@@ -114,7 +118,9 @@ export class PerfectViewChart extends EventTarget {
     const c = this.ctx, w = this.width, h = this.height;
     c.clearRect(0, 0, w, h);
     c.fillStyle = '#0f151b'; c.fillRect(0, 0, w, h);
-    this.plot = { left: 18, right: w - (this.focus ? 24 : 86), top: 30, bottom: h - 42 };
+    const panes = this.models.filter(m => m.pane === 'oscillator');
+    const paneHeight = Math.min(108, Math.max(64, (h - 210) / Math.max(1, panes.length)));
+    this.plot = { left: 18, right: w - (this.focus ? 24 : 86), top: 30, bottom: h - 42 - panes.length * paneHeight };
     this.plot.width = Math.max(1, this.plot.right - this.plot.left);
     this.plot.height = Math.max(1, this.plot.bottom - this.plot.top);
     const start = Math.max(0, Math.floor(this.end - this.count)), end = Math.min(this.bars.length, Math.ceil(this.end));
@@ -142,7 +148,7 @@ export class PerfectViewChart extends EventTarget {
       if (index !== start && Math.floor(this.bars[index].time / 86400) === Math.floor(this.bars[index - 1].time / 86400)) continue;
       const boundary = index > 0 && Math.floor(this.bars[index].time / 86400) !== Math.floor(this.bars[index - 1].time / 86400);
       const date = new Date(this.bars[index].time * 1000);
-      const label = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+      const label = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: this.timeframe >= 86400 ? 'numeric' : undefined, timeZone: 'UTC' });
       const half = c.measureText(label).width / 2;
       const x = Math.max(this.plot.left + half, Math.min(this.plot.right - half, this.x(index)));
       if (dateLabels.some(previous => Math.abs(previous.x - x) < previous.half + half + 16)) continue;
@@ -158,7 +164,7 @@ export class PerfectViewChart extends EventTarget {
       const x = this.x(index), date = new Date(this.bars[index].time * 1000);
       c.fillStyle = '#82909d'; c.textAlign = 'center';
       const label = this.timeframe >= 3600
-        ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+        ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: this.timeframe >= 86400 ? 'numeric' : undefined, timeZone: 'UTC' })
         : date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
       if (dateLabels.some(date => Math.abs(date.x - x) < date.half + c.measureText(label).width / 2 + 16)) continue;
       c.fillText(label, x, h - 19);
@@ -176,10 +182,15 @@ export class PerfectViewChart extends EventTarget {
       const top = Math.min(this.y(b.open), this.y(b.close)), height = Math.max(1.4, Math.abs(this.y(b.open) - this.y(b.close)));
       c.fillRect(x - bodyWidth / 2, top, bodyWidth, height);
     }
-    for (const model of this.models) this.drawModel(model);
+    for (const model of this.models) if (model.pane !== 'oscillator') this.drawModel(model);
     for (const drawing of this.drawings) this.drawAnnotation(drawing);
     if (this.pending && this.cursor && this.inPlot(this.cursor)) {
-      this.drawAnnotation({ type: this.tool, color: this.drawingColor, points: [this.pending, this.marketPoint(this.cursor)] });
+      const point = this.marketPoint(this.cursor);
+      if (['long', 'short'].includes(this.tool)) {
+        const stop = this.pendingStop ?? point, direction = this.tool === 'long' ? 1 : -1;
+        const target = this.pendingStop ? point : {time: point.time, price: this.pending.price + direction * Math.abs(this.pending.price - stop.price) * 2};
+        this.drawAnnotation({type: this.tool, color: this.drawingColor, points: [this.pending, stop, target]});
+      } else this.drawAnnotation({ type: this.tool, color: this.drawingColor, points: [this.pending, point] });
     }
     if (this.cursor && this.inPlot(this.cursor)) {
       c.strokeStyle = '#cedbe02a'; c.lineWidth = 1; c.setLineDash([3, 5]); c.beginPath();
@@ -188,6 +199,12 @@ export class PerfectViewChart extends EventTarget {
       c.stroke(); c.setLineDash([]);
     }
     c.restore();
+    panes.forEach((model, i) => this.drawPane(model, this.plot.bottom + i * paneHeight + 8, paneHeight - 12));
+    if (this.cursor && this.inPlot(this.cursor) && (this.tool !== 'select' || this.selected || !this.focus)) {
+      const p = this.marketPoint(this.cursor); c.font = '11px system-ui'; c.fillStyle = '#dce6ef'; c.textAlign = 'right';
+      c.fillText(p.price.toFixed(this.precision), this.plot.right - 5, Math.max(this.plot.top + 12, this.cursor.y - 9));
+      c.textAlign = 'center'; c.fillText(new Date(p.time * 1000).toLocaleString('en-GB', {timeZone:'UTC',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}), Math.max(75, Math.min(w - 75, this.cursor.x)), h - 7);
+    }
     if (this.selected) {
       const d = this.drawings.find(d => d.id === this.selected);
       if (d) for (const p of d.points) {
@@ -195,6 +212,32 @@ export class PerfectViewChart extends EventTarget {
         c.beginPath(); c.arc(point.x, point.y, 4, 0, Math.PI * 2); c.fill(); c.stroke();
       }
     }
+  }
+
+  drawPane(model, top, height) {
+    const c = this.ctx, start = this.end - this.count;
+    const visible = p => this.indexAt(p.time) >= start - 1 && this.indexAt(p.time) <= this.end + 1 && Number.isFinite(p.value);
+    const values = [...(model.lines ?? []), ...(model.histograms ?? [])].flatMap(l => (l.points ?? []).filter(visible).map(p => p.value));
+    let min = model.range?.[0] ?? Math.min(0, ...values), max = model.range?.[1] ?? Math.max(0, ...values);
+    if (max === min) { min -= 1; max += 1; }
+    const y = value => top + height - 12 - (value - min) / (max - min) * (height - 24);
+    c.save(); c.beginPath(); c.rect(this.plot.left, top, this.plot.width, height); c.clip();
+    c.strokeStyle = '#ffffff18'; c.lineWidth = 1; c.beginPath(); c.moveTo(this.plot.left, top); c.lineTo(this.plot.right, top); c.stroke();
+    c.fillStyle = '#9caab8'; c.font = '11px system-ui'; c.textAlign = 'left'; c.fillText(model.title ?? '', this.plot.left + 5, top + 10);
+    for (const level of model.levels ?? []) {
+      c.strokeStyle = '#ffffff18'; c.setLineDash([3, 5]); c.beginPath(); c.moveTo(this.plot.left, y(level)); c.lineTo(this.plot.right, y(level)); c.stroke();
+      c.fillStyle = '#82909d'; c.textAlign = 'right'; c.fillText(String(level), this.plot.right - 4, y(level) - 6);
+    }
+    c.setLineDash([]);
+    for (const histogram of model.histograms ?? []) for (const p of (histogram.points ?? []).filter(visible)) {
+      c.fillStyle = p.value >= 0 ? histogram.positive : histogram.negative;
+      const py = y(p.value), zero = y(0); c.fillRect(this.x(this.indexAt(p.time)) - 2, Math.min(py, zero), Math.max(1, Math.min(8, this.plot.width / this.count * .6)), Math.max(1, Math.abs(zero - py)));
+    }
+    for (const line of model.lines ?? []) {
+      c.strokeStyle = line.color ?? '#b4a2ff'; c.lineWidth = 1.4; c.beginPath(); let started = false;
+      for (const p of line.points ?? []) { if (!visible(p)) { started = false; continue; } const px = this.x(this.indexAt(p.time)), py = y(p.value); started ? c.lineTo(px, py) : c.moveTo(px, py); started = true; } c.stroke();
+    }
+    c.restore();
   }
 
   drawModel(model) {
@@ -227,13 +270,29 @@ export class PerfectViewChart extends EventTarget {
     const c = this.ctx, p = this.xy(d.points[0]);
     c.strokeStyle = d.color; c.fillStyle = d.color; c.lineWidth = d.id === this.selected ? 2 : 1.5;
     c.setLineDash([]);
-    if (d.type === 'horizontal') {
+    if (d.type === 'long' || d.type === 'short') {
+      const stop = this.xy(d.points[1]), target = this.xy(d.points[2]);
+      const right = Math.max(p.x + 35, target.x), risk = Math.abs(d.points[0].price - d.points[1].price), reward = Math.abs(d.points[2].price - d.points[0].price);
+      c.globalAlpha = .14; c.fillStyle = '#74c8bb'; c.fillRect(p.x, Math.min(p.y, target.y), right - p.x, Math.abs(p.y - target.y));
+      c.fillStyle = '#ce8585'; c.fillRect(p.x, Math.min(p.y, stop.y), right - p.x, Math.abs(p.y - stop.y)); c.globalAlpha = 1;
+      c.font = '11px system-ui'; c.textAlign = 'left';
+      for (const [name, point, price, colour] of [['Entry',p,d.points[0].price,d.color],['Stop',stop,d.points[1].price,'#ce8585'],['Target',target,d.points[2].price,'#74c8bb']]) {
+        c.strokeStyle = colour; c.beginPath(); c.moveTo(p.x, point.y); c.lineTo(right, point.y); c.stroke(); c.fillStyle = colour; c.fillText(name + ' ' + price.toFixed(this.precision), p.x + 5, point.y - 8);
+      }
+      c.fillStyle = '#c8d4df'; c.fillText(risk > 0 ? 'R:R ' + (reward / risk).toFixed(2) : 'Set stop', p.x + 5, p.y + 13);
+    } else if (d.type === 'vertical') {
+      c.beginPath(); c.moveTo(p.x, this.plot.top); c.lineTo(p.x, this.plot.bottom); c.stroke();
+    } else if (d.type === 'horizontal') {
       c.beginPath(); c.moveTo(this.plot.left, p.y); c.lineTo(this.plot.right, p.y); c.stroke();
+      if (d.id === this.selected) {c.font = '11px system-ui'; c.textAlign = 'right'; c.fillText(d.points[0].price.toFixed(this.precision), this.plot.right - 5, p.y - 9);}
     } else if (d.type === 'text') {
       c.font = '14px system-ui'; c.textAlign = 'left'; c.fillText(d.text, p.x + 7, p.y);
     } else {
       const q = this.xy(d.points[1]);
-      if (d.type === 'trend') { c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.stroke(); }
+      if (d.type === 'trend' || d.type === 'ray') {
+        const end = d.type === 'ray' && Math.abs(q.x - p.x) > 1 ? {x:this.plot.right,y:p.y+(q.y-p.y)*(this.plot.right-p.x)/(q.x-p.x)} : q;
+        c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(end.x, end.y); c.stroke();
+      }
       else if (d.type === 'rectangle') {
         c.globalAlpha = 0.09; c.fillRect(p.x, p.y, q.x - p.x, q.y - p.y); c.globalAlpha = 1;
         c.strokeRect(p.x, p.y, q.x - p.x, q.y - p.y);
@@ -245,6 +304,8 @@ export class PerfectViewChart extends EventTarget {
       const a = this.xy(d.points[0]);
       const handle = d.points.findIndex(point => { const q = this.xy(point); return Math.hypot(q.x - p.x, q.y - p.y) < 10; });
       if (handle >= 0) return { d, handle };
+      if (d.type === 'vertical' && Math.abs(p.x - a.x) < 8) return {d, handle:-1};
+      if (['long', 'short'].includes(d.type)) {const q=this.xy(d.points[2]), stop=this.xy(d.points[1]);if(p.x>=a.x-7&&p.x<=Math.max(a.x+35,q.x)+7&&p.y>=Math.min(q.y,stop.y)-8&&p.y<=Math.max(q.y,stop.y)+8)return {d,handle:-1};}
       if (d.type === 'horizontal' && Math.abs(p.y - a.y) < 8) return { d, handle: -1 };
       if (d.type === 'text' && p.x >= a.x && p.x <= a.x + this.ctx.measureText(d.text).width + 16 && Math.abs(p.y - a.y) < 12) return { d, handle: -1 };
       if (d.points.length === 2) {
@@ -274,9 +335,18 @@ export class PerfectViewChart extends EventTarget {
     }
     const point = this.marketPoint(p);
     if (this.tool === 'text') { this.emit('text', { point }); return; }
-    if (this.tool === 'horizontal') { this.addDrawing({ type: this.tool, points: [point] }); this.setTool('select'); }
+    if (this.tool === 'horizontal' || this.tool === 'vertical') { this.addDrawing({ type: this.tool, points: [point] }); this.setTool('select'); }
     else if (!this.pending) { this.pending = point; this.requestDraw(); this.emit('tool', { tool: this.tool, pending: true }); }
-    else {
+    else if (['long','short'].includes(this.tool)) {
+      const direction = this.tool === 'long' ? 1 : -1;
+      if (!this.pendingStop) {
+        if ((point.price - this.pending.price) * direction >= 0) {this.emit('message', {text:'Place the stop on the loss side of the entry.'}); return;}
+        this.pendingStop = point; this.emit('tool', {tool:this.tool,pending:true,stop:true});
+      } else {
+        if ((point.price - this.pending.price) * direction <= 0) {this.emit('message', {text:'Place the target on the profit side of the entry.'}); return;}
+        this.addDrawing({type:this.tool,points:[this.pending,this.pendingStop,point]}); this.setTool('select');
+      }
+    } else {
       this.addDrawing({ type: this.tool, points: [this.pending, point] }); this.setTool('select');
     }
   }
@@ -287,7 +357,15 @@ export class PerfectViewChart extends EventTarget {
       this.drag.moved ||= Math.hypot(delta, p.y - this.drag.start.y) > 3;
       if (this.drag.hit && this.drag.moved) {
         const { d, handle } = this.drag.hit, point = this.marketPoint(p);
-        if (handle >= 0) d.points[handle] = point;
+        if (handle >= 0) {
+          if (['long','short'].includes(d.type)) {
+            const direction=d.type==='long'?1:-1, entry=d.points[0].price;
+            if(handle===1 && (point.price-entry)*direction>=0)return;
+            if(handle===2 && (point.price-entry)*direction<=0)return;
+            if(handle===0 && !((d.points[1].price-point.price)*direction<0&&(d.points[2].price-point.price)*direction>0))return;
+          }
+          d.points[handle] = point;
+        }
         else d.points = this.drag.before.map(a => ({ time: Math.max(0, a.time + point.time - this.drag.market.time),
           price: Math.max(1e-10, a.price + point.price - this.drag.market.price) }));
       } else if (!this.drag.hit) { this.end = this.drag.end - delta / this.plot.width * this.count; this.clamp(); }

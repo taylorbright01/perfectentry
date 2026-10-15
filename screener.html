@@ -605,10 +605,11 @@ let screenerStats = {};
 
 async function loadScreenerStats() {
   try {
-    const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
+    const SIGNAL_HISTORY_VIEW = import('./assets/perfect-view/config.mjs').then(({config}) => config.requireMembership ? 'public_signal_history' : 'signals');
+      const SUPABASE_URL = 'https://nmfsqgqwjihpudiqnuwh.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I';
     const res = await fetch(
-      SUPABASE_URL + '/rest/v1/signals?select=sym,tf,dir,outcome&outcome=not.is.null&order=created_at.desc&limit=10000',
+      SUPABASE_URL + '/rest/v1/' + (await SIGNAL_HISTORY_VIEW) + '?select=sym,tf,dir,outcome&outcome=not.is.null&order=created_at.desc&limit=10000',
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
     );
     if (!res.ok) return;

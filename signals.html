@@ -502,7 +502,8 @@
         border-top: 1px solid var(--border);
       }
     </style>
-  </head>
+    <link rel="stylesheet" href="assets/perfect-view/account.css">
+</head>
   <body>
     <nav>
       <div class="nav-inner">
@@ -619,7 +620,11 @@
       it does not promise a fixed trade duration.
     </footer>
 
-    <script>
+    <script type="module">
+      import {config} from "./assets/perfect-view/config.mjs";
+      import {Account,showMembershipGate} from "./assets/perfect-view/account.mjs";
+      const account=new Account(config.accountApiUrl);
+      const protectedFeed=!!config.accountApiUrl && config.requireMembership;
       const SUPABASE_URL = "https://nmfsqgqwjihpudiqnuwh.supabase.co";
       const SUPABASE_ANON =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I";
@@ -891,6 +896,9 @@
         fetchRunning = true;
         try {
           const since = effectiveStartIso();
+          let loaded;
+          if(protectedFeed){loaded=await account.request('/signals');}
+          else {
           const query =
             "/rest/v1/public_signal_feed?" +
             "select=*" +
@@ -902,7 +910,7 @@
             "&currency_ai_pass=eq.true" +
             "&tf=in.(1min,5min)" +
             "&order=created_at.desc";
-          const loaded = [];
+          loaded = [];
           const pageSize = 500;
           for (let offset = 0; offset < MAX_ROWS; offset += pageSize) {
             const res = await fetch(
@@ -913,6 +921,7 @@
             const page = await res.json();
             loaded.push(...page);
             if (page.length < pageSize) break;
+          }
           }
           rows = loaded.filter(sameUtcDay);
           const dayPill = document.getElementById("dayPill");
@@ -1009,9 +1018,11 @@
       bindToggle("togglePulse", () => (showPulse = !showPulse));
       bindToggle("toggleFive", () => (showFive = !showFive));
       async function refreshSignals() {
+        if(protectedFeed && !account.access.signals)return;
         try {
           await fetchSignals();
         } catch (err) {
+          if(protectedFeed && (err.status===401 || err.status===403)){account.access.signals=false;gateSignals();return;}
           document.getElementById("pulseList").innerHTML =
             '<div class="empty">Failed to load signals.<br>' +
             String(err?.message || err).slice(0, 160) +
@@ -1027,10 +1038,16 @@
       setInterval(updateClock, 1000);
       // Keep the live page current without polling Supabase from background tabs.
       setInterval(() => {
-        if (!document.hidden) refreshSignals();
+        if (!document.hidden && (!protectedFeed || account.access.signals)) refreshSignals();
       }, 60000);
       updateClock();
-      refreshSignals();
+      function gateSignals(){const allowed=showMembershipGate(account,'signals');if(!allowed){document.querySelector('.controls').hidden=true;document.querySelector('.top-stats').hidden=true;}return allowed;}
+      if(protectedFeed){
+        try {await account.initialize();if(gateSignals()){
+          const logout=document.createElement('button');logout.className='btn';logout.textContent='Sign out';logout.addEventListener('click',async()=>{await account.signOut();location.reload();});document.querySelector('.controls').append(logout);refreshSignals();
+        }}
+        catch(error){gateSignals();}
+      } else refreshSignals();
     </script>
   </body>
 </html>

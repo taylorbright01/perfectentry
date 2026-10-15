@@ -9,6 +9,7 @@
   <link rel="icon" href="assets/logo.png">
   <link rel="stylesheet" href="assets/perfect-view/style.css">
   <script type="module" src="assets/perfect-view/app.mjs"></script>
+  <link rel="stylesheet" href="assets/perfect-view/account.css">
 </head>
 <body>
   <a class="skip" href="#chart">Skip to chart</a>
@@ -35,6 +36,7 @@
         <label class="sr-only" for="chart-mode">Chart style</label><select id="chart-mode"><option value="candles">Candles</option><option value="line">Line</option></select>
         <button id="focus" class="button focus-button" aria-pressed="true">Focus view</button>
         <button id="load" class="button">Load data</button>
+        <select id="layout-picker" aria-label="Saved layouts" hidden></select><button id="save-layout" class="button">Save layout</button>
         <button id="panel-toggle" class="button mobile-panel" aria-expanded="false" aria-controls="side-panel">Workspace</button>
       </div>
     </section>
@@ -47,6 +49,10 @@
         <button data-tool="trend" aria-pressed="false" title="Trendline"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 18 14-12"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/></svg><span class="sr-only">Trendline</span></button>
         <button data-tool="rectangle" aria-pressed="false" title="Price zone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1"/></svg><span class="sr-only">Price zone</span></button>
         <button data-tool="text" aria-pressed="false" title="Text note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M12 5v15M8 20h8"/></svg><span class="sr-only">Text note</span></button>
+        <button data-tool="vertical" aria-pressed="false" title="Vertical line"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/></svg><span class="sr-only">Vertical line</span></button>
+        <button data-tool="ray" aria-pressed="false" title="Ray"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 19 18-16M15 3h6v6"/></svg><span class="sr-only">Ray</span></button>
+        <button data-tool="long" aria-pressed="false" title="Long position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M4 5h16M4 20h16M8 16V8m-3 3 3-3 3 3"/></svg><span class="sr-only">Long position</span></button>
+        <button data-tool="short" aria-pressed="false" title="Short position"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M4 5h16M4 20h16M8 8v8m-3-3 3 3 3-3"/></svg><span class="sr-only">Short position</span></button>
         <span class="tool-divider"></span>
         <button id="undo" disabled title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4-5 5 5 5M4 9h10a6 6 0 0 1 0 12"/></svg><span class="sr-only">Undo</span></button>
         <button id="redo" disabled title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 5 5-5 5M20 9H10a6 6 0 0 0 0 12"/></svg><span class="sr-only">Redo</span></button>
@@ -96,9 +102,10 @@
   </form></dialog>
 
   <dialog id="indicator-dialog"><form id="indicator-form">
-    <div class="dialog-heading"><h2>Add moving average</h2><button type="button" data-close="indicator-dialog" aria-label="Close">×</button></div>
-    <p>A native exponential moving average (EMA), calculated from this chart’s candles.</p>
-    <label>Period<input id="ema-period" type="number" min="1" max="500" step="1" value="20" required></label>
+    <div class="dialog-heading"><h2 id="indicator-heading">Add an indicator</h2><button type="button" data-close="indicator-dialog" aria-label="Close">×</button></div>
+    <p>Calculated from completed candles. Settings stay with your layout across markets.</p>
+    <label>Indicator<select id="indicator-type"></select></label>
+    <div id="indicator-inputs"></div>
     <label>Colour<input id="ema-color" type="color" value="#b4a2ff"></label>
     <div class="dialog-actions"><button class="button primary" type="submit">Add to chart</button></div>
   </form></dialog>
@@ -112,6 +119,13 @@
     <div class="dialog-heading"><h2>Rename workspace item</h2><button type="button" data-close="rename-dialog" aria-label="Close">×</button></div>
     <label>Name<input id="rename-name" type="text" maxlength="80" required autocomplete="off"></label>
     <div class="dialog-actions"><button class="button primary" type="submit">Save name</button></div>
+  </form></dialog>
+  <dialog id="layout-dialog"><form id="layout-form">
+    <div class="dialog-heading"><h2>Save layout</h2><button type="button" data-close="layout-dialog" aria-label="Close">×</button></div>
+    <p>Save your chart settings, indicators and drawings across markets to your account.</p>
+    <label>Name<input id="layout-name" maxlength="80" required></label>
+    <label class="checkbox"><input id="layout-save-copy" type="checkbox"><span>Save as a new layout</span></label>
+    <div class="dialog-actions"><button id="delete-layout" class="button" type="button" hidden>Delete saved layout</button><button id="save-layout-confirm" class="button primary" type="submit">Save to account</button></div>
   </form></dialog>
   <noscript><p class="message">Enable JavaScript to use Perfect View charting.</p></noscript>
 </body>

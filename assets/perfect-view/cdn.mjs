@@ -9,14 +9,14 @@ export class CdnFeed {
   Object.assign(this,{url,fetchImpl,readCache,writeCache,now,locks});
   this.memory=new Map();
  }
- async cached(key,ttl,action) {
+ async cached(key,ttl,action,revision) {
   const run=async()=>{
    let cached=this.memory.get(key);
-   if (!cached || this.now()-cached.savedAt>=ttl) try {
+   if (!cached || this.now()-cached.savedAt>=ttl || (revision!==undefined && cached.value?.revision!==revision)) try {
     const shared=await this.readCache(key);
-    if(shared && (!cached || shared.savedAt>cached.savedAt))cached=shared;
+    if(shared && (!cached || shared.savedAt>cached.savedAt || (revision!==undefined && shared.value?.revision===revision)))cached=shared;
    } catch {}
-   if(cached && cached.savedAt<=this.now() && this.now()-cached.savedAt<ttl) return cached.value;
+   if(cached && cached.savedAt<=this.now() && this.now()-cached.savedAt<ttl && (revision===undefined || cached.value?.revision===revision)) return cached.value;
    const value=await action(),record={savedAt:this.now(),value};
    if(this.memory.size>=400)this.memory.delete(this.memory.keys().next().value);
    this.memory.set(key,record);
@@ -79,3 +79,27 @@ export class CdnFeed {
   return data;
  }
 }
+
+// Only the selected market/timeframe downloads an archive. Old completed parts
+// are shared through the same IndexedDB cache; live candles still use one group.
+CdnFeed.prototype.history = async function(symbol,timeframe,{signal}={}) {
+ if(![3600,14400,86400].includes(timeframe))return null;
+ const base=timeframe===86400?86400:3600,prefix='cdn:'+new URL(this.url).href+':archive:'+symbol;
+ const manifest=await this.cached(prefix+':manifest',60000,()=>this.file(`pv/v2/archive/${symbol}/manifest.json`,signal,true));
+ if(!manifest)return null;
+ if(manifest.version!==2||manifest.symbol!==symbol||!manifest.series||!Number.isSafeInteger(manifest.through)||manifest.through>this.now()/1000+10)throw Error('Invalid history manifest.');
+ const parts=(manifest.series[base]??[]).filter(p=>base===3600?/^\d{4}-\d{2}$/.test(p):/^\d{4}$/.test(p)).slice(base===3600?-13:-6);
+ const rows=[];
+ for(let start=0;start<parts.length;start+=4){
+  const files=await Promise.all(parts.slice(start,start+4).map(async part=>{
+   const revision=manifest.partRevisions?.[base+':'+part];
+   const file=await this.cached(prefix+':'+base+':'+part,part===parts.at(-1)?60000:7*86400000,()=>this.file(`pv/v2/archive/${symbol}/${base}/${part}.json${revision===undefined?'':'?v='+revision}`,signal,true),revision);
+   if(!file)return [];
+   if(file.version!==2||file.symbol!==symbol||file.baseTimeframe!==base||file.part!==part||!Array.isArray(file.candles)||file.candles.length>(base===3600?750:366))throw Error('Invalid historical candle file.');
+   return file.candles;
+  }));rows.push(...files.flat());
+ }
+ if(!rows.length)return null;
+ const unique=new Map();for(const r of rows){if(!Array.isArray(r)||r.length!==6||r[0]+base>this.now()/1000)throw Error('Unfinished historical candle.');unique.set(r[0],{time:r[0],open:r[1],high:r[2],low:r[3],close:r[4],volume:r[5]});}
+ return parseFeedResponse(JSON.stringify({symbol,baseTimeframe:base,candles:[...unique.values()].sort((a,b)=>a.time-b.time)}),symbol,base);
+};

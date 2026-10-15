@@ -7,6 +7,9 @@ export const config = Object.freeze({
   feedBaseTimeframe: 30,
   refreshSeconds: 30,
   availableSymbols: ['AUDCAD','AUDCHF','AUDNZD','AUDUSD','BTCUSD','CADJPY','CHFJPY','ETHUSD','EURAUD','EURCAD','EURGBP','EURJPY','EURNZD','EURUSD','GBPAUD','GBPCAD','GBPCHF','GBPJPY','GBPUSD','NAS100','NZDCAD','NZDCHF','NZDJPY','NZDUSD','USDCAD','USDCHF','USDJPY','XAGUSD','XAUUSD'],
+  accountApiUrl: null, // Set to the deployed perfect-view-accounts Worker URL.
+  requireMembership: false, // Enable after the account Worker and product IDs are verified.
+  historyUrl: 'https://perfectview.th3flow.world/',
   loginUrl: null, // Set when the shared server-side Whop OAuth flow is deployed.
   workspaceUrl: null // Reserved for authenticated, per-account server persistence.
 });

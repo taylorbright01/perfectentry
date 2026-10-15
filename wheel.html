@@ -502,6 +502,7 @@
       </div>
     </div>
     <script>
+      const SIGNAL_HISTORY_VIEW = import('./assets/perfect-view/config.mjs').then(({config}) => config.requireMembership ? 'public_signal_history' : 'public_signal_feed');
       const SUPABASE_URL = "https://nmfsqgqwjihpudiqnuwh.supabase.co";
       const SUPABASE_ANON =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I";
@@ -675,7 +676,7 @@
         loadRunning = true;
         try {
           const path =
-            "/rest/v1/public_signal_feed?select=sym,tf,dir,r_result,shadow_r_result,display_r_result,created_at,display_closed_at,closed_at,shadow_closed_at&created_at=gte." +
+            "/rest/v1/" + (await SIGNAL_HISTORY_VIEW) + "?select=sym,tf,dir,r_result,shadow_r_result,display_r_result,created_at,display_closed_at,closed_at,shadow_closed_at&created_at=gte." +
             encodeURIComponent(VERIFIED_START) +
             "&tf=in.(1min,5min)&order=created_at.asc";
           const raw = await fetchAll(path);

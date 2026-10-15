@@ -682,6 +682,7 @@
       </div>
     </div>
     <script>
+      const SIGNAL_HISTORY_VIEW = import('./assets/perfect-view/config.mjs').then(({config}) => config.requireMembership ? 'public_signal_history' : 'public_signal_feed');
       const SUPABASE_URL = "https://nmfsqgqwjihpudiqnuwh.supabase.co";
       const SUPABASE_ANON =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I";
@@ -757,7 +758,7 @@
         const cols =
           "id,sym,tf,dir,created_at,display_closed_at,display_outcome,display_r_result,closed_at,outcome,r_result,shadow_closed_at,shadow_outcome,shadow_r_result,entry,sl,tp,currency_ai_pass";
         const path =
-          "/rest/v1/public_signal_feed?select=" +
+          "/rest/v1/" + (await SIGNAL_HISTORY_VIEW) + "?select=" +
           cols +
           "&currency_ai_pass=eq.true" +
           "&tf=in.(1min,5min)" +
@@ -775,7 +776,7 @@
         const cols =
           "id,sym,tf,dir,created_at,display_closed_at,display_outcome,display_r_result,closed_at,outcome,r_result,shadow_closed_at,shadow_outcome,shadow_r_result,currency_ai_pass,entry,sl,tp";
         const path =
-          "/rest/v1/public_signal_feed?select=" +
+          "/rest/v1/" + (await SIGNAL_HISTORY_VIEW) + "?select=" +
           cols +
           "&tf=in.(1min,5min)" +
           "&created_at=gte." +
