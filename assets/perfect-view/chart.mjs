@@ -8,7 +8,7 @@ export class PerfectViewChart extends EventTarget {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.bars = []; this.drawings = []; this.models = [];
-    this.count = 110; this.end = 0; this.timeframe = 300; this.precision = 5;
+    this.count = 40; this.end = 0; this.timeframe = 300; this.precision = 5;
     this.mode = 'candles'; this.focus = true; this.tool = 'select';
     this.selected = null; this.pending = null; this.pendingStop = null; this.cursor = null;
     this.drawingColor = '#e3b975';
@@ -44,7 +44,7 @@ export class PerfectViewChart extends EventTarget {
     this.resize();
   }
 
-  emit(type, detail = {}) { this.dispatchEvent(new CustomEvent(type, { detail })); }
+  emit(type, detail = {}) { if(type==='viewport')this.pendingViewport=null; this.dispatchEvent(new CustomEvent(type, { detail })); }
   destroy() { this.abort.abort(); this.resizeObserver.disconnect(); cancelAnimationFrame(this.frame); }
   position(e) { const r = this.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
   resize() {
@@ -60,15 +60,28 @@ export class PerfectViewChart extends EventTarget {
     this.frame = requestAnimationFrame(() => { this.frame = null; this.draw(); });
   }
   setBars(bars, { timeframe = this.timeframe, precision = this.precision, reset = false } = {}) {
-    const atLatest = this.end >= this.bars.length - 0.5;
-    // Keep the same market time when a historical viewport receives new data.
+    // Passive updates preserve market time, even when the view was at the latest
+    // candle. Only an explicit Latest/reset action moves the viewport forward.
     const anchor = this.bars.length ? this.timeAt(this.end - 1) : null;
+    const dragAnchor = this.bars.length && this.drag ? this.timeAt(this.drag.end - 1) : null;
     this.bars = bars; this.timeframe = timeframe; this.precision = precision;
-    if (reset || !anchor || atLatest) this.end = bars.length;
-    else this.end = this.indexAt(anchor) + 1;
-    if (reset) {this.count = 110; this.priceRange = null;}
+    this.end = reset || anchor === null ? bars.length : this.indexAt(anchor) + 1;
+    if (reset) {this.count = 40; this.priceRange = null;this.pendingViewport=null;}
     if(reset){this.pending=null;this.pendingStop=null;}
-    this.clamp(); this.requestDraw();
+    if(dragAnchor!==null&&!reset)this.drag.end=this.indexAt(dragAnchor)+1;
+    this.clamp(!reset); this.applyPendingViewport(); this.requestDraw();
+  }
+  restoreViewport(viewport) {
+    this.pendingViewport = {...viewport};
+    this.applyPendingViewport(); this.requestDraw();
+  }
+  applyPendingViewport() {
+    const view=this.pendingViewport;
+    // Do not clamp an older saved view to the small first download, then save
+    // that accidental position over the original. Wait for its history to arrive.
+    if(!view||!this.bars.length||view.endTime<this.bars[0].time||view.endTime>this.bars.at(-1).time+this.timeframe*this.count*.15)return;
+    this.count=view.count;this.end=this.indexAt(view.endTime)+1;
+    this.clamp(true);this.pendingViewport=null;
   }
   setModels(models) {
     this.models = models; const panes = models.filter(m => m.pane === 'oscillator').length;
@@ -113,9 +126,9 @@ export class PerfectViewChart extends EventTarget {
     }
     return this.drawings.find(d=>d.id===this.selected&&['long','short'].includes(d.type))??null;
   }
-  clamp() {
+  clamp(preserve = false) {
     this.count = Math.max(12, Math.min(1500, this.count));
-    this.end = Math.max(Math.min(this.count, this.bars.length), Math.min(this.bars.length + this.count * 0.15, this.end));
+    this.end = Math.max(Math.min(preserve ? 1 : this.count, this.bars.length), Math.min(this.bars.length + this.count * 0.15, this.end));
   }
   latest() { this.end = this.bars.length; this.clamp(); this.requestDraw(); this.emit('viewport'); }
   zoom(factor, x = this.plot ? (this.plot.left + this.plot.right) / 2 : this.width / 2) {

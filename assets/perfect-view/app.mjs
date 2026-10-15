@@ -6,6 +6,7 @@ registerCustomIndicators(indicators);
 import { Account, showMembershipGate } from './account.mjs';
 import { validateLayout } from './layouts.mjs';
 import { CdnFeed, nextCdnCheck } from './cdn.mjs';
+import {parseFeedResponse} from './feed.mjs';
 import {defaultFib,validateFib,validatePriceRange} from './drawings.mjs';
 import {instrumentPreset,validateRiskSession,calculatePositionSize} from './risk.mjs';
 import {FxBook} from './fx.mjs';
@@ -42,6 +43,7 @@ if(!riskProfiles||Array.isArray(riskProfiles)||typeof riskProfiles!=='object')ri
 chart.fibSettings=validateFib(getSaved('fib-settings'))??defaultFib();
 chart.positionSizer=drawing=>positionSize(drawing);
 const archiveCache = new Map();
+let archiveRequest=null,historyRequest=null;
 let dataset = null, kind = 'demo', datasetId = '', scope = '', studies = [], history = [], historyIndex = 0;
 let pollTimer = null, feedController = null, feedGeneration = 0, notePoint = null, saveTimer = null;
 let studyTemplateLoaded = false, renameTarget = null, editingStudy = null;
@@ -64,7 +66,7 @@ function getSaved(key) {
 }
 function state() {
   return { version: 1, drawings: structuredClone(chart.drawings), studies: structuredClone(studies),
-    viewport: { count: chart.count, endTime: chart.bars.length ? chart.timeAt(chart.end - 1) : null, ...(chart.getPriceRange()?{priceRange:chart.getPriceRange()}:{}) } };
+    viewport: { count: chart.pendingViewport?.count ?? chart.count, endTime: chart.pendingViewport?.endTime ?? (chart.bars.length ? chart.timeAt(chart.end - 1) : null), ...(chart.getPriceRange()?{priceRange:chart.getPriceRange()}:{}) } };
 }
 function validatedState(raw) {
   if (!raw || raw.version !== 1 || !Array.isArray(raw.drawings) || raw.drawings.length > 300) throw new Error('Invalid workspace file.');
@@ -127,13 +129,22 @@ function displayedBars(closedOnly = preferences.closedOnly) {
   return [...new Map([...older,...live].map(b => [b.time,b])).values()].sort((a,b) => a.time-b.time);
 }
 async function loadArchive() {
-  if (kind !== 'feed' || ![3600,14400,86400].includes(preferences.timeframe)) return;
+  if (kind !== 'feed' || ![3600,14400,86400].includes(preferences.timeframe)) {archiveRequest?.controller.abort();return;}
   const symbol=dataset.symbol,tf=preferences.timeframe,key=symbol+':'+tf,cached=archiveCache.get(key);
-  // Archive files change hourly; a five-minute recheck avoids extra reads on every candle.
-  if (cached && Date.now()-cached.checked<300000) return;
-  archiveCache.set(key,{...cached,checked:Date.now()});
-  try {const data=await cdn.history(symbol,tf);archiveCache.set(key,{checked:Date.now(),data});if(dataset?.symbol===symbol&&preferences.timeframe===tf)rebuild();}
-  catch(error){announce('Older history could not be loaded. Recent candles remain available.');}
+  if(archiveRequest?.key===key&&!archiveRequest.controller.signal.aborted)return;
+  archiveRequest?.controller.abort();
+  // Only a completed download is fresh. Interrupted backfills resume from cache.
+  if (cached?.complete && Date.now()-cached.checked<300000) return;
+  const controller=new AbortController(),request={key,controller};archiveRequest=request;
+  const timeout=setTimeout(()=>controller.abort(),60000);
+  try {
+    for await(const data of cdn.historyStream(symbol,tf,{signal:controller.signal})){
+      archiveCache.set(key,{checked:Date.now(),data,complete:false});
+      if(kind==='feed'&&dataset?.symbol===symbol&&preferences.timeframe===tf){rebuild();save();}
+    }
+    const result=archiveCache.get(key);archiveCache.set(key,{...result,checked:Date.now(),complete:true});
+  } catch(error){if(!controller.signal.aborted&&dataset?.symbol===symbol&&preferences.timeframe===tf)announce('Older history could not be loaded. Recent candles remain available.');}
+  finally{clearTimeout(timeout);if(archiveRequest===request)archiveRequest=null;}
 }
 function rebuild({ reset = false } = {}) {
   if (!dataset) return;
@@ -194,10 +205,7 @@ function useDataset(data, source, id, { reset = true, restoreViewport = false } 
   chart.drawingColor = preferences.drawingColor;
   rebuild({ reset });
   if(saved?.viewport?.priceRange)chart.setPriceRange(saved.viewport.priceRange);
-  if (restoreViewport && saved?.viewport && chart.bars.length) {
-    chart.count = saved.viewport.count; chart.end = chart.indexAt(saved.viewport.endTime) + 1;
-    chart.clamp(); chart.requestDraw();
-  }
+  if (restoreViewport && saved?.viewport) chart.restoreViewport(saved.viewport);
   history = [{ drawings: structuredClone(chart.drawings), studies: structuredClone(studies) }]; historyIndex = 0;
   chart.setTool('select'); renderStudies(); renderDrawings(); renderRiskForm(); updateUndo(); save();
 }
@@ -285,7 +293,7 @@ function renderDrawings() {
     select.addEventListener('click', () => {
       chart.selected = drawing.id; chart.setTool('select');
       chart.end = chart.indexAt(drawing.points[0].time) + chart.count / 2;
-      chart.clamp(); chart.requestDraw(); renderDrawings(); scheduleSave();
+      chart.clamp(); chart.requestDraw();chart.emit('viewport'); renderDrawings(); scheduleSave();
     });
     const remove = document.createElement('button'); remove.textContent = '×'; remove.setAttribute('aria-label', `Delete ${label}`);
     remove.addEventListener('click', () => chart.removeDrawing(drawing.id));
@@ -455,23 +463,49 @@ function readDataset(id) {
   });
 }
 
+async function continueHistory(iterator,request) {
+  const timeout=setTimeout(()=>request.controller.abort(),60000);
+  try{
+    for await(const data of iterator){
+      if(request.controller.signal.aborted||historyRequest!==request||scope!==request.scope||kind!=='feed')return;
+      // Polls can supply newer candles while the older files are downloading.
+      // Merge those over the background snapshot rather than rolling them back.
+      dataset={...parseFeedResponse(JSON.stringify(dataset),data.symbol,30,data),historyComplete:data.historyComplete};
+      rebuild();save();
+    }
+  }catch(error){
+    if(!request.controller.signal.aborted&&historyRequest===request&&scope===request.scope)announce('Older candles could not finish loading. The recent chart is available; history will retry automatically.');
+  }finally{clearTimeout(timeout);if(historyRequest===request)historyRequest=null;}
+}
 async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
   const generation = ++feedGeneration;
   feedFetching = true;
   feedController?.abort(); feedController = new AbortController();
+  const id = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href),targetScope=id+':'+symbol;
+  if(historyRequest?.scope!==targetScope)historyRequest?.controller.abort();
+  if(dataset?.symbol!==symbol)archiveRequest?.controller.abort();
   const controller = feedController;
   const timeout = setTimeout(() => controller.abort(), 15000);
+  let iterator;
   try {
-    const id = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href);
-    const previous = kind === 'feed' && scope === id + ':' + symbol ? dataset : null;
-    const data = await cdn.load(symbol, previous, {signal: controller.signal});
-    if (generation !== feedGeneration) return;
-    if (scope === id + ':' + symbol) { dataset = data; rebuild(); save(); }
+    const previous = kind === 'feed' && scope === targetScope ? dataset : null;
+    const recentOnly=historyRequest?.scope===targetScope&&!historyRequest.controller.signal.aborted;
+    iterator=cdn.stream(symbol,previous,{signal:controller.signal,timeframe:preferences.timeframe,recentOnly});
+    const {value:data,done}=await iterator.next();
+    if (generation !== feedGeneration || done) {await iterator.return();return;}
+    if (scope === targetScope) {
+      dataset={...parseFeedResponse(JSON.stringify(data),symbol,30,dataset),historyComplete:recentOnly?dataset.historyComplete:data.historyComplete};
+      rebuild();save();
+    }
     else useDataset(data, 'feed', id, { restoreViewport });
-    feedFailures = 0;
-    $('message').hidden = true;
-    loadArchive();
-    void refreshConversion();
+    feedFailures = 0;$('message').hidden=true;
+    void loadArchive();void refreshConversion();
+    if(!recentOnly&&data.historyComplete===false){
+      const request={scope:targetScope,controller};historyRequest=request;
+      // Detach this download from the regular live poll. A slow old file must
+      // never delay the next 30-second price update.
+      feedController=null;void continueHistory(iterator,request);
+    }else await iterator.return();
   } catch (error) {
     if (generation !== feedGeneration) return;
     feedFailures++;
@@ -481,9 +515,7 @@ async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
     if (dataset && dataset.symbol !== symbol) { ensureSymbol(dataset.symbol); preferences.symbol = dataset.symbol; }
   } finally {
     clearTimeout(timeout);
-    if (generation === feedGeneration) {
-      feedFetching = false;
-    }
+    if (generation === feedGeneration) feedFetching = false;
   }
 }
 function scheduleFeed() {
@@ -497,7 +529,7 @@ function scheduleFeed() {
   }, delay);
 }
 function pauseFeed() {
-  clearTimeout(pollTimer);clearTimeout(fxTimer); feedController?.abort(); feedGeneration++; feedFetching = false;
+  clearTimeout(pollTimer);clearTimeout(fxTimer); feedController?.abort();archiveRequest?.controller.abort();historyRequest?.controller.abort(); feedGeneration++; feedFetching = false;
 }
 
 document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => chart.setTool(button.dataset.tool)));
