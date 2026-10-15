@@ -8,6 +8,7 @@ import { validateLayout } from './layouts.mjs';
 import { CdnFeed, nextCdnCheck } from './cdn.mjs';
 import {defaultFib,validateFib,validatePriceRange} from './drawings.mjs';
 import {instrumentPreset,validateRiskSession,calculatePositionSize} from './risk.mjs';
+import {FxBook} from './fx.mjs';
 
 const account = new Account(config.accountApiUrl);
 const $ = id => document.getElementById(id);
@@ -35,9 +36,8 @@ try {
 let activeLayoutId = null, activeLayoutRevision = 0;
 let editingFibId=null;
 let riskSession=validateRiskSession(getSaved('risk-session'))??{currency:'USD',balance:0,mode:'percent',risk:1,updated:''};
-let riskProfiles=getSaved('risk-profiles')??{},conversionRates=getSaved('risk-rates')??{};
+let riskProfiles=getSaved('risk-profiles')??{};
 if(!riskProfiles||Array.isArray(riskProfiles)||typeof riskProfiles!=='object')riskProfiles={};
-if(!conversionRates||Array.isArray(conversionRates)||typeof conversionRates!=='object')conversionRates={};
 chart.fibSettings=validateFib(getSaved('fib-settings'))??defaultFib();
 chart.positionSizer=drawing=>positionSize(drawing);
 const archiveCache = new Map();
@@ -47,6 +47,7 @@ let studyTemplateLoaded = false, renameTarget = null, editingStudy = null;
 const workspaceCache = new Map();
 let feedFetching = false, feedFailures = 0;
 const cdn = new CdnFeed({url: config.feedUrl, readCache: readDataset, writeCache: cacheDataset});
+const sampleFx=new FxBook(),fxErrors=new Map();let sampleFxTime=0,fxTimer=null;
 const labels = { 30: '30 seconds', 60: '1 minute', 300: '5 minute', 900: '15 minute', 3600: '1 hour', 14400: '4 hour', 86400: '1 day' };
 const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note', vertical: 'Vertical line', ray: 'Ray', long: 'Long position', short: 'Short position', fib: 'Fibonacci retracement' };
 
@@ -322,8 +323,38 @@ function currentRiskProfile() {
   return {...instrumentPreset(symbol),...(riskProfiles[symbol+':'+riskSession.currency]??{})};
 }
 function positionSize(drawing) {
-  const profile=currentRiskProfile(),key=profile.profitCurrency+':'+riskSession.currency;
-  return calculatePositionSize(drawing,riskSession,profile,dataset?.symbol??preferences.symbol,conversionRates[key]);
+  return calculatePositionSize(drawing,riskSession,currentRiskProfile(),dataset?.symbol??preferences.symbol,currentFxRate());
+}
+function needsConversion(){
+  const p=currentRiskProfile(),symbol=dataset?.symbol??preferences.symbol;
+  return p.mode==='contract'&&p.profitCurrency!==riskSession.currency&&!(symbol.length===6&&symbol.slice(0,3)===riskSession.currency&&symbol.slice(3)===p.profitCurrency);
+}
+function currentFxRate(){
+  const p=currentRiskProfile();
+  if(kind==='demo'){
+    if(!sampleFxTime)for(const symbol of ['EURUSD','GBPUSD','USDJPY']){const b=createDemoBars(symbol).at(-1);sampleFxTime=Math.max(sampleFxTime,b.time+60);sampleFx.set({symbol,close:b.close,asOf:b.time+60});}
+    const result=sampleFx.resolve(p.profitCurrency,riskSession.currency,{now:sampleFxTime});return result?{...result,sample:true}:null;
+  }
+  return cdn.fxBook.resolve(p.profitCurrency,riskSession.currency);
+}
+function renderConversionStatus(){
+  const element=$('risk-conversion-status'),p=currentRiskProfile();if(!element)return;element.hidden=!needsConversion();if(element.hidden)return;
+  const rate=currentFxRate(),key=p.profitCurrency+':'+riskSession.currency;
+  if(rate){element.textContent='1 '+rate.from+' ≈ '+rate.rate.toLocaleString('en-GB',{maximumFractionDigits:8})+' '+rate.to+' · '+rate.symbols.join(' → ')+(rate.sample?' · sample tickers, not live':' · '+new Date(rate.asOf*1000).toLocaleTimeString('en-GB',{timeZone:'UTC',hour12:false})+' UTC');}
+  else element.textContent=kind==='demo'?'No conversion route in these sample tickers.':!config.feedUrl?'Automatic conversion needs the broker feed. This offline preview converts its sample tickers.':fxErrors.get(key)??(riskSession.balance>0?'Loading '+p.profitCurrency+' → '+riskSession.currency+' from ticker closes…':'Currency conversion loads automatically when you set your balance.');
+}
+async function refreshConversion(){
+  renderConversionStatus();
+  if(!dataset||!needsConversion()||!(riskSession.balance>0)||kind==='demo'||!config.feedUrl||document.hidden||(config.requireMembership&&!account.access.perfectView)){renderRiskReadout();return;}
+  const p=currentRiskProfile(),from=p.profitCurrency,to=riskSession.currency,key=from+':'+to;
+  try{await cdn.conversionRate(from,to,{refresh:true,signal:AbortSignal.timeout(8000)});fxErrors.delete(key);}
+  catch(error){fxErrors.set(key,error.message);}
+  if(key===currentRiskProfile().profitCurrency+':'+riskSession.currency){renderConversionStatus();renderRiskReadout();chart.requestDraw();}
+}
+function scheduleFx(){
+  clearTimeout(fxTimer);
+  if(!dataset||kind==='demo'||!config.feedUrl||document.hidden||!needsConversion()||!(riskSession.balance>0)||(config.requireMembership&&!account.access.perfectView))return;
+  fxTimer=setTimeout(async()=>{await refreshConversion();scheduleFx();},60000);
 }
 function renderRiskForm() {
   const p=currentRiskProfile(),symbol=dataset?.symbol??preferences.symbol;
@@ -333,13 +364,10 @@ function renderRiskForm() {
   $('risk-calculation').value=p.mode;$('risk-profit-currency').value=p.profitCurrency;$('risk-market').textContent=symbol;
   $('risk-preset-note').textContent=riskProfiles[symbol+':'+riskSession.currency]?'Using your saved settings. Keep these matched to the MT5 symbol specification.':p.forex?'FX preset: 100,000 units/lot and 0.01 steps. Match these to your MT5 symbol specification.':'Enter the contract size and volume limits from this instrument’s MT5 specification.';
   if(!p.forex&&!p.contractSize)$('risk-contract').open=true;
-  $('risk-conversion').value=conversionRates[p.profitCurrency+':'+riskSession.currency]??'';
-  updateRiskVisibility();renderRiskReadout();
+  updateRiskVisibility();renderRiskReadout();void refreshConversion();scheduleFx();
 }
 function updateRiskVisibility() {
-  const p=currentRiskProfile(),symbol=dataset?.symbol??preferences.symbol;
-  const manual=p.mode==='contract'&&p.profitCurrency!==riskSession.currency&&!(symbol.length===6&&symbol.slice(0,3)===riskSession.currency&&symbol.slice(3)===p.profitCurrency);
-  $('risk-conversion-label').hidden=!manual;$('risk-conversion-title').textContent='1 '+p.profitCurrency+' in '+riskSession.currency;
+  const p=currentRiskProfile();renderConversionStatus();
   document.querySelectorAll('.contract-field').forEach(el=>el.hidden=p.mode!=='contract');document.querySelectorAll('.tick-field').forEach(el=>el.hidden=p.mode!=='tick');
   $('risk-value').max=riskSession.mode==='percent'?'100':'1000000000000';
   $('risk-value').setAttribute('aria-label',riskSession.mode==='percent'?'Risk percent of balance':'Risk amount in '+riskSession.currency);
@@ -351,15 +379,12 @@ function readRiskForm(event) {
   const p={...currentRiskProfile(),mode:$('risk-calculation').value,profitCurrency:$('risk-profit-currency').value};
   for(const [id,field] of [['risk-contract-size','contractSize'],['risk-min-lot','minLot'],['risk-lot-step','lotStep'],['risk-max-lot','maxLot'],['risk-tick-size','tickSize'],['risk-tick-value','tickValue'],['risk-commission','commissionPerLot']])p[field]=Number($(id).value);
   riskProfiles[(dataset?.symbol??preferences.symbol)+':'+riskSession.currency]=p;
-  const rateKey=p.profitCurrency+':'+riskSession.currency;
-  if(event?.target?.id==='risk-profit-currency')$('risk-conversion').value=conversionRates[rateKey]??'';
-  if(!$('risk-conversion-label').hidden||event?.target?.id==='risk-conversion')conversionRates[rateKey]=Number($('risk-conversion').value);
-  if(validateRiskSession(riskSession))store('risk-session',riskSession);store('risk-profiles',riskProfiles);store('risk-rates',conversionRates);
-  updateRiskVisibility();renderRiskReadout();chart.requestDraw();
+  if(validateRiskSession(riskSession))store('risk-session',riskSession);store('risk-profiles',riskProfiles);
+  updateRiskVisibility();renderRiskReadout();chart.requestDraw();void refreshConversion();scheduleFx();
 }
 function renderRiskReadout(drawing=chart.activePosition()) {
-  const result=positionSize(drawing),holder=$('risk-readout');holder.replaceChildren();
-  if(!result.ok){const p=document.createElement('p');p.textContent=result.message;holder.append(p);return;}
+  const result=positionSize(drawing),holder=$('risk-readout');if(!holder)return;holder.replaceChildren();
+  if(!result.ok){const p=document.createElement('p'),key=currentRiskProfile().profitCurrency+':'+riskSession.currency;p.textContent=result.message.startsWith('Waiting for')?(fxErrors.get(key)??result.message):result.message;holder.append(p);return;}
   const numbers=new Intl.NumberFormat('en-GB',{maximumFractionDigits:8}),money=n=>new Intl.NumberFormat('en-GB',{style:'currency',currency:result.currency,maximumFractionDigits:2}).format(n);
   const title=document.createElement('strong');title.className='risk-size';title.textContent=numbers.format(result.lots)+' lots';holder.append(title);
   const rows=[['Units',result.units==null?'Set contract size':numbers.format(result.units)],['Risk budget',money(result.budget)],['Est. stop loss',money(result.loss)],['Est. target P/L',money(result.reward)],['Est. reward / risk',result.rr.toFixed(2)],['Stop distance',result.distance.toFixed(chart.precision)]];
@@ -368,7 +393,7 @@ function renderRiskReadout(drawing=chart.activePosition()) {
 }
 $('risk-form').addEventListener('submit',event=>event.preventDefault());
 $('risk-form').addEventListener('input',readRiskForm);$('risk-form').addEventListener('change',readRiskForm);
-$('risk-new-session').addEventListener('click',()=>{riskSession={...riskSession,balance:0,updated:new Date().toISOString()};store('risk-session',riskSession);renderRiskForm();chart.requestDraw();$('risk-balance').focus();});
+$('risk-new-session').addEventListener('click',()=>{riskSession={...riskSession,balance:0,updated:new Date().toISOString()};store('risk-session',riskSession);renderRiskForm();chart.requestDraw();scheduleFx();$('risk-balance').focus();});
 
 // Imported candles are kept in IndexedDB, separate from small workspace documents.
 function withDB(action) {
@@ -433,6 +458,7 @@ async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
     feedFailures = 0;
     $('message').hidden = true;
     loadArchive();
+    void refreshConversion();
   } catch (error) {
     if (generation !== feedGeneration) return;
     feedFailures++;
@@ -458,7 +484,7 @@ function scheduleFeed() {
   }, delay);
 }
 function pauseFeed() {
-  clearTimeout(pollTimer); feedController?.abort(); feedGeneration++; feedFetching = false;
+  clearTimeout(pollTimer);clearTimeout(fxTimer); feedController?.abort(); feedGeneration++; feedFetching = false;
 }
 
 document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => chart.setTool(button.dataset.tool)));
@@ -603,7 +629,7 @@ document.addEventListener('keydown', event => {
 window.addEventListener('pagehide', () => { save(); pauseFeed(); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { save(); pauseFeed(); }
-  else if (config.feedUrl && (!dataset || kind === 'feed')) fetchFeed().finally(scheduleFeed);
+  else {if (config.feedUrl && (!dataset || kind === 'feed')) fetchFeed().finally(scheduleFeed);void refreshConversion();scheduleFx();}
 });
 if (config.loginUrl) { $('login').href = config.loginUrl; $('login').hidden = false; }
 

@@ -28,8 +28,8 @@ export function calculatePositionSize(drawing,session,profile,symbol,conversionR
     let lossRate,rewardRate;
     if(p.profitCurrency===s.currency){lossRate=rewardRate=1;conversion=p.profitCurrency+' = account currency';}
     else if(symbol.length===6&&symbol.slice(0,3)===s.currency&&symbol.slice(3)===p.profitCurrency){lossRate=1/stop;rewardRate=1/target;conversion='Converted at drawn stop/target';}
-    else if(Number.isFinite(conversionRate)&&conversionRate>0&&conversionRate<1e9){lossRate=rewardRate=conversionRate;conversion='Manual '+p.profitCurrency+' → '+s.currency+' rate';}
-    else return fail('Enter how much 1 '+p.profitCurrency+' is worth in '+s.currency+'.');
+    else if(conversionRate&&Number.isFinite(conversionRate.rate)&&conversionRate.rate>0&&conversionRate.rate<1e9){lossRate=rewardRate=conversionRate.rate;conversion=(conversionRate.sample?'Sample ':'Ticker ')+(conversionRate.symbols??[]).join(' → ')+' · '+p.profitCurrency+' → '+s.currency;}
+    else return fail('Waiting for the '+p.profitCurrency+' → '+s.currency+' ticker conversion.');
     lossPerLot=distance*p.contractSize*lossRate;rewardPerLot=rewardDistance*p.contractSize*rewardRate;
   }
   lossPerLot+=p.commissionPerLot;rewardPerLot-=p.commissionPerLot;

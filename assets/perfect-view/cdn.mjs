@@ -1,5 +1,6 @@
 import {parseFeedResponse} from './feed.mjs';
-import {groupFor,hourOf,liveKey,hourKey} from './protocol.mjs';
+import {GROUPS,groupFor,hourOf,liveKey,hourKey} from './protocol.mjs';
+import {FxBook,currencyPaths} from './fx.mjs';
 export function nextCdnCheck(now,seconds=30) {
  const period=seconds*1000,phase=5000;
  return Math.max(250,(Math.floor((now-phase)/period)+1)*period+phase-now);
@@ -8,6 +9,7 @@ export class CdnFeed {
  constructor({url,fetchImpl=globalThis.fetch.bind(globalThis),readCache=async()=>null,writeCache=async()=>{},now=()=>Date.now(),locks=globalThis.navigator?.locks}) {
   Object.assign(this,{url,fetchImpl,readCache,writeCache,now,locks});
   this.memory=new Map();
+  this.fxBook=new FxBook();this.liveInflight=new Map();this.fxInflight=new Map();this.fxFailures=new Map();
  }
  async cached(key,ttl,action,revision) {
   const run=async()=>{
@@ -38,10 +40,49 @@ export class CdnFeed {
  validateFile(file,group) {
   if(!file || file.version!==1 || file.baseTimeframe!==30 || file.group!==group || !file.streams || typeof file.streams!=='object')throw new Error('Invalid candle file.');
  }
+ async live(group,{signal}={}){
+  if(this.liveInflight.has(group))return this.liveInflight.get(group);
+  const run=(async()=>{
+    const prefix='cdn:'+new URL(this.url).href+':';
+    const frame=await this.cached(prefix+'live:'+group,2000,()=>this.file(liveKey(group),signal));
+    this.validateFile(frame,group);
+    // Only instruments belonging to this group may contribute conversion quotes.
+    this.fxBook.ingestFrame({...frame,streams:Object.fromEntries(Object.entries(frame.streams).filter(([symbol])=>GROUPS[group]?.includes(symbol)))},group,this.now()/1000);
+    return frame;
+  })();
+  this.liveInflight.set(group,run);try{return await run;}finally{this.liveInflight.delete(group);}
+ }
+ async conversionRate(from,to,{signal,refresh=false}={}){
+  const existing=this.fxBook.resolve(from,to,{now:this.now()/1000}),key=from+':'+to;
+  if(existing&&(!refresh||existing.age<=60))return existing;
+  if(this.fxInflight.has(key))return this.fxInflight.get(key);
+  const failed=this.fxFailures.get(key);if(failed!==undefined&&this.now()-failed<300000){if(existing)return existing;throw new Error('Conversion feed unavailable. Waiting for fresh ticker closes.');}
+  const run=(async()=>{
+    const candidates=currencyPaths(from,to,GROUPS.flat(),2),requested=new Set();
+    candidates.sort((a,b)=>{
+      const cost=p=>new Set(p.symbols.filter(s=>{const q=this.fxBook.quotes.get(s);return !q||this.now()/1000-q.asOf>60;}).map(groupFor)).size;
+      return cost(a)-cost(b)||a.symbols.length-b.symbols.length;
+    });
+    for(const path of candidates){
+      const groups=[...new Set(path.symbols.map(groupFor))];
+      for(const group of groups){
+        if(requested.has(group)||requested.size>=3)continue;
+        requested.add(group);try{await this.live(group,{signal});}catch{}
+        const result=this.fxBook.resolve(from,to,{now:this.now()/1000});
+        if(result&&result.age<=60){this.fxFailures.delete(key);return result;}
+      }
+      if(requested.size>=3)break;
+    }
+    const result=this.fxBook.resolve(from,to,{now:this.now()/1000});
+    if(result){this.fxFailures.delete(key);return result;}
+    this.fxFailures.set(key,this.now());throw new Error('Conversion feed unavailable. Waiting for fresh ticker closes.');
+  })();
+  this.fxInflight.set(key,run);try{return await run;}finally{this.fxInflight.delete(key);}
+ }
  async load(symbol,previous=null,{signal}={}) {
   const group=groupFor(symbol);if(group<0)throw new Error('Unsupported market.');
   const prefix='cdn:'+new URL(this.url).href+':';
-  const frame=await this.cached(prefix+'live:'+group,2000,()=>this.file(liveKey(group),signal));
+  const frame=await this.live(group,{signal});
   this.validateFile(frame,group);
   const source=frame.streams[symbol],now=Math.floor(this.now()/1000);
   if(!Number.isSafeInteger(frame.revision) || !Number.isSafeInteger(frame.updatedAt) || frame.updatedAt>now+10 || !source || !Array.isArray(source.candles) || source.candles.length>4 || !Number.isSafeInteger(source.through) || source.through%30 || source.through>now+10)throw new Error('No completed candles have arrived for this market yet.');

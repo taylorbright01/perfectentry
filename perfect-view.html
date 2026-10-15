@@ -95,7 +95,7 @@
               <label>Maximum lots (0 = unset)<input id="risk-max-lot" type="number" min="0" step="any" inputmode="decimal"></label>
               <label>Round-trip commission / lot (account currency)<input id="risk-commission" type="number" min="0" step="any" inputmode="decimal"></label>
             </details>
-            <label id="risk-conversion-label" hidden><span id="risk-conversion-title">Conversion rate</span><input id="risk-conversion" type="number" min="0" step="any" inputmode="decimal" placeholder="Enter conversion rate"></label>
+            <p id="risk-conversion-status" class="panel-note" role="status" hidden></p>
           </form>
           <div id="risk-readout" class="risk-readout" aria-live="polite"><p>Enter your balance, then draw a position.</p></div>
           <p class="panel-note">Estimate using your broker settings. Spread, slippage and swaps are excluded. Balance and sizing settings stay on this device.</p>

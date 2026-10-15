@@ -37,8 +37,8 @@ test('cash risk, short positions and quote/base account currencies use the corre
  const p=instrumentPreset('USDJPY'),d=drawing(150,151,148,'short');
  const result=calculatePositionSize(d,{...session,mode:'cash',risk:100},p,'USDJPY');assert.equal(result.ok,true);assert.equal(result.lots,.15);assert.ok(Math.abs(result.loss-.15*100000/151)<1e-10);assert.ok(Math.abs(result.reward-.15*2*100000/148)<1e-10);
  const jpy=calculatePositionSize(d,{...session,currency:'JPY',balance:1000000},p,'USDJPY');assert.equal(jpy.lots,.1);assert.equal(jpy.loss,10000);
- const bad=calculatePositionSize(d,session,p,'EURJPY');assert.equal(bad.ok,false);assert.match(bad.message,/1 JPY/);
- const manual=calculatePositionSize(d,session,p,'EURJPY',.0065);assert.equal(manual.ok,true);assert.equal(manual.lots,.15);
+ const bad=calculatePositionSize(d,session,p,'EURJPY');assert.equal(bad.ok,false);assert.match(bad.message,/ticker conversion/);
+ const converted=calculatePositionSize(d,session,p,'EURJPY',{rate:.0065,symbols:['USDJPY']});assert.equal(converted.ok,true);assert.equal(converted.lots,.15);
 });
 test('CFD contract and account-currency tick modes require broker inputs',()=>{
  const p=instrumentPreset('XAUUSD'),d=drawing(2600,2595,2610);assert.equal(calculatePositionSize(d,session,p,'XAUUSD').ok,false);
