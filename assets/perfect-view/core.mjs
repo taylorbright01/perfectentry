@@ -1,3 +1,5 @@
+import { definitions, validateStudy } from './studies.mjs';
+import {validateFib} from './drawings.mjs';
 // Original Perfect View data and indicator foundation. No charting dependencies.
 export const TIMEFRAMES = [30, 60, 300, 900, 3600, 14400, 86400];
 export const MAX_BARS = 50000;
@@ -92,10 +94,7 @@ export class IndicatorRegistry {
 }
 
 export const indicators = new IndicatorRegistry();
-indicators.register({
-  id: 'ema', name: 'Moving average', defaults: { period: 20, color: '#b4a2ff' },
-  calculate: (bars, settings) => ({ lines: [{ points: ema(bars, settings.period), color: settings.color }], zones: [], markers: [] })
-});
+for (const definition of definitions) indicators.register(definition);
 
 // RFC-style quoted fields; commas, semicolons and tab-separated MT5 exports.
 export function parseCSV(text) {
@@ -150,23 +149,24 @@ export function parseDataset(text, fallbackSymbol = 'EURUSD', fallbackTimeframe 
 }
 
 export function validateDrawing(d) {
-  if (!d || !['horizontal', 'trend', 'rectangle', 'text'].includes(d.type) ||
+  if (!d || !['horizontal', 'vertical', 'trend', 'ray', 'rectangle', 'text', 'long', 'short', 'fib'].includes(d.type) ||
       typeof d.id !== 'string' || d.id.length > 80) return null;
-  const needed = ['trend', 'rectangle'].includes(d.type) ? 2 : 1;
+  const needed = ['long', 'short'].includes(d.type) ? 3 : ['trend', 'ray', 'rectangle', 'fib'].includes(d.type) ? 2 : 1;
   if (!Array.isArray(d.points) || d.points.length !== needed ||
       !d.points.every(p => Number.isFinite(p.time) && p.time >= 0 && p.time < 4102444800 &&
         Number.isFinite(p.price) && p.price > 0)) return null;
+  if (d.type === 'long' && !(d.points[1].price < d.points[0].price && d.points[2].price > d.points[0].price)) return null;
+  if (d.type === 'short' && !(d.points[1].price > d.points[0].price && d.points[2].price < d.points[0].price)) return null;
+  const fib=d.type==='fib'?validateFib(d.fib):null;
+  if(d.type==='fib'&&(!fib||d.points[0].price===d.points[1].price))return null;
   return { id: d.id, type: d.type, points: d.points.map(p => ({ time: p.time, price: p.price })),
     color: /^#[0-9a-f]{6}$/i.test(d.color) ? d.color : '#e3b975',
     name: typeof d.name === 'string' ? d.name.trim().slice(0, 80) : '',
-    text: typeof d.text === 'string' ? d.text.slice(0, 160) : '' };
+    text: typeof d.text === 'string' ? d.text.slice(0, 160) : '', ...(fib?{fib}:{}) };
 }
 
-export function validateStudies(raw) {
-  return Array.isArray(raw) ? raw.slice(0, 8).filter(s => s?.id === 'ema' &&
-    typeof s.key === 'string' && s.key.length < 80 && Number.isInteger(s.period) && s.period >= 1 && s.period <= 500 &&
-    /^#[0-9a-f]{6}$/i.test(s.color)).map(s => ({ id: s.id, key: s.key, period: s.period, color: s.color,
-      name: typeof s.name === 'string' ? s.name.trim().slice(0, 80) : '' })) : [];
+export function validateStudies(raw, registry = indicators) {
+ return Array.isArray(raw)?raw.slice(0,12).map(s=>validateStudy(s,registry)).filter(Boolean):[];
 }
 
 export function createDemoBars(symbol = 'EURUSD') {

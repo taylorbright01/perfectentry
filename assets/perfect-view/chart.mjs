@@ -1,5 +1,7 @@
 // Original Canvas 2D renderer, authored for Perfect Entry.
 // Drawings are anchored to market timestamps and prices, never screen pixels.
+import {defaultFib,fibPrices,validatePriceRange} from './drawings.mjs';
+import {modelValuesAt,formatStudyValue} from './readouts.mjs';
 export class PerfectViewChart extends EventTarget {
   constructor(canvas) {
     super();
@@ -8,8 +10,10 @@ export class PerfectViewChart extends EventTarget {
     this.bars = []; this.drawings = []; this.models = [];
     this.count = 110; this.end = 0; this.timeframe = 300; this.precision = 5;
     this.mode = 'candles'; this.focus = true; this.tool = 'select';
-    this.selected = null; this.pending = null; this.cursor = null;
+    this.selected = null; this.pending = null; this.pendingStop = null; this.cursor = null;
     this.drawingColor = '#e3b975';
+    this.fibSettings = defaultFib(); this.priceRange = null; this.positionSizer = null;
+    this.crosshair=true;this.paneScales=[];
     this.drag = null; this.frame = null; this.width = 0; this.height = 0;
     this.abort = new AbortController();
     const opts = { signal: this.abort.signal };
@@ -17,18 +21,19 @@ export class PerfectViewChart extends EventTarget {
     canvas.addEventListener('pointerdown', e => this.onDown(e), opts);
     canvas.addEventListener('pointerup', e => this.onUp(e), opts);
     canvas.addEventListener('pointercancel', e => this.onCancel(e), opts);
-    canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.cursor = null; this.requestDraw(); } }, opts);
+    canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.cursor = null; this.requestDraw();this.emit('hover',{bar:null}); } }, opts);
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
       const p = this.position(e);
-      this.zoom(e.deltaY > 0 ? 1.14 : 0.88, p.x);
+      if(e.shiftKey||e.altKey||this.plot&&p.x>this.plot.right)this.zoomPrice(e.deltaY>0?1.14:.88,p.y);
+      else this.zoom(e.deltaY > 0 ? 1.14 : 0.88, p.x);
     }, { ...opts, passive: false });
     canvas.addEventListener('keydown', e => {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault(); this.end += (e.key === 'ArrowLeft' ? -1 : 1) * this.count * 0.15;
         this.clamp(); this.requestDraw(); this.emit('viewport');
-      } else if (e.key === '+' || e.key === '=') { e.preventDefault(); this.zoom(0.8); }
-      else if (e.key === '-') { e.preventDefault(); this.zoom(1.25); }
+      } else if (e.key === '+' || e.key === '=') { e.preventDefault(); e.altKey?this.zoomPrice(.8):this.zoom(0.8); }
+      else if (e.key === '-') { e.preventDefault(); e.altKey?this.zoomPrice(1.25):this.zoom(1.25); }
       else if (e.key === 'Escape') { this.setTool('select'); this.selected = null; this.requestDraw(); this.emit('selection'); }
       else if ((e.key === 'Delete' || e.key === 'Backspace') && this.selected) {
         e.preventDefault(); this.removeDrawing(this.selected);
@@ -61,15 +66,53 @@ export class PerfectViewChart extends EventTarget {
     this.bars = bars; this.timeframe = timeframe; this.precision = precision;
     if (reset || !anchor || atLatest) this.end = bars.length;
     else this.end = this.indexAt(anchor) + 1;
-    if (reset) this.count = 110;
-    this.pending = null;
+    if (reset) {this.count = 110; this.priceRange = null;}
+    if(reset){this.pending=null;this.pendingStop=null;}
     this.clamp(); this.requestDraw();
   }
-  setModels(models) { this.models = models; this.requestDraw(); }
-  setDrawings(drawings) { this.drawings = structuredClone(drawings); this.selected = null; this.pending = null; this.requestDraw(); }
-  setTool(tool) { this.tool = tool; this.pending = null; this.canvas.dataset.tool = tool; this.requestDraw(); this.emit('tool', { tool }); }
+  setModels(models) {
+    this.models = models; const panes = models.filter(m => m.pane === 'oscillator').length;
+    if(this.canvas.parentElement) this.canvas.parentElement.style.minHeight = panes ? (260 + Math.min(4, panes) * 100) + 'px' : '';
+    this.requestDraw();
+  }
+  setDrawings(drawings) { this.drawings = structuredClone(drawings); this.selected = null; this.pending = null; this.pendingStop=null;this.requestDraw(); }
+  setTool(tool) { this.tool = tool; this.pending = null; this.pendingStop = null; this.canvas.dataset.tool = tool; this.requestDraw(); this.emit('tool', { tool }); }
   setFocus(focus) { this.focus = focus; this.requestDraw(); }
   setMode(mode) { this.mode = mode; this.requestDraw(); }
+  setCrosshair(enabled){this.crosshair=enabled;this.requestDraw();}
+  cursorRegion(){
+    const p=this.cursor;if(!p||!this.plot||p.x<this.plot.left||p.x>this.plot.right)return null;
+    if(this.inPlot(p))return {type:'price',top:this.plot.top,bottom:this.plot.bottom,value:this.marketPoint(p).price};
+    const pane=this.paneScales.find(s=>p.y>=s.valueTop&&p.y<=s.valueBottom);
+    return pane?{type:'indicator',top:pane.valueTop,bottom:pane.valueBottom,model:pane.model,value:pane.min+(pane.valueBottom-p.y)/(pane.valueBottom-pane.valueTop)*(pane.max-pane.min)}:null;
+  }
+  readout(){
+    const region=this.crosshair?this.cursorRegion():null;
+    const hovering=this.crosshair&&this.cursor&&this.plot&&this.cursor.x>=this.plot.left&&this.cursor.x<=this.plot.right&&this.cursor.y>=this.plot.top&&this.cursor.y<=this.height-42;
+    const index=hovering?Math.round(this.end-this.count+(this.cursor.x-this.plot.left)/this.plot.width*this.count-.5):null;
+    const bar=hovering?this.bars[index]??null:null;
+    const latest=Math.max(-Infinity,...this.models.flatMap(m=>[...(m.lines??[]),...(m.histograms??[])].map(s=>s.points?.at(-1)?.time??-Infinity)));
+    const time=hovering?(bar?.time??null):(Number.isFinite(latest)?latest:this.bars.at(-1)?.time??null);
+    return {bar,time,region,latest:!hovering,models:this.models.map(model=>({key:model.key,title:model.title,values:modelValuesAt(model,time,this.precision)}))};
+  }
+  getPriceRange() { return this.priceRange ? {...this.priceRange} : null; }
+  setPriceRange(range) {this.priceRange=validatePriceRange(range);this.requestDraw();this.emit('viewport');}
+  resetPriceScale() {this.priceRange=null;this.requestDraw();this.emit('viewport');}
+  zoomPrice(factor,y=this.plot?(this.plot.top+this.plot.bottom)/2:0) {
+    if(!this.bars.length||!this.plot||!Number.isFinite(this.min)||!Number.isFinite(this.max)||!Number.isFinite(factor)||factor<=0)return;
+    const fraction=Math.max(0,Math.min(1,(this.plot.bottom-y)/this.plot.height)),span=this.max-this.min;
+    const anchor=this.min+fraction*span,next=Math.max(Math.max(1e-10,Math.abs(anchor)*1e-10),Math.min(1e14,span*factor));
+    const range=validatePriceRange({min:anchor-fraction*next,max:anchor+(1-fraction)*next});
+    if(range){this.priceRange=range;this.min=range.min;this.max=range.max;this.requestDraw();this.emit('viewport');}
+  }
+  activePosition() {
+    if(['long','short'].includes(this.tool)&&this.pending&&this.cursor&&this.inPlot(this.cursor)){
+      const point=this.marketPoint(this.cursor),stop=this.pendingStop??point,direction=this.tool==='long'?1:-1;
+      const target=this.pendingStop?point:{time:point.time,price:this.pending.price+direction*Math.abs(this.pending.price-stop.price)*2};
+      return {type:this.tool,points:[this.pending,stop,target]};
+    }
+    return this.drawings.find(d=>d.id===this.selected&&['long','short'].includes(d.type))??null;
+  }
   clamp() {
     this.count = Math.max(12, Math.min(1500, this.count));
     this.end = Math.max(Math.min(this.count, this.bars.length), Math.min(this.bars.length + this.count * 0.15, this.end));
@@ -114,7 +157,10 @@ export class PerfectViewChart extends EventTarget {
     const c = this.ctx, w = this.width, h = this.height;
     c.clearRect(0, 0, w, h);
     c.fillStyle = '#0f151b'; c.fillRect(0, 0, w, h);
-    this.plot = { left: 18, right: w - (this.focus ? 24 : 86), top: 30, bottom: h - 42 };
+    const panes = this.models.filter(m => m.pane === 'oscillator');
+    this.paneScales=[];
+    const paneHeight = Math.min(108, Math.max(64, (h - 210) / Math.max(1, panes.length)));
+    this.plot = { left: 18, right: w - (this.focus ? 24 : 86), top: 30, bottom: h - 42 - panes.length * paneHeight };
     this.plot.width = Math.max(1, this.plot.right - this.plot.left);
     this.plot.height = Math.max(1, this.plot.bottom - this.plot.top);
     const start = Math.max(0, Math.floor(this.end - this.count)), end = Math.min(this.bars.length, Math.ceil(this.end));
@@ -126,6 +172,7 @@ export class PerfectViewChart extends EventTarget {
     this.min = Math.min(...visible.map(b => b.low)); this.max = Math.max(...visible.map(b => b.high));
     const pad = Math.max((this.max - this.min) * 0.14, this.max * 0.00002);
     this.min -= pad; this.max += pad;
+    if(this.priceRange){this.min=this.priceRange.min;this.max=this.priceRange.max;}
     c.font = '12px system-ui'; c.lineWidth = 1; c.textBaseline = 'middle';
     for (let i = 0; i <= 5; i++) {
       const y = this.plot.top + i / 5 * this.plot.height;
@@ -142,7 +189,7 @@ export class PerfectViewChart extends EventTarget {
       if (index !== start && Math.floor(this.bars[index].time / 86400) === Math.floor(this.bars[index - 1].time / 86400)) continue;
       const boundary = index > 0 && Math.floor(this.bars[index].time / 86400) !== Math.floor(this.bars[index - 1].time / 86400);
       const date = new Date(this.bars[index].time * 1000);
-      const label = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+      const label = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: this.timeframe >= 86400 ? 'numeric' : undefined, timeZone: 'UTC' });
       const half = c.measureText(label).width / 2;
       const x = Math.max(this.plot.left + half, Math.min(this.plot.right - half, this.x(index)));
       if (dateLabels.some(previous => Math.abs(previous.x - x) < previous.half + half + 16)) continue;
@@ -158,7 +205,7 @@ export class PerfectViewChart extends EventTarget {
       const x = this.x(index), date = new Date(this.bars[index].time * 1000);
       c.fillStyle = '#82909d'; c.textAlign = 'center';
       const label = this.timeframe >= 3600
-        ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+        ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: this.timeframe >= 86400 ? 'numeric' : undefined, timeZone: 'UTC' })
         : date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
       if (dateLabels.some(date => Math.abs(date.x - x) < date.half + c.measureText(label).width / 2 + 16)) continue;
       c.fillText(label, x, h - 19);
@@ -176,18 +223,30 @@ export class PerfectViewChart extends EventTarget {
       const top = Math.min(this.y(b.open), this.y(b.close)), height = Math.max(1.4, Math.abs(this.y(b.open) - this.y(b.close)));
       c.fillRect(x - bodyWidth / 2, top, bodyWidth, height);
     }
-    for (const model of this.models) this.drawModel(model);
+    for (const model of this.models) if (model.pane !== 'oscillator') this.drawModel(model);
     for (const drawing of this.drawings) this.drawAnnotation(drawing);
     if (this.pending && this.cursor && this.inPlot(this.cursor)) {
-      this.drawAnnotation({ type: this.tool, color: this.drawingColor, points: [this.pending, this.marketPoint(this.cursor)] });
+      const point = this.marketPoint(this.cursor);
+      if (['long', 'short'].includes(this.tool)) {
+        const stop = this.pendingStop ?? point, direction = this.tool === 'long' ? 1 : -1;
+        const target = this.pendingStop ? point : {time: point.time, price: this.pending.price + direction * Math.abs(this.pending.price - stop.price) * 2};
+        this.drawAnnotation({type: this.tool, color: this.drawingColor, points: [this.pending, stop, target]});
+      } else this.drawAnnotation({ type: this.tool, color: this.drawingColor, points: [this.pending, point] });
     }
-    if (this.cursor && this.inPlot(this.cursor)) {
+    if (!this.crosshair && this.cursor && this.inPlot(this.cursor) && this.tool!=='select') {
       c.strokeStyle = '#cedbe02a'; c.lineWidth = 1; c.setLineDash([3, 5]); c.beginPath();
       c.moveTo(this.cursor.x, this.plot.top); c.lineTo(this.cursor.x, this.plot.bottom);
       if (!this.focus) { c.moveTo(this.plot.left, this.cursor.y); c.lineTo(this.plot.right, this.cursor.y); }
       c.stroke(); c.setLineDash([]);
     }
     c.restore();
+    panes.forEach((model, i) => this.drawPane(model, this.plot.bottom + i * paneHeight + 8, paneHeight - 12));
+    if(this.crosshair)this.drawCrosshair();
+    if (!this.crosshair && this.cursor && this.inPlot(this.cursor) && (this.tool !== 'select' || this.selected)) {
+      const p = this.marketPoint(this.cursor); c.font = '11px system-ui'; c.fillStyle = '#dce6ef'; c.textAlign = 'right';
+      c.fillText(p.price.toFixed(this.precision), this.plot.right - 5, Math.max(this.plot.top + 12, this.cursor.y - 9));
+      c.textAlign = 'center'; c.fillText(new Date(p.time * 1000).toLocaleString('en-GB', {timeZone:'UTC',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}), Math.max(75, Math.min(w - 75, this.cursor.x)), h - 7);
+    }
     if (this.selected) {
       const d = this.drawings.find(d => d.id === this.selected);
       if (d) for (const p of d.points) {
@@ -195,6 +254,47 @@ export class PerfectViewChart extends EventTarget {
         c.beginPath(); c.arc(point.x, point.y, 4, 0, Math.PI * 2); c.fill(); c.stroke();
       }
     }
+    this.emit('readout',this.readout());
+  }
+
+  drawCrosshair(){
+    const region=this.cursorRegion();if(!region)return;
+    const c=this.ctx,p=this.cursor,bar=this.readout().bar,crossX=bar?this.x(this.indexAt(bar.time)):p.x;c.save();c.lineWidth=1;c.strokeStyle='#b6d1d877';c.setLineDash([3,5]);c.beginPath();c.moveTo(crossX,this.plot.top);c.lineTo(crossX,this.height-42);c.moveTo(this.plot.left,p.y);c.lineTo(this.plot.right,p.y);c.stroke();c.setLineDash([]);
+    const text=region.type==='price'?region.value.toFixed(this.precision):formatStudyValue(region.value,region.model,this.precision);
+    c.font='11px system-ui';c.textBaseline='middle';const width=c.measureText(text).width+12,x=this.plot.right-width,y=Math.max(region.top,Math.min(region.bottom-20,p.y-10));
+    c.fillStyle='#233940';c.fillRect(x,y,width,20);c.strokeStyle='#80cec677';c.strokeRect(x,y,width,20);c.fillStyle='#e5edf0';c.textAlign='right';c.fillText(text,this.plot.right-6,y+10);
+    const time=bar?.time??this.marketPoint(p).time,label=new Date(time*1000).toLocaleString('en-GB',{timeZone:'UTC',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
+    c.textAlign='center';const tx=Math.max(this.plot.left+72,Math.min(this.plot.right-72,p.x));c.fillStyle='#233940';c.fillRect(tx-72,this.height-29,144,20);c.fillStyle='#e5edf0';c.fillText(label,tx,this.height-19);c.restore();
+  }
+
+  drawPane(model, top, height) {
+    const c = this.ctx, start = this.end - this.count;
+    const visible = p => this.indexAt(p.time) >= start - 1 && this.indexAt(p.time) <= this.end + 1 && Number.isFinite(p.value);
+    const values = [...(model.lines ?? []), ...(model.histograms ?? [])].flatMap(l => (l.points ?? []).filter(visible).map(p => p.value));
+    let min = model.range?.[0] ?? Math.min(0, ...values), max = model.range?.[1] ?? Math.max(0, ...values);
+    if (max === min) { min -= 1; max += 1; }
+    const y = value => top + height - 12 - (value - min) / (max - min) * (height - 24);
+    this.paneScales.push({model,top,height,min,max,valueTop:top+12,valueBottom:top+height-12});
+    c.save(); c.beginPath(); c.rect(this.plot.left, top, this.plot.width, height); c.clip();
+    c.strokeStyle = '#ffffff18'; c.lineWidth = 1; c.beginPath(); c.moveTo(this.plot.left, top); c.lineTo(this.plot.right, top); c.stroke();
+    const index=this.crosshair&&this.cursor&&this.cursor.x>=this.plot.left&&this.cursor.x<=this.plot.right&&this.cursor.y>=this.plot.top&&this.cursor.y<=this.height-42?Math.round(this.end-this.count+(this.cursor.x-this.plot.left)/this.plot.width*this.count-.5):null;
+    const time=index===null?[...(model.lines??[]),...(model.histograms??[])].map(s=>s.points?.at(-1)?.time??-Infinity).reduce((a,b)=>Math.max(a,b),-Infinity):this.bars[index]?.time??null;
+    const headerValues=modelValuesAt(model,time,this.precision),readout=headerValues.map(v=>(headerValues.length>1?v.name+' ':'')+v.text).join(' · ');
+    c.fillStyle = '#b9cbd3'; c.font = '11px system-ui'; c.textAlign = 'left'; c.fillText((model.title??'')+(readout?'  '+readout:''), this.plot.left + 5, top + 10,this.plot.width-10);
+    for (const level of model.levels ?? []) {
+      c.strokeStyle = '#ffffff18'; c.setLineDash([3, 5]); c.beginPath(); c.moveTo(this.plot.left, y(level)); c.lineTo(this.plot.right, y(level)); c.stroke();
+      c.fillStyle = '#82909d'; c.textAlign = 'right'; c.fillText(String(level), this.plot.right - 4, y(level) - 6);
+    }
+    c.setLineDash([]);
+    for (const histogram of model.histograms ?? []) for (const p of (histogram.points ?? []).filter(visible)) {
+      c.fillStyle = p.value >= 0 ? histogram.positive : histogram.negative;
+      const py = y(p.value), zero = y(0); c.fillRect(this.x(this.indexAt(p.time)) - 2, Math.min(py, zero), Math.max(1, Math.min(8, this.plot.width / this.count * .6)), Math.max(1, Math.abs(zero - py)));
+    }
+    for (const line of model.lines ?? []) {
+      c.strokeStyle = line.color ?? '#b4a2ff'; c.lineWidth = 1.4; c.beginPath(); let started = false;
+      for (const p of line.points ?? []) { if (!visible(p)) { started = false; continue; } const px = this.x(this.indexAt(p.time)), py = y(p.value); started ? c.lineTo(px, py) : c.moveTo(px, py); started = true; } c.stroke();
+    }
+    c.restore();
   }
 
   drawModel(model) {
@@ -227,13 +327,40 @@ export class PerfectViewChart extends EventTarget {
     const c = this.ctx, p = this.xy(d.points[0]);
     c.strokeStyle = d.color; c.fillStyle = d.color; c.lineWidth = d.id === this.selected ? 2 : 1.5;
     c.setLineDash([]);
-    if (d.type === 'horizontal') {
+    if (d.type === 'long' || d.type === 'short') {
+      const stop = this.xy(d.points[1]), target = this.xy(d.points[2]);
+      const right = Math.max(p.x + 35, target.x), risk = Math.abs(d.points[0].price - d.points[1].price), reward = Math.abs(d.points[2].price - d.points[0].price);
+      c.globalAlpha = .14; c.fillStyle = '#74c8bb'; c.fillRect(p.x, Math.min(p.y, target.y), right - p.x, Math.abs(p.y - target.y));
+      c.fillStyle = '#ce8585'; c.fillRect(p.x, Math.min(p.y, stop.y), right - p.x, Math.abs(p.y - stop.y)); c.globalAlpha = 1;
+      c.font = '11px system-ui'; c.textAlign = 'left';
+      for (const [name, point, price, colour] of [['Entry',p,d.points[0].price,d.color],['Stop',stop,d.points[1].price,'#ce8585'],['Target',target,d.points[2].price,'#74c8bb']]) {
+        c.strokeStyle = colour; c.beginPath(); c.moveTo(p.x, point.y); c.lineTo(right, point.y); c.stroke(); c.fillStyle = colour; c.fillText(name + ' ' + price.toFixed(this.precision), p.x + 5, point.y - 8);
+      }
+      const size=this.positionSizer?.(d);
+      c.fillStyle = '#c8d4df'; c.fillText(risk > 0 ? (size?.ok?'Est. R:R ':'R:R ') + (size?.ok?size.rr:reward / risk).toFixed(2) : 'Set stop', p.x + 5, p.y + 13);
+      if(size?.ok){c.fillText(size.lots.toLocaleString('en-GB',{maximumFractionDigits:8})+' lots'+(size.units==null?'':' · '+size.units.toLocaleString('en-GB',{maximumFractionDigits:2})+' units'),p.x+5,p.y+28);}
+    } else if (d.type === 'fib') {
+      const q=this.xy(d.points[1]),settings=d.fib??this.fibSettings,left=Math.min(p.x,q.x),right=settings.extend?this.plot.right:Math.max(p.x,q.x);
+      c.save();c.font='11px system-ui';c.textAlign='left';c.lineWidth=settings.width;
+      for(const level of fibPrices(d.points,settings)){
+        const y=this.y(level.price);c.globalAlpha=settings.opacity*level.opacity;c.strokeStyle=level.color;c.fillStyle=level.color;
+        c.beginPath();c.moveTo(left,y);c.lineTo(right,y);c.stroke();
+        if(settings.labels)c.fillText((level.value*100).toLocaleString('en-GB',{maximumFractionDigits:3})+'%  '+level.price.toFixed(this.precision),Math.max(this.plot.left+4,left+5),y-8);
+      }
+      c.globalAlpha=.45;c.strokeStyle=d.color;c.lineWidth=1;c.setLineDash([4,5]);c.beginPath();c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();c.restore();
+    } else if (d.type === 'vertical') {
+      c.beginPath(); c.moveTo(p.x, this.plot.top); c.lineTo(p.x, this.plot.bottom); c.stroke();
+    } else if (d.type === 'horizontal') {
       c.beginPath(); c.moveTo(this.plot.left, p.y); c.lineTo(this.plot.right, p.y); c.stroke();
+      if (d.id === this.selected) {c.font = '11px system-ui'; c.textAlign = 'right'; c.fillText(d.points[0].price.toFixed(this.precision), this.plot.right - 5, p.y - 9);}
     } else if (d.type === 'text') {
       c.font = '14px system-ui'; c.textAlign = 'left'; c.fillText(d.text, p.x + 7, p.y);
     } else {
       const q = this.xy(d.points[1]);
-      if (d.type === 'trend') { c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.stroke(); }
+      if (d.type === 'trend' || d.type === 'ray') {
+        const end = d.type === 'ray' && Math.abs(q.x - p.x) > 1 ? {x:this.plot.right,y:p.y+(q.y-p.y)*(this.plot.right-p.x)/(q.x-p.x)} : q;
+        c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(end.x, end.y); c.stroke();
+      }
       else if (d.type === 'rectangle') {
         c.globalAlpha = 0.09; c.fillRect(p.x, p.y, q.x - p.x, q.y - p.y); c.globalAlpha = 1;
         c.strokeRect(p.x, p.y, q.x - p.x, q.y - p.y);
@@ -245,6 +372,12 @@ export class PerfectViewChart extends EventTarget {
       const a = this.xy(d.points[0]);
       const handle = d.points.findIndex(point => { const q = this.xy(point); return Math.hypot(q.x - p.x, q.y - p.y) < 10; });
       if (handle >= 0) return { d, handle };
+      if (d.type === 'vertical' && Math.abs(p.x - a.x) < 8) return {d, handle:-1};
+      if(d.type==='fib'){
+        const b=this.xy(d.points[1]),settings=d.fib??this.fibSettings,l=Math.min(a.x,b.x),r=settings.extend?this.plot.right:Math.max(a.x,b.x);
+        if(p.x>=l-7&&p.x<=r+7&&fibPrices(d.points,settings).some(level=>Math.abs(p.y-this.y(level.price))<Math.max(7,settings.width+3)))return {d,handle:-1};
+      }
+      if (['long', 'short'].includes(d.type)) {const q=this.xy(d.points[2]), stop=this.xy(d.points[1]);if(p.x>=a.x-7&&p.x<=Math.max(a.x+35,q.x)+7&&p.y>=Math.min(q.y,stop.y)-8&&p.y<=Math.max(q.y,stop.y)+8)return {d,handle:-1};}
       if (d.type === 'horizontal' && Math.abs(p.y - a.y) < 8) return { d, handle: -1 };
       if (d.type === 'text' && p.x >= a.x && p.x <= a.x + this.ctx.measureText(d.text).width + 16 && Math.abs(p.y - a.y) < 12) return { d, handle: -1 };
       if (d.points.length === 2) {
@@ -253,7 +386,7 @@ export class PerfectViewChart extends EventTarget {
           const l = Math.min(a.x, b.x), r = Math.max(a.x, b.x), t = Math.min(a.y, b.y), bot = Math.max(a.y, b.y);
           if (p.x >= l - 7 && p.x <= r + 7 && p.y >= t - 7 && p.y <= bot + 7 &&
               (Math.abs(p.x - l) < 7 || Math.abs(p.x - r) < 7 || Math.abs(p.y - t) < 7 || Math.abs(p.y - bot) < 7)) return { d, handle: -1 };
-        } else {
+        } else if(d.type!=='fib') {
           const dx = b.x - a.x, dy = b.y - a.y;
           const fraction = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
           if (Math.hypot(p.x - a.x - fraction * dx, p.y - a.y - fraction * dy) < 8) return { d, handle: -1 };
@@ -264,38 +397,68 @@ export class PerfectViewChart extends EventTarget {
   }
   onDown(e) {
     if (e.button !== 0 || this.drag) return;
-    const p = this.position(e); if (!this.inPlot(p) || !this.bars.length) return;
+    const p = this.position(e); if (!this.plot||!this.bars.length) return;this.cursor=p;
+    if(p.x>this.plot.right&&p.y>=this.plot.top&&p.y<=this.plot.bottom){
+      this.canvas.setPointerCapture(e.pointerId);this.drag={id:e.pointerId,start:p,scale:true,range:{min:this.min,max:this.max},previousRange:this.getPriceRange(),moved:false};return;
+    }
+    if(!this.inPlot(p)){this.requestDraw();return;}
     this.canvas.focus({ preventScroll: true }); this.canvas.setPointerCapture(e.pointerId);
     if (this.tool === 'select') {
-      const hit = this.hit(p); this.selected = hit?.d.id ?? null;
+      const hit = e.shiftKey?null:this.hit(p); if(!e.shiftKey)this.selected = hit?.d.id ?? null;
       this.drag = { id: e.pointerId, start: p, end: this.end, hit, before: hit ? structuredClone(hit.d.points) : null,
-        market: this.marketPoint(p), moved: false };
+        market: this.marketPoint(p), moved: false,pricePan:e.shiftKey&&!hit,range:{min:this.min,max:this.max},previousRange:this.getPriceRange() };
       this.emit('selection', { id: this.selected }); this.requestDraw(); return;
     }
     const point = this.marketPoint(p);
     if (this.tool === 'text') { this.emit('text', { point }); return; }
-    if (this.tool === 'horizontal') { this.addDrawing({ type: this.tool, points: [point] }); this.setTool('select'); }
+    if (this.tool === 'horizontal' || this.tool === 'vertical') { this.addDrawing({ type: this.tool, points: [point] }); this.setTool('select'); }
     else if (!this.pending) { this.pending = point; this.requestDraw(); this.emit('tool', { tool: this.tool, pending: true }); }
-    else {
+    else if (['long','short'].includes(this.tool)) {
+      const direction = this.tool === 'long' ? 1 : -1;
+      if (!this.pendingStop) {
+        if ((point.price - this.pending.price) * direction >= 0) {this.emit('message', {text:'Place the stop on the loss side of the entry.'}); return;}
+        this.pendingStop = point; this.emit('tool', {tool:this.tool,pending:true,stop:true});
+      } else {
+        if ((point.price - this.pending.price) * direction <= 0) {this.emit('message', {text:'Place the target on the profit side of the entry.'}); return;}
+        this.addDrawing({type:this.tool,points:[this.pending,this.pendingStop,point]}); this.setTool('select');
+      }
+    } else {
+      if(this.tool==='fib'&&point.price===this.pending.price){this.emit('message',{text:'Choose a second anchor at a different price.'});return;}
       this.addDrawing({ type: this.tool, points: [this.pending, point] }); this.setTool('select');
     }
   }
   onMove(e) {
     const p = this.position(e); this.cursor = p;
+    this.canvas.style.cursor=this.plot&&p.x>this.plot.right&&p.y<=this.plot.bottom?'ns-resize':'';
     if (this.drag && this.drag.id === e.pointerId) {
       const delta = p.x - this.drag.start.x;
       this.drag.moved ||= Math.hypot(delta, p.y - this.drag.start.y) > 3;
-      if (this.drag.hit && this.drag.moved) {
+      if((this.drag.scale||this.drag.pricePan)&&this.drag.moved){
+        const before=this.drag.range,span=before.max-before.min,center=(before.min+before.max)/2,dy=p.y-this.drag.start.y;
+        const next=this.drag.scale?Math.max(Math.abs(center)*1e-10,Math.min(1e14,span*Math.exp(Math.max(-8,Math.min(8,dy*.008))))):span;
+        const shift=this.drag.pricePan?dy/this.plot.height*span:0;
+        const range=validatePriceRange({min:center-next/2+shift,max:center+next/2+shift});
+        if(range){this.priceRange=range;this.min=range.min;this.max=range.max;}
+      }else if (this.drag.hit && this.drag.moved) {
         const { d, handle } = this.drag.hit, point = this.marketPoint(p);
-        if (handle >= 0) d.points[handle] = point;
-        else d.points = this.drag.before.map(a => ({ time: Math.max(0, a.time + point.time - this.drag.market.time),
-          price: Math.max(1e-10, a.price + point.price - this.drag.market.price) }));
-      } else if (!this.drag.hit) { this.end = this.drag.end - delta / this.plot.width * this.count; this.clamp(); }
+        if (handle >= 0) {
+          if (['long','short'].includes(d.type)) {
+            const direction=d.type==='long'?1:-1, entry=d.points[0].price;
+            if(handle===1 && (point.price-entry)*direction>=0)return;
+            if(handle===2 && (point.price-entry)*direction<=0)return;
+            if(handle===0 && !((d.points[1].price-point.price)*direction<0&&(d.points[2].price-point.price)*direction>0))return;
+          }
+          if(d.type==='fib'&&d.points[1-handle].price===point.price)return;
+          d.points[handle] = point;
+        }
+        else {const moved=this.drag.before.map(a=>({time:Math.max(0,a.time+point.time-this.drag.market.time),price:a.price+point.price-this.drag.market.price}));if(moved.every(a=>a.price>0))d.points=moved;}
+      } else if (!this.drag.hit&&!this.drag.scale&&!this.drag.pricePan) { this.end = this.drag.end - delta / this.plot.width * this.count; this.clamp(); }
     }
-    if (this.inPlot(p) && this.bars.length) {
+    if ((this.inPlot(p)||this.cursorRegion()) && this.bars.length) {
       const index = Math.round(this.end - this.count + (p.x - this.plot.left) / this.plot.width * this.count - 0.5);
       this.emit('hover', { bar: this.bars[index] ?? null });
     } else this.emit('hover', { bar: null });
+    this.emit('positionpreview',{drawing:this.activePosition()});
     this.requestDraw();
   }
   onUp(e) {
@@ -306,11 +469,13 @@ export class PerfectViewChart extends EventTarget {
   onCancel(e) {
     if (!this.drag || this.drag.id !== e.pointerId) return;
     if (this.drag.hit) this.drag.hit.d.points = this.drag.before;
-    this.drag = null; this.requestDraw();
+    if(this.drag.scale||this.drag.pricePan)this.priceRange=this.drag.previousRange;
+    this.drag = null; this.requestDraw();this.emit('positionpreview',{drawing:this.activePosition()});
   }
   addDrawing(d) {
     if (this.drawings.length >= 300) { this.emit('limit'); return; }
     const drawing = { ...d, id: crypto.randomUUID(), color: d.color ?? this.drawingColor, name: d.name ?? '', text: d.text ?? '' };
+    if(d.type==='fib')drawing.fib=structuredClone(d.fib??this.fibSettings);
     this.drawings.push(drawing); this.selected = drawing.id; this.requestDraw(); this.emit('drawings'); this.emit('selection', { id: drawing.id });
   }
   removeDrawing(id) {

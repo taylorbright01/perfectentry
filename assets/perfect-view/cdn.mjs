@@ -1,5 +1,6 @@
 import {parseFeedResponse} from './feed.mjs';
-import {groupFor,hourOf,liveKey,hourKey} from './protocol.mjs';
+import {GROUPS,groupFor,hourOf,liveKey,hourKey} from './protocol.mjs';
+import {FxBook,currencyPaths} from './fx.mjs';
 export function nextCdnCheck(now,seconds=30) {
  const period=seconds*1000,phase=5000;
  return Math.max(250,(Math.floor((now-phase)/period)+1)*period+phase-now);
@@ -8,15 +9,16 @@ export class CdnFeed {
  constructor({url,fetchImpl=globalThis.fetch.bind(globalThis),readCache=async()=>null,writeCache=async()=>{},now=()=>Date.now(),locks=globalThis.navigator?.locks}) {
   Object.assign(this,{url,fetchImpl,readCache,writeCache,now,locks});
   this.memory=new Map();
+  this.fxBook=new FxBook();this.liveInflight=new Map();this.fxInflight=new Map();this.fxFailures=new Map();
  }
- async cached(key,ttl,action) {
+ async cached(key,ttl,action,revision) {
   const run=async()=>{
    let cached=this.memory.get(key);
-   if (!cached || this.now()-cached.savedAt>=ttl) try {
+   if (!cached || this.now()-cached.savedAt>=ttl || (revision!==undefined && cached.value?.revision!==revision)) try {
     const shared=await this.readCache(key);
-    if(shared && (!cached || shared.savedAt>cached.savedAt))cached=shared;
+    if(shared && (!cached || shared.savedAt>cached.savedAt || (revision!==undefined && shared.value?.revision===revision)))cached=shared;
    } catch {}
-   if(cached && cached.savedAt<=this.now() && this.now()-cached.savedAt<ttl) return cached.value;
+   if(cached && cached.savedAt<=this.now() && this.now()-cached.savedAt<ttl && (revision===undefined || cached.value?.revision===revision)) return cached.value;
    const value=await action(),record={savedAt:this.now(),value};
    if(this.memory.size>=400)this.memory.delete(this.memory.keys().next().value);
    this.memory.set(key,record);
@@ -38,10 +40,49 @@ export class CdnFeed {
  validateFile(file,group) {
   if(!file || file.version!==1 || file.baseTimeframe!==30 || file.group!==group || !file.streams || typeof file.streams!=='object')throw new Error('Invalid candle file.');
  }
+ async live(group,{signal}={}){
+  if(this.liveInflight.has(group))return this.liveInflight.get(group);
+  const run=(async()=>{
+    const prefix='cdn:'+new URL(this.url).href+':';
+    const frame=await this.cached(prefix+'live:'+group,2000,()=>this.file(liveKey(group),signal));
+    this.validateFile(frame,group);
+    // Only instruments belonging to this group may contribute conversion quotes.
+    this.fxBook.ingestFrame({...frame,streams:Object.fromEntries(Object.entries(frame.streams).filter(([symbol])=>GROUPS[group]?.includes(symbol)))},group,this.now()/1000);
+    return frame;
+  })();
+  this.liveInflight.set(group,run);try{return await run;}finally{this.liveInflight.delete(group);}
+ }
+ async conversionRate(from,to,{signal,refresh=false}={}){
+  const existing=this.fxBook.resolve(from,to,{now:this.now()/1000}),key=from+':'+to;
+  if(existing&&(!refresh||existing.age<=60))return existing;
+  if(this.fxInflight.has(key))return this.fxInflight.get(key);
+  const failed=this.fxFailures.get(key);if(failed!==undefined&&this.now()-failed<300000){if(existing)return existing;throw new Error('Conversion feed unavailable. Waiting for fresh ticker closes.');}
+  const run=(async()=>{
+    const candidates=currencyPaths(from,to,GROUPS.flat(),2),requested=new Set();
+    candidates.sort((a,b)=>{
+      const cost=p=>new Set(p.symbols.filter(s=>{const q=this.fxBook.quotes.get(s);return !q||this.now()/1000-q.asOf>60;}).map(groupFor)).size;
+      return cost(a)-cost(b)||a.symbols.length-b.symbols.length;
+    });
+    for(const path of candidates){
+      const groups=[...new Set(path.symbols.map(groupFor))];
+      for(const group of groups){
+        if(requested.has(group)||requested.size>=3)continue;
+        requested.add(group);try{await this.live(group,{signal});}catch{}
+        const result=this.fxBook.resolve(from,to,{now:this.now()/1000});
+        if(result&&result.age<=60){this.fxFailures.delete(key);return result;}
+      }
+      if(requested.size>=3)break;
+    }
+    const result=this.fxBook.resolve(from,to,{now:this.now()/1000});
+    if(result){this.fxFailures.delete(key);return result;}
+    this.fxFailures.set(key,this.now());throw new Error('Conversion feed unavailable. Waiting for fresh ticker closes.');
+  })();
+  this.fxInflight.set(key,run);try{return await run;}finally{this.fxInflight.delete(key);}
+ }
  async load(symbol,previous=null,{signal}={}) {
   const group=groupFor(symbol);if(group<0)throw new Error('Unsupported market.');
   const prefix='cdn:'+new URL(this.url).href+':';
-  const frame=await this.cached(prefix+'live:'+group,2000,()=>this.file(liveKey(group),signal));
+  const frame=await this.live(group,{signal});
   this.validateFile(frame,group);
   const source=frame.streams[symbol],now=Math.floor(this.now()/1000);
   if(!Number.isSafeInteger(frame.revision) || !Number.isSafeInteger(frame.updatedAt) || frame.updatedAt>now+10 || !source || !Array.isArray(source.candles) || source.candles.length>4 || !Number.isSafeInteger(source.through) || source.through%30 || source.through>now+10)throw new Error('No completed candles have arrived for this market yet.');
@@ -79,3 +120,27 @@ export class CdnFeed {
   return data;
  }
 }
+
+// Only the selected market/timeframe downloads an archive. Old completed parts
+// are shared through the same IndexedDB cache; live candles still use one group.
+CdnFeed.prototype.history = async function(symbol,timeframe,{signal}={}) {
+ if(![3600,14400,86400].includes(timeframe))return null;
+ const base=timeframe===86400?86400:3600,prefix='cdn:'+new URL(this.url).href+':archive:'+symbol;
+ const manifest=await this.cached(prefix+':manifest',60000,()=>this.file(`pv/v2/archive/${symbol}/manifest.json`,signal,true));
+ if(!manifest)return null;
+ if(manifest.version!==2||manifest.symbol!==symbol||!manifest.series||!Number.isSafeInteger(manifest.through)||manifest.through>this.now()/1000+10)throw Error('Invalid history manifest.');
+ const parts=(manifest.series[base]??[]).filter(p=>base===3600?/^\d{4}-\d{2}$/.test(p):/^\d{4}$/.test(p)).slice(base===3600?-13:-6);
+ const rows=[];
+ for(let start=0;start<parts.length;start+=4){
+  const files=await Promise.all(parts.slice(start,start+4).map(async part=>{
+   const revision=manifest.partRevisions?.[base+':'+part];
+   const file=await this.cached(prefix+':'+base+':'+part,part===parts.at(-1)?60000:7*86400000,()=>this.file(`pv/v2/archive/${symbol}/${base}/${part}.json${revision===undefined?'':'?v='+revision}`,signal,true),revision);
+   if(!file)return [];
+   if(file.version!==2||file.symbol!==symbol||file.baseTimeframe!==base||file.part!==part||!Array.isArray(file.candles)||file.candles.length>(base===3600?750:366))throw Error('Invalid historical candle file.');
+   return file.candles;
+  }));rows.push(...files.flat());
+ }
+ if(!rows.length)return null;
+ const unique=new Map();for(const r of rows){if(!Array.isArray(r)||r.length!==6||r[0]+base>this.now()/1000)throw Error('Unfinished historical candle.');unique.set(r[0],{time:r[0],open:r[1],high:r[2],low:r[3],close:r[4],volume:r[5]});}
+ return parseFeedResponse(JSON.stringify({symbol,baseTimeframe:base,candles:[...unique.values()].sort((a,b)=>a.time-b.time)}),symbol,base);
+};

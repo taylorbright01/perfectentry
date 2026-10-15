@@ -600,6 +600,7 @@
       </div>
     </div>
     <script>
+      const SIGNAL_HISTORY_VIEW = import('./assets/perfect-view/config.mjs').then(({config}) => config.requireMembership ? 'public_signal_history' : 'public_signal_feed');
       const SUPABASE_URL = "https://nmfsqgqwjihpudiqnuwh.supabase.co",
         SUPABASE_ANON =
           "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZnNxZ3F3amlocHVkaXFudXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDEwNjcsImV4cCI6MjA5NTcxNzA2N30.oPpvWBgLhI95342peeBnkpPsKeu6ZI0a9dA2iKMTR9I",
@@ -674,7 +675,7 @@
 
       async function loadRows() {
         const rows = await fetchAll(
-          "/rest/v1/public_signal_feed?" +
+          "/rest/v1/" + (await SIGNAL_HISTORY_VIEW) + "?" +
             "select=id,sym,tf,dir,created_at,display_closed_at,display_r_result,closed_at,shadow_closed_at,currency_ai_pass,r_result,shadow_r_result" +
             "&created_at=gte." +
             encodeURIComponent(VERIFIED_START) +

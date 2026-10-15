@@ -1,12 +1,20 @@
 import { aggregateBars, createDemoBars, indicators, parseDataset, validateDrawing, validateStudies, TIMEFRAMES } from './core.mjs';
 import { PerfectViewChart } from './chart.mjs';
 import { config } from './config.mjs';
+import { registerCustomIndicators } from './custom-indicators.mjs';
+registerCustomIndicators(indicators);
+import { Account, showMembershipGate } from './account.mjs';
+import { validateLayout } from './layouts.mjs';
 import { CdnFeed, nextCdnCheck } from './cdn.mjs';
+import {defaultFib,validateFib,validatePriceRange} from './drawings.mjs';
+import {instrumentPreset,validateRiskSession,calculatePositionSize} from './risk.mjs';
+import {FxBook} from './fx.mjs';
 
+const account = new Account(config.accountApiUrl);
 const $ = id => document.getElementById(id);
 const chart = new PerfectViewChart($('chart'));
 const PREFIX = 'perfect-view:v1:';
-const defaults = { symbol: 'EURUSD', timeframe: 300, focus: true, mode: 'candles', closedOnly: true,
+const defaults = { symbol: 'EURUSD', timeframe: 300, focus: true, crosshair: true, mode: 'candles', closedOnly: true,
   refreshSeconds: config.refreshSeconds === 30 ? 30 : 60, source: 'demo', datasetId: null, drawingColor: '#e3b975' };
 let storageOkay = true, preferences = { ...defaults };
 try {
@@ -16,6 +24,7 @@ try {
     symbol: /^[A-Z0-9._-]{2,24}$/.test(raw.symbol) ? raw.symbol : defaults.symbol,
     timeframe: TIMEFRAMES.includes(raw.timeframe) ? raw.timeframe : defaults.timeframe,
     focus: typeof raw.focus === 'boolean' ? raw.focus : true,
+    crosshair: typeof raw.crosshair === 'boolean' ? raw.crosshair : true,
     closedOnly: typeof raw.closedOnly === 'boolean' ? raw.closedOnly : true,
     mode: raw.mode === 'line' ? 'line' : 'candles',
     refreshSeconds: raw.refreshSeconds === 30 ? 30 : 60,
@@ -25,14 +34,23 @@ try {
   };
 } catch { storageOkay = false; }
 
+let activeLayoutId = null, activeLayoutRevision = 0;
+let editingFibId=null;
+let riskSession=validateRiskSession(getSaved('risk-session'))??{currency:'USD',balance:0,mode:'percent',risk:1,updated:''};
+let riskProfiles=getSaved('risk-profiles')??{};
+if(!riskProfiles||Array.isArray(riskProfiles)||typeof riskProfiles!=='object')riskProfiles={};
+chart.fibSettings=validateFib(getSaved('fib-settings'))??defaultFib();
+chart.positionSizer=drawing=>positionSize(drawing);
+const archiveCache = new Map();
 let dataset = null, kind = 'demo', datasetId = '', scope = '', studies = [], history = [], historyIndex = 0;
 let pollTimer = null, feedController = null, feedGeneration = 0, notePoint = null, saveTimer = null;
-let studyTemplateLoaded = false, renameTarget = null;
+let studyTemplateLoaded = false, renameTarget = null, editingStudy = null;
 const workspaceCache = new Map();
 let feedFetching = false, feedFailures = 0;
 const cdn = new CdnFeed({url: config.feedUrl, readCache: readDataset, writeCache: cacheDataset});
+const sampleFx=new FxBook(),fxErrors=new Map();let sampleFxTime=0,fxTimer=null;
 const labels = { 30: '30 seconds', 60: '1 minute', 300: '5 minute', 900: '15 minute', 3600: '1 hour', 14400: '4 hour', 86400: '1 day' };
-const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note' };
+const names = { horizontal: 'Horizontal level', trend: 'Trendline', rectangle: 'Price zone', text: 'Note', vertical: 'Vertical line', ray: 'Ray', long: 'Long position', short: 'Short position', fib: 'Fibonacci retracement' };
 
 function announce(text) { $('message').textContent = text; $('message').hidden = false; }
 function store(key, value) {
@@ -46,15 +64,17 @@ function getSaved(key) {
 }
 function state() {
   return { version: 1, drawings: structuredClone(chart.drawings), studies: structuredClone(studies),
-    viewport: { count: chart.count, endTime: chart.bars.length ? chart.timeAt(chart.end - 1) : null } };
+    viewport: { count: chart.count, endTime: chart.bars.length ? chart.timeAt(chart.end - 1) : null, ...(chart.getPriceRange()?{priceRange:chart.getPriceRange()}:{}) } };
 }
 function validatedState(raw) {
   if (!raw || raw.version !== 1 || !Array.isArray(raw.drawings) || raw.drawings.length > 300) throw new Error('Invalid workspace file.');
   const drawings = raw.drawings.map(validateDrawing);
   if (drawings.some(d => !d)) throw new Error('A drawing contains invalid coordinates.');
   const savedStudies = validateStudies(raw.studies);
+  const priceRange=validatePriceRange(raw.viewport?.priceRange);
+  if(raw.viewport?.priceRange!=null&&!priceRange)throw new Error('Invalid price scale.');
   const viewport = raw.viewport && Number.isFinite(raw.viewport.count) && Number.isFinite(raw.viewport.endTime)
-    ? { count: Math.max(12, Math.min(1500, raw.viewport.count)), endTime: raw.viewport.endTime } : null;
+    ? { count: Math.max(12, Math.min(1500, raw.viewport.count)), endTime: raw.viewport.endTime,...(priceRange?{priceRange}:{}) } : null;
   return { version: 1, drawings, studies: savedStudies, viewport };
 }
 function save() {
@@ -98,14 +118,30 @@ function ensureSymbol(symbol) {
   }
   $('symbol').value = symbol;
 }
+function displayedBars(closedOnly = preferences.closedOnly) {
+  if (!dataset) return [];
+  const live = aggregateBars(dataset.candles, preferences.timeframe, {baseTimeframe:dataset.baseTimeframe,closedOnly});
+  const cached = kind === 'feed' ? archiveCache.get(dataset.symbol + ':' + preferences.timeframe)?.data : null;
+  if (!cached) return live;
+  const older = aggregateBars(cached.candles, preferences.timeframe, {baseTimeframe:cached.baseTimeframe,closedOnly:true});
+  return [...new Map([...older,...live].map(b => [b.time,b])).values()].sort((a,b) => a.time-b.time);
+}
+async function loadArchive() {
+  if (kind !== 'feed' || ![3600,14400,86400].includes(preferences.timeframe)) return;
+  const symbol=dataset.symbol,tf=preferences.timeframe,key=symbol+':'+tf,cached=archiveCache.get(key);
+  // Archive files change hourly; a five-minute recheck avoids extra reads on every candle.
+  if (cached && Date.now()-cached.checked<300000) return;
+  archiveCache.set(key,{...cached,checked:Date.now()});
+  try {const data=await cdn.history(symbol,tf);archiveCache.set(key,{checked:Date.now(),data});if(dataset?.symbol===symbol&&preferences.timeframe===tf)rebuild();}
+  catch(error){announce('Older history could not be loaded. Recent candles remain available.');}
+}
 function rebuild({ reset = false } = {}) {
   if (!dataset) return;
   if (preferences.timeframe < dataset.baseTimeframe) preferences.timeframe = dataset.baseTimeframe;
-  const bars = aggregateBars(dataset.candles, preferences.timeframe, {
-    baseTimeframe: dataset.baseTimeframe, closedOnly: preferences.closedOnly
-  });
+  const bars = displayedBars();
   chart.setBars(bars, { timeframe: preferences.timeframe, precision: precision(dataset.symbol, bars), reset });
   chart.setFocus(preferences.focus); chart.setMode(preferences.mode);
+  chart.setCrosshair(preferences.crosshair);$('crosshair').setAttribute('aria-pressed',String(preferences.crosshair));
   $('chart-title').textContent = dataset.symbol;
   $('timeframe-label').textContent = labels[preferences.timeframe];
   $('focus').setAttribute('aria-pressed', String(preferences.focus));
@@ -157,12 +193,13 @@ function useDataset(data, source, id, { reset = true, restoreViewport = false } 
   }
   chart.drawingColor = preferences.drawingColor;
   rebuild({ reset });
+  if(saved?.viewport?.priceRange)chart.setPriceRange(saved.viewport.priceRange);
   if (restoreViewport && saved?.viewport && chart.bars.length) {
     chart.count = saved.viewport.count; chart.end = chart.indexAt(saved.viewport.endTime) + 1;
     chart.clamp(); chart.requestDraw();
   }
   history = [{ drawings: structuredClone(chart.drawings), studies: structuredClone(studies) }]; historyIndex = 0;
-  chart.setTool('select'); renderStudies(); renderDrawings(); updateUndo(); save();
+  chart.setTool('select'); renderStudies(); renderDrawings(); renderRiskForm(); updateUndo(); save();
 }
 function useDemo(symbol = preferences.symbol, restoreViewport = false) {
   if (!['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD'].includes(symbol)) symbol = 'EURUSD';
@@ -170,17 +207,25 @@ function useDemo(symbol = preferences.symbol, restoreViewport = false) {
 }
 function calculateStudies() {
   const models = [];
-  const completed = dataset ? aggregateBars(dataset.candles, preferences.timeframe, {
-    baseTimeframe: dataset.baseTimeframe, closedOnly: true
-  }) : [];
+  const completed = displayedBars(true);
   for (const study of studies) {
-    try { models.push(indicators.calculate(study.id, completed, study)); }
+    if (study.enabled === false) continue;
+    try { models.push({ ...indicators.calculate(study.id, completed, study), id: study.id, key: study.key, title: itemName(study, 'study') }); }
     catch { announce('An indicator could not be calculated. Remove it and try again.'); }
   }
   chart.setModels(models);
+  updateStudyValues(chart.readout());
+}
+function updateStudyValues(readout){
+  const byKey=new Map(readout.models.map(model=>[model.key,model]));
+  document.querySelectorAll('[data-study-values]').forEach(element=>{
+    const model=byKey.get(element.dataset.studyValues),values=model?.values??[];
+    element.textContent=model?(values.length?values.map(v=>(values.length>1?v.name+' ':'')+v.text).join(' · '):'No visible components'):'Hidden';
+    element.title=(readout.latest?'Latest closed candle':'Cursor candle')+' · '+element.textContent;
+  });
 }
 function itemName(item, type) {
-  return item.name || (type === 'study' ? `EMA ${item.period}` : item.text || names[item.type]);
+  return item.name || (type === 'study' ? `${item.id.startsWith('pe_') ? indicators.definitions.get(item.id)?.name ?? item.id : item.id.toUpperCase()}${item.period ? ' ' + item.period : ''}` : item.text || names[item.type]);
 }
 function renameButton(type, id, label) {
   const button = document.createElement('button'); button.className = 'rename-button';
@@ -200,6 +245,7 @@ function colourPicker(item, type) {
   picker.addEventListener('change', () => {
     item.color = picker.value;
     if (type === 'drawing') {
+      if(item.type==='fib')item.fib={...(item.fib??defaultFib()),levels:(item.fib??defaultFib()).levels.map(level=>({...level,color:picker.value}))};
       preferences.drawingColor = picker.value; chart.drawingColor = picker.value; chart.requestDraw();
     } else calculateStudies();
     checkpoint();
@@ -212,11 +258,20 @@ function renderStudies() {
   for (const study of studies) {
     const row = document.createElement('div'); row.className = 'entry-row';
     const label = itemName(study, 'study');
-    const title = document.createElement('span'); title.className = 'item-title'; title.textContent = label; title.title = `${label} · EMA ${study.period}`;
+    const title = document.createElement('span'); title.className = 'item-title'; title.textContent = label; title.title = label;
+    const heading=document.createElement('div');heading.className='study-heading';const values=document.createElement('small');values.className='study-values';values.dataset.studyValues=study.key;heading.append(title,values);
     const remove = document.createElement('button'); remove.textContent = '×'; remove.setAttribute('aria-label', `Remove ${label}`);
     remove.addEventListener('click', () => { studies = studies.filter(s => s.key !== study.key); calculateStudies(); renderStudies(); checkpoint(); });
-    row.append(title, colourPicker(study, 'study'), renameButton('study', study.key, label), remove); list.append(row);
+    const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.checked = study.enabled !== false;
+    enabled.setAttribute('aria-label', `Show ${label}`);
+    enabled.addEventListener('change', () => {
+      if(enabled.checked && indicators.definitions.get(study.id)?.pane === 'oscillator' && studies.filter(s => s.key !== study.key && s.enabled !== false && indicators.definitions.get(s.id)?.pane === 'oscillator').length >= 4) {enabled.checked=false;announce('Show up to four oscillator panels at once.');return;}
+      study.enabled = enabled.checked; calculateStudies(); checkpoint(); });
+    const settings = document.createElement('button'); settings.textContent = '⚙'; settings.setAttribute('aria-label', `Settings for ${label}`);
+    settings.addEventListener('click', () => openIndicator(study));
+    row.append(enabled, heading, colourPicker(study, 'study'), settings, renameButton('study', study.key, label), remove); list.append(row);
   }
+  updateStudyValues(chart.readout());
 }
 function renderDrawings() {
   const list = $('drawing-list'); list.replaceChildren();
@@ -234,13 +289,124 @@ function renderDrawings() {
     });
     const remove = document.createElement('button'); remove.textContent = '×'; remove.setAttribute('aria-label', `Delete ${label}`);
     remove.addEventListener('click', () => chart.removeDrawing(drawing.id));
-    row.append(select, colourPicker(drawing, 'drawing'), renameButton('drawing', drawing.id, label), remove); list.append(row);
+    row.append(select, colourPicker(drawing, 'drawing'));
+    if(drawing.type==='fib'){const settings=document.createElement('button');settings.textContent='⚙';settings.title='Edit Fibonacci levels and brightness';settings.setAttribute('aria-label','Settings for '+label);settings.addEventListener('click',()=>openFibSettings(drawing));row.append(settings);}
+    row.append(renameButton('drawing', drawing.id, label), remove); list.append(row);
   }
+  renderRiskReadout();
 }
 function openPanel(name) {
   document.querySelectorAll('[data-panel]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.panel === name)));
-  $('indicators-panel').hidden = name !== 'indicators'; $('drawings-panel').hidden = name !== 'drawings';
+  $('indicators-panel').hidden = name !== 'indicators'; $('drawings-panel').hidden = name !== 'drawings';$('risk-panel').hidden=name!=='risk';
+  if(name==='risk'){renderRiskReadout();if(['long','short'].includes(chart.tool)){$('side-panel').classList.add('open');$('panel-toggle').setAttribute('aria-expanded','true');}}
 }
+
+function addFibLevel(level={value:1,color:'#80cec6',opacity:1,visible:true}) {
+  if($('fib-levels').children.length>=24)return;
+  const row=document.createElement('div');row.className='fib-level-row';
+  for(const [field,type] of [['visible','checkbox'],['value','number'],['color','color'],['opacity','range']]){
+    const input=document.createElement('input');input.type=type;input.dataset.fib=field;input.setAttribute('aria-label',field==='value'?'Level ratio':field==='visible'?'Show level':field==='color'?'Level colour':'Level brightness');
+    if(field==='visible')input.checked=level.visible;
+    else if(field==='opacity'){input.min=10;input.max=100;input.step=5;input.value=level.opacity*100;}
+    else{input.value=level[field];if(field==='value'){input.min=-10;input.max=10;input.step='any';input.required=true;}}
+    row.append(input);
+  }
+  const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Remove level');remove.addEventListener('click',()=>row.remove());row.append(remove);$('fib-levels').append(row);
+}
+function fillFibSettings(settings) {
+  $('fib-width').value=settings.width;$('fib-opacity').value=settings.opacity*100;$('fib-extend').checked=settings.extend;$('fib-labels').checked=settings.labels;
+  $('fib-levels').replaceChildren();settings.levels.forEach(addFibLevel);$('fib-error').hidden=true;
+}
+function openFibSettings(drawing) {
+  editingFibId=drawing.id;fillFibSettings(drawing.fib??chart.fibSettings);$('fib-dialog').showModal();
+}
+$('fib-add-level').addEventListener('click',()=>addFibLevel());
+$('fib-defaults').addEventListener('click',()=>fillFibSettings(defaultFib()));
+$('fib-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  const settings=validateFib({opacity:Number($('fib-opacity').value)/100,width:Number($('fib-width').value),extend:$('fib-extend').checked,labels:$('fib-labels').checked,levels:[...$('fib-levels').children].map(row=>({value:Number(row.querySelector('[data-fib="value"]').value),color:row.querySelector('[data-fib="color"]').value,opacity:Number(row.querySelector('[data-fib="opacity"]').value)/100,visible:row.querySelector('[data-fib="visible"]').checked}))});
+  if(!settings){$('fib-error').textContent='Use 1–24 valid levels and keep at least one visible.';$('fib-error').hidden=false;return;}
+  const drawing=chart.drawings.find(d=>d.id===editingFibId&&d.type==='fib');
+  if(drawing)drawing.fib=structuredClone(settings);
+  chart.fibSettings=settings;store('fib-settings',settings);chart.requestDraw();checkpoint();$('fib-dialog').close();
+});
+
+function currentRiskProfile() {
+  const symbol=dataset?.symbol??preferences.symbol;
+  return {...instrumentPreset(symbol),...(riskProfiles[symbol+':'+riskSession.currency]??{})};
+}
+function positionSize(drawing) {
+  return calculatePositionSize(drawing,riskSession,currentRiskProfile(),dataset?.symbol??preferences.symbol,currentFxRate());
+}
+function needsConversion(){
+  const p=currentRiskProfile(),symbol=dataset?.symbol??preferences.symbol;
+  return p.mode==='contract'&&p.profitCurrency!==riskSession.currency&&!(symbol.length===6&&symbol.slice(0,3)===riskSession.currency&&symbol.slice(3)===p.profitCurrency);
+}
+function currentFxRate(){
+  const p=currentRiskProfile();
+  if(kind==='demo'){
+    if(!sampleFxTime)for(const symbol of ['EURUSD','GBPUSD','USDJPY']){const b=createDemoBars(symbol).at(-1);sampleFxTime=Math.max(sampleFxTime,b.time+60);sampleFx.set({symbol,close:b.close,asOf:b.time+60});}
+    const result=sampleFx.resolve(p.profitCurrency,riskSession.currency,{now:sampleFxTime});return result?{...result,sample:true}:null;
+  }
+  return cdn.fxBook.resolve(p.profitCurrency,riskSession.currency);
+}
+function renderConversionStatus(){
+  const element=$('risk-conversion-status'),p=currentRiskProfile();if(!element)return;element.hidden=!needsConversion();if(element.hidden)return;
+  const rate=currentFxRate(),key=p.profitCurrency+':'+riskSession.currency;
+  if(rate){element.textContent='1 '+rate.from+' ≈ '+rate.rate.toLocaleString('en-GB',{maximumFractionDigits:8})+' '+rate.to+' · '+rate.symbols.join(' → ')+(rate.sample?' · sample tickers, not live':' · '+new Date(rate.asOf*1000).toLocaleTimeString('en-GB',{timeZone:'UTC',hour12:false})+' UTC');}
+  else element.textContent=kind==='demo'?'No conversion route in these sample tickers.':!config.feedUrl?'Automatic conversion needs the broker feed. This offline preview converts its sample tickers.':fxErrors.get(key)??(riskSession.balance>0?'Loading '+p.profitCurrency+' → '+riskSession.currency+' from ticker closes…':'Currency conversion loads automatically when you set your balance.');
+}
+async function refreshConversion(){
+  renderConversionStatus();
+  if(!dataset||!needsConversion()||!(riskSession.balance>0)||kind==='demo'||!config.feedUrl||document.hidden||(config.requireMembership&&!account.access.perfectView)){renderRiskReadout();return;}
+  const p=currentRiskProfile(),from=p.profitCurrency,to=riskSession.currency,key=from+':'+to;
+  try{await cdn.conversionRate(from,to,{refresh:true,signal:AbortSignal.timeout(8000)});fxErrors.delete(key);}
+  catch(error){fxErrors.set(key,error.message);}
+  if(key===currentRiskProfile().profitCurrency+':'+riskSession.currency){renderConversionStatus();renderRiskReadout();chart.requestDraw();}
+}
+function scheduleFx(){
+  clearTimeout(fxTimer);
+  if(!dataset||kind==='demo'||!config.feedUrl||document.hidden||!needsConversion()||!(riskSession.balance>0)||(config.requireMembership&&!account.access.perfectView))return;
+  fxTimer=setTimeout(async()=>{await refreshConversion();scheduleFx();},60000);
+}
+function renderRiskForm() {
+  const p=currentRiskProfile(),symbol=dataset?.symbol??preferences.symbol;
+  $('risk-currency').value=riskSession.currency;$('risk-balance').value=riskSession.balance||'';$('risk-mode').value=riskSession.mode;$('risk-value').value=riskSession.risk;
+  for(const [id,field] of [['risk-contract-size','contractSize'],['risk-min-lot','minLot'],['risk-lot-step','lotStep'],['risk-max-lot','maxLot'],['risk-tick-size','tickSize'],['risk-tick-value','tickValue'],['risk-commission','commissionPerLot']])$(id).value=p[field]||'';
+  $('risk-max-lot').value=p.maxLot;$('risk-commission').value=p.commissionPerLot;
+  $('risk-calculation').value=p.mode;$('risk-profit-currency').value=p.profitCurrency;$('risk-market').textContent=symbol;
+  $('risk-preset-note').textContent=riskProfiles[symbol+':'+riskSession.currency]?'Using your saved settings. Keep these matched to the MT5 symbol specification.':p.forex?'FX preset: 100,000 units/lot and 0.01 steps. Match these to your MT5 symbol specification.':'Enter the contract size and volume limits from this instrument’s MT5 specification.';
+  if(!p.forex&&!p.contractSize)$('risk-contract').open=true;
+  updateRiskVisibility();renderRiskReadout();void refreshConversion();scheduleFx();
+}
+function updateRiskVisibility() {
+  const p=currentRiskProfile();renderConversionStatus();
+  document.querySelectorAll('.contract-field').forEach(el=>el.hidden=p.mode!=='contract');document.querySelectorAll('.tick-field').forEach(el=>el.hidden=p.mode!=='tick');
+  $('risk-value').max=riskSession.mode==='percent'?'100':'1000000000000';
+  $('risk-value').setAttribute('aria-label',riskSession.mode==='percent'?'Risk percent of balance':'Risk amount in '+riskSession.currency);
+  $('risk-session-date').textContent=riskSession.updated?'Balance/risk updated '+new Date(riskSession.updated).toLocaleDateString('en-GB')+' · saved on this device':'Enter your balance to start this session.';
+}
+function readRiskForm(event) {
+  if($('risk-currency').value!==riskSession.currency){riskSession.currency=$('risk-currency').value;renderRiskForm();}
+  riskSession={currency:$('risk-currency').value,balance:Number($('risk-balance').value),mode:$('risk-mode').value,risk:Number($('risk-value').value),updated:new Date().toISOString()};
+  const p={...currentRiskProfile(),mode:$('risk-calculation').value,profitCurrency:$('risk-profit-currency').value};
+  for(const [id,field] of [['risk-contract-size','contractSize'],['risk-min-lot','minLot'],['risk-lot-step','lotStep'],['risk-max-lot','maxLot'],['risk-tick-size','tickSize'],['risk-tick-value','tickValue'],['risk-commission','commissionPerLot']])p[field]=Number($(id).value);
+  riskProfiles[(dataset?.symbol??preferences.symbol)+':'+riskSession.currency]=p;
+  if(validateRiskSession(riskSession))store('risk-session',riskSession);store('risk-profiles',riskProfiles);
+  updateRiskVisibility();renderRiskReadout();chart.requestDraw();void refreshConversion();scheduleFx();
+}
+function renderRiskReadout(drawing=chart.activePosition()) {
+  const result=positionSize(drawing),holder=$('risk-readout');if(!holder)return;holder.replaceChildren();
+  if(!result.ok){const p=document.createElement('p'),key=currentRiskProfile().profitCurrency+':'+riskSession.currency;p.textContent=result.message.startsWith('Waiting for')?(fxErrors.get(key)??result.message):result.message;holder.append(p);return;}
+  const numbers=new Intl.NumberFormat('en-GB',{maximumFractionDigits:8}),money=n=>new Intl.NumberFormat('en-GB',{style:'currency',currency:result.currency,maximumFractionDigits:2}).format(n);
+  const title=document.createElement('strong');title.className='risk-size';title.textContent=numbers.format(result.lots)+' lots';holder.append(title);
+  const rows=[['Units',result.units==null?'Set contract size':numbers.format(result.units)],['Risk budget',money(result.budget)],['Est. stop loss',money(result.loss)],['Est. target P/L',money(result.reward)],['Est. reward / risk',result.rr.toFixed(2)],['Stop distance',result.distance.toFixed(chart.precision)]];
+  const dl=document.createElement('dl');for(const [label,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;dl.append(dt,dd);}holder.append(dl);
+  const note=document.createElement('p');note.textContent=result.message||result.conversion;holder.append(note);
+}
+$('risk-form').addEventListener('submit',event=>event.preventDefault());
+$('risk-form').addEventListener('input',readRiskForm);$('risk-form').addEventListener('change',readRiskForm);
+$('risk-new-session').addEventListener('click',()=>{riskSession={...riskSession,balance:0,updated:new Date().toISOString()};store('risk-session',riskSession);renderRiskForm();chart.requestDraw();scheduleFx();$('risk-balance').focus();});
 
 // Imported candles are kept in IndexedDB, separate from small workspace documents.
 function withDB(action) {
@@ -304,6 +470,8 @@ async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
     else useDataset(data, 'feed', id, { restoreViewport });
     feedFailures = 0;
     $('message').hidden = true;
+    loadArchive();
+    void refreshConversion();
   } catch (error) {
     if (generation !== feedGeneration) return;
     feedFailures++;
@@ -329,20 +497,28 @@ function scheduleFeed() {
   }, delay);
 }
 function pauseFeed() {
-  clearTimeout(pollTimer); feedController?.abort(); feedGeneration++; feedFetching = false;
+  clearTimeout(pollTimer);clearTimeout(fxTimer); feedController?.abort(); feedGeneration++; feedFetching = false;
 }
 
 document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => chart.setTool(button.dataset.tool)));
 chart.addEventListener('tool', ({ detail }) => {
   document.querySelectorAll('[data-tool]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.tool === detail.tool)));
-  $('chart-instructions').textContent = detail.tool === 'select' ? 'Drag to explore. Scroll to zoom.'
+  if(['long','short'].includes(detail.tool))openPanel('risk');
+  renderRiskReadout();
+  $('chart-instructions').textContent = detail.tool === 'select' ? 'Scroll to zoom time. Shift + scroll to zoom price. Shift + drag to move price.'
     : detail.tool === 'horizontal' ? 'Click the chart to mark a level.'
+    : ['long','short'].includes(detail.tool) ? (detail.stop ? 'Choose the target. Escape to cancel.' : detail.pending ? 'Choose the stop. Escape to cancel.' : 'Choose the entry, then stop, then target.')
+    : detail.tool === 'vertical' ? 'Click to mark a time.'
+    : detail.tool === 'fib' ? (detail.pending?'Choose the swing end. 0 will sit here.':'Choose the swing start, then the swing end. Edit levels in Drawings.')
     : detail.tool === 'text' ? 'Click where you want to leave a note.'
     : detail.pending ? 'Choose the second point. Escape to cancel.' : 'Choose the first point. Escape to cancel.';
 });
-chart.addEventListener('drawings', () => { renderDrawings(); checkpoint(); openPanel('drawings'); });
+chart.addEventListener('drawings', () => { renderDrawings(); checkpoint(); openPanel(chart.activePosition()?'risk':'drawings'); });
 chart.addEventListener('selection', renderDrawings);
-chart.addEventListener('viewport', scheduleSave);
+chart.addEventListener('readout',({detail})=>updateStudyValues(detail));
+chart.addEventListener('viewport', () => {$('price-reset').setAttribute('aria-pressed',String(!chart.getPriceRange()));scheduleSave();});
+chart.addEventListener('positionpreview',({detail})=>renderRiskReadout(detail.drawing));
+chart.addEventListener('message', ({detail}) => announce(detail.text));
 chart.addEventListener('limit', () => announce('This workspace supports up to 300 drawings. Export or remove some before adding more.'));
 chart.addEventListener('hover', ({ detail }) => {
   const b = detail.bar;
@@ -357,9 +533,10 @@ $('note-form').addEventListener('submit', event => {
 $('undo').addEventListener('click', () => travel(-1)); $('redo').addEventListener('click', () => travel(1));
 $('delete').addEventListener('click', () => { if (chart.selected) chart.removeDrawing(chart.selected); });
 $('zoom-in').addEventListener('click', () => chart.zoom(0.8)); $('zoom-out').addEventListener('click', () => chart.zoom(1.25));
+$('price-zoom-in').addEventListener('click',()=>chart.zoomPrice(.8));$('price-zoom-out').addEventListener('click',()=>chart.zoomPrice(1.25));$('price-reset').addEventListener('click',()=>chart.resetPriceScale());
 $('latest').addEventListener('click', () => chart.latest());
 document.querySelectorAll('[data-tf]').forEach(button => button.addEventListener('click', () => {
-  preferences.timeframe = Number(button.dataset.tf); chart.setTool('select'); rebuild({ reset: true }); save();
+  preferences.timeframe = Number(button.dataset.tf); chart.setTool('select'); rebuild({ reset: true }); save(); loadArchive();
 }));
 $('symbol').addEventListener('change', async () => {
   const symbol = $('symbol').value;
@@ -367,6 +544,7 @@ $('symbol').addEventListener('change', async () => {
   else useDemo(symbol);
 });
 $('focus').addEventListener('click', () => { preferences.focus = !preferences.focus; chart.setFocus(preferences.focus); $('focus').setAttribute('aria-pressed', String(preferences.focus)); $('hover-time').textContent = ''; save(); });
+$('crosshair').addEventListener('click',()=>{preferences.crosshair=!preferences.crosshair;chart.setCrosshair(preferences.crosshair);$('crosshair').setAttribute('aria-pressed',String(preferences.crosshair));save();});
 $('chart-mode').addEventListener('change', () => { preferences.mode = $('chart-mode').value; chart.setMode(preferences.mode); save(); });
 $('closed-only').addEventListener('change', () => { preferences.closedOnly = $('closed-only').checked; rebuild(); save(); });
 $('refresh').addEventListener('change', () => { preferences.refreshSeconds = Number($('refresh').value); rebuild(); save(); scheduleFeed(); });
@@ -387,15 +565,38 @@ $('rename-form').addEventListener('submit', event => {
   renameTarget = null; $('rename-dialog').close();
 });
 $('load').addEventListener('click', () => { $('import-symbol').value = dataset?.symbol ?? preferences.symbol; $('import-error').hidden = true; $('load-dialog').showModal(); });
-$('add-indicator').addEventListener('click', () => {
-  if (studies.length >= 8) { announce('Up to eight moving averages can be shown at once.'); return; }
-  $('indicator-dialog').showModal();
-});
+function indicatorInputs(study = null) {
+  const id = $('indicator-type').value, definition = indicators.definitions.get(id);
+  const holder = $('indicator-inputs'); holder.replaceChildren();
+  for (const [key, schema] of Object.entries(definition.inputs ?? {})) {
+    const label = document.createElement('label'), input = document.createElement('input');
+    label.textContent = schema.label; input.dataset.setting = key;
+    input.id = key === 'period' ? 'ema-period' : 'study-' + key;
+    if (schema.type === 'boolean') { input.type = 'checkbox'; input.checked = study?.[key] ?? schema.default; }
+    else { input.type = 'number'; input.min = schema.min; input.max = schema.max; input.step = schema.step; input.value = study?.[key] ?? schema.default; input.required = true; }
+    label.append(input); holder.append(label);
+  }
+  $('ema-color').value = study?.color ?? definition.defaults.color ?? '#b4a2ff';
+}
+function openIndicator(study = null) {
+  if (!study && studies.length >= 12) { announce('Up to twelve indicators can be saved in a layout.'); return; }
+  editingStudy = study;
+  $('indicator-type').replaceChildren(...[...indicators.definitions.values()].map(d => {const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; return o;}));
+  $('indicator-type').value = study?.id ?? 'ema'; $('indicator-type').disabled = !!study;
+  $('indicator-heading').textContent = study ? 'Indicator settings' : 'Add an indicator';
+  indicatorInputs(study); $('indicator-dialog').showModal();
+}
+$('add-indicator').addEventListener('click', () => openIndicator());
+$('indicator-type').addEventListener('change', () => indicatorInputs());
 $('indicator-form').addEventListener('submit', event => {
-  event.preventDefault(); const period = Number($('ema-period').value);
-  if (!Number.isInteger(period) || period < 1 || period > 500) return;
-  studies.push({ id: 'ema', key: crypto.randomUUID(), period, color: $('ema-color').value });
-  calculateStudies(); renderStudies(); checkpoint(); $('indicator-dialog').close();
+  event.preventDefault(); const raw = {id: $('indicator-type').value, key: editingStudy?.key ?? crypto.randomUUID(),
+    color: $('ema-color').value, name: editingStudy?.name ?? '', enabled: editingStudy?.enabled ?? true};
+  for (const input of $('indicator-inputs').querySelectorAll('[data-setting]')) raw[input.dataset.setting] = input.type === 'checkbox' ? input.checked : Number(input.value);
+  const validated = validateStudies([raw])[0];
+  if (!validated) { announce('Check the indicator settings. RSI lower must be below upper; MACD fast must be below slow.'); return; }
+  const next = editingStudy ? studies.map(s => s.key === editingStudy.key ? validated : s) : [...studies, validated];
+  if (next.filter(s => s.enabled !== false && indicators.definitions.get(s.id)?.pane === 'oscillator').length > 4) { announce('Show up to four oscillator panels at once. Hide one before adding another.'); return; }
+  studies = next; calculateStudies(); renderStudies(); checkpoint(); $('indicator-dialog').close(); editingStudy = null;
 });
 $('data-form').addEventListener('submit', async event => {
   event.preventDefault(); const file = $('data-file').files[0]; if (!file) return;
@@ -443,9 +644,68 @@ document.addEventListener('keydown', event => {
 window.addEventListener('pagehide', () => { save(); pauseFeed(); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { save(); pauseFeed(); }
-  else if (config.feedUrl && (!dataset || kind === 'feed')) fetchFeed().finally(scheduleFeed);
+  else {if (config.feedUrl && (!dataset || kind === 'feed')) fetchFeed().finally(scheduleFeed);void refreshConversion();scheduleFx();}
 });
 if (config.loginUrl) { $('login').href = config.loginUrl; $('login').hidden = false; }
+
+function layoutDocument(name) {
+  save(); const markets = {}, id = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href);
+  for (const symbol of config.availableSymbols ?? [preferences.symbol]) {
+    const state = workspaceCache.get(id + ':' + symbol) ?? getSaved('workspace:' + id + ':' + symbol);
+    if (state) markets[symbol] = {drawings: state.drawings ?? [], viewport: state.viewport ?? null};
+  }
+  if (dataset) markets[dataset.symbol] = {drawings: structuredClone(chart.drawings), viewport: state().viewport};
+  return validateLayout({version:2,name,preferences:{symbol:preferences.symbol,timeframe:preferences.timeframe,mode:preferences.mode,focus:preferences.focus,crosshair:preferences.crosshair,closedOnly:preferences.closedOnly,refreshSeconds:preferences.refreshSeconds},studies,markets});
+}
+async function listLayouts() {
+  const result = await account.request('/layouts');
+  $('layout-picker').replaceChildren(new Option('Choose a saved layout', ''), ...result.layouts.map(l => new Option(l.name, l.id)));
+  if (activeLayoutId) $('layout-picker').value = activeLayoutId;
+}
+$('save-layout').addEventListener('click', async () => {
+  if (!account.user) { if (config.accountApiUrl) await account.signIn(); else announce('Account sync will be available when Whop sign-in is connected. Your drawings are still saved in this browser.'); return; }
+  if(kind !== 'feed') {announce('Account layouts use the broker feed. Export drawings separately for imported charts.');return;}
+  $('layout-save-copy').checked = false; $('delete-layout').hidden = !activeLayoutId;
+  $('layout-name').value = activeLayoutId ? $('layout-picker').selectedOptions[0]?.textContent ?? 'My layout' : 'My layout'; $('layout-dialog').showModal();
+});
+$('delete-layout').addEventListener('click', async () => {
+  if (!activeLayoutId || !window.confirm('Delete this saved account layout? Your current chart will stay open.')) return;
+  try {await account.request('/layouts/' + activeLayoutId,{method:'DELETE',headers:{'If-Match':String(activeLayoutRevision)}});activeLayoutId=null;activeLayoutRevision=0;await listLayouts();$('layout-dialog').close();announce('Saved layout deleted.');}
+  catch(error) {announce(error.message);}
+});
+$('layout-form').addEventListener('submit', async event => {
+  event.preventDefault(); const button = $('save-layout-confirm'); button.disabled = true;
+  try {
+    const copy = $('layout-save-copy').checked, id = copy || !activeLayoutId ? crypto.randomUUID() : activeLayoutId;
+    const result = await account.request('/layouts/' + id, {method:'PUT',headers:{'If-Match':String(copy || !activeLayoutId ? 0 : activeLayoutRevision)},body:JSON.stringify(layoutDocument($('layout-name').value))});
+    activeLayoutId = id; activeLayoutRevision = result.revision; await listLayouts(); $('layout-dialog').close(); announce('Layout saved to your Whop account.');
+  } catch(e) { announce(e.message); } finally { button.disabled = false; }
+});
+$('layout-picker').addEventListener('change', async () => {
+  const id = $('layout-picker').value; if (!id) return;
+  try {
+    const result = await account.request('/layouts/' + id), layout = validateLayout(result.layout);
+    save(); const source = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href);
+    for (const symbol of config.availableSymbols ?? []) { const item=layout.markets[symbol] ?? {drawings:[],viewport:null};const data={version:1,...item,studies:layout.studies};workspaceCache.set(source+':'+symbol,data);store('workspace:'+source+':'+symbol,data); }
+    // Clear the active scope so useDataset cannot overwrite the incoming layout with old drawings.
+    scope = ''; preferences = {...preferences,...layout.preferences}; studies = layout.studies; store('studies',studies); studyTemplateLoaded = true;
+    activeLayoutId = id; activeLayoutRevision = result.revision; await fetchFeed(preferences.symbol,true); scheduleFeed(); renderStudies(); announce('Layout loaded.');
+  } catch(e) { announce(e.message); }
+});
+async function initializeAccount() {
+  if (!config.accountApiUrl) return true;
+  try {
+    await account.initialize(); $('login').hidden = false; $('login').href = '#';
+    $('login').textContent = account.user ? account.user.name + ' · Sign out' : 'Sign in with Whop';
+    $('login').addEventListener('click', async event => {event.preventDefault();if(account.user){await account.signOut();location.reload();}else await account.signIn();});
+    if (config.requireMembership && !showMembershipGate(account,'perfectView')) return false;
+    if (account.access.perfectView) {
+      try { await account.loadPremium(indicators); } catch(error) { announce(error.message); }
+      $('layout-picker').hidden = false; try { await listLayouts(); } catch(error) { announce(error.message); }
+    }
+    return true;
+  } catch(e) {announce(e.message);if(config.requireMembership) {showMembershipGate(account,'perfectView');return false;}return true;}
+}
 
 async function initialize() {
   if (config.feedUrl) {
@@ -466,4 +726,11 @@ async function initialize() {
   }
   useDemo(preferences.symbol, true);
 }
-await initialize();
+if (await initializeAccount()) {
+  await initialize();
+  if (config.requireMembership && config.accountApiUrl) {const membershipTimer = setInterval(async () => {
+    if(document.hidden)return;
+    try{const profile=await account.request('/me');account.user=profile.user;account.access=profile.access;if(!profile.access.perfectView){clearInterval(membershipTimer);save();pauseFeed();showMembershipGate(account,'perfectView');}}
+    catch(error){if(error.status===401||error.status===403){clearInterval(membershipTimer);save();pauseFeed();account.user=null;account.access={};showMembershipGate(account,'perfectView');}}
+  },300000);}
+}
