@@ -2,7 +2,7 @@ import { MAX_BARS, parseDataset } from './core.mjs';
 
 // Merge verified closed-candle updates without discarding history or drawings.
 export function parseFeedResponse(text, symbol, baseTimeframe, previous = null) {
-  if (text.length > 8 * 1024 * 1024) throw new Error('Feed response is too large.');
+  if (text.length > 24 * 1024 * 1024) throw new Error('Feed response is too large.');
   const raw = JSON.parse(text);
   if (raw?.symbol !== symbol || raw?.baseTimeframe !== baseTimeframe || !Array.isArray(raw?.candles)) {
     throw new Error('The feed returned a different market or source timeframe.');

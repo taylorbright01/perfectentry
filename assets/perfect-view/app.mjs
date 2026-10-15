@@ -5,7 +5,7 @@ import { registerCustomIndicators } from './custom-indicators.mjs';
 registerCustomIndicators(indicators);
 import { Account, showMembershipGate } from './account.mjs';
 import { validateLayout } from './layouts.mjs';
-import { CdnFeed, nextCdnCheck } from './cdn.mjs';
+import { CdnFeed, nextCdnCheck,archiveBase } from './cdn.mjs';
 import {parseFeedResponse} from './feed.mjs';
 import {defaultFib,validateFib,validatePriceRange} from './drawings.mjs';
 import {instrumentPreset,validateRiskSession,calculatePositionSize} from './risk.mjs';
@@ -43,7 +43,7 @@ if(!riskProfiles||Array.isArray(riskProfiles)||typeof riskProfiles!=='object')ri
 chart.fibSettings=validateFib(getSaved('fib-settings'))??defaultFib();
 chart.positionSizer=drawing=>positionSize(drawing);
 const archiveCache = new Map();
-let archiveRequest=null,historyRequest=null;
+let archiveRequest=null,historyTimer=null;
 let dataset = null, kind = 'demo', datasetId = '', scope = '', studies = [], history = [], historyIndex = 0;
 let pollTimer = null, feedController = null, feedGeneration = 0, notePoint = null, saveTimer = null;
 let studyTemplateLoaded = false, renameTarget = null, editingStudy = null;
@@ -128,22 +128,44 @@ function displayedBars(closedOnly = preferences.closedOnly) {
   const older = aggregateBars(cached.candles, preferences.timeframe, {baseTimeframe:cached.baseTimeframe,closedOnly:true});
   return [...new Map([...older,...live].map(b => [b.time,b])).values()].sort((a,b) => a.time-b.time);
 }
-async function loadArchive() {
-  if (kind !== 'feed' || ![3600,14400,86400].includes(preferences.timeframe)) {archiveRequest?.controller.abort();return;}
-  const symbol=dataset.symbol,tf=preferences.timeframe,key=symbol+':'+tf,cached=archiveCache.get(key);
+function requiredHistoryBars(){
+  // Only active studies need warmup. Recursive smoothers receive extra seed
+  // history; no indicator causes another user's data to be downloaded.
+  return 40+Math.max(0,...studies.filter(s=>s.enabled!==false).map(s=>Math.min(5000,Object.entries(s).filter(([k,v])=>/period|length|fast|slow|signal|smooth/i.test(k)&&Number.isFinite(v)).reduce((n,[,v])=>n+v,0)*3)));
+}
+function maybeLoadOlder(){
+  clearTimeout(historyTimer);
+  if(kind!=='feed'||!chart.bars.length||chart.end-chart.count>Math.max(12,chart.count*.5))return;
+  historyTimer=setTimeout(()=>void loadArchive({older:true}),120);
+}
+async function loadArchive({older=false}={}) {
+  if(kind!=='feed')return;
+  const symbol=dataset.symbol,tf=preferences.timeframe,key=symbol+':'+tf,cached=archiveCache.get(key),target=requiredHistoryBars();
+  if(!older&&chart.bars.length>=target)return;
   if(archiveRequest?.key===key&&!archiveRequest.controller.signal.aborted)return;
   archiveRequest?.controller.abort();
-  // Only a completed download is fresh. Interrupted backfills resume from cache.
-  if (cached?.complete && Date.now()-cached.checked<300000) return;
   const controller=new AbortController(),request={key,controller};archiveRequest=request;
-  const timeout=setTimeout(()=>controller.abort(),60000);
-  try {
-    for await(const data of cdn.historyStream(symbol,tf,{signal:controller.signal})){
-      archiveCache.set(key,{checked:Date.now(),data,complete:false});
-      if(kind==='feed'&&dataset?.symbol===symbol&&preferences.timeframe===tf){rebuild();save();}
+  const timeout=setTimeout(()=>controller.abort(),30000);
+  try{
+    const before=older?(cached?.nextBefore??chart.bars[0]?.time??Infinity):(cached?.data?cached.nextBefore:Infinity);
+    let page=archiveBase(tf)?await cdn.archivePage(symbol,tf,{before,target:older?Math.max(40,chart.count):target,signal:controller.signal}):{data:null,hasMore:false};
+    if(page.data){
+      const old=cached?.data;
+      const data=old?parseFeedResponse(JSON.stringify(page.data),symbol,page.data.baseTimeframe,old):page.data;
+      archiveCache.set(key,{data,nextBefore:page.nextBefore,hasMore:page.hasMore});
     }
-    const result=archiveCache.get(key);archiveCache.set(key,{...result,checked:Date.now(),complete:true});
-  } catch(error){if(!controller.signal.aborted&&dataset?.symbol===symbol&&preferences.timeframe===tf)announce('Older history could not be loaded. Recent candles remain available.');}
+    if(controller.signal.aborted||kind!=='feed'||dataset?.symbol!==symbol||preferences.timeframe!==tf)return;
+    if(page.data){rebuild();save();if(!older&&page.hasMore&&chart.bars.length<target)historyTimer=setTimeout(()=>void loadArchive(),80);}
+    // Before the archive is deployed, the same interaction can page through the
+    // small rolling feed. Never preload its whole 72-hour window unnecessarily.
+    if(!page.data&&(!older||!cached?.data)){
+      const rawBefore=dataset.candles[0]?.time;
+      const hours=Math.min(72,Math.ceil((older?Math.max(40,chart.count):target)*tf/3600)+1);
+      const data=await cdn.load(symbol,dataset,{before:rawBefore,maxHours:hours,timeframe:tf,signal:controller.signal});
+      if(controller.signal.aborted||kind!=='feed'||dataset?.symbol!==symbol||preferences.timeframe!==tf)return;
+      dataset={...parseFeedResponse(JSON.stringify(dataset),symbol,30,data),historyComplete:true};rebuild();save();
+    }
+  }catch(error){if(!controller.signal.aborted&&dataset?.symbol===symbol&&preferences.timeframe===tf)announce('Older history could not be loaded. Your current chart remains available.');}
   finally{clearTimeout(timeout);if(archiveRequest===request)archiveRequest=null;}
 }
 function rebuild({ reset = false } = {}) {
@@ -274,7 +296,7 @@ function renderStudies() {
     enabled.setAttribute('aria-label', `Show ${label}`);
     enabled.addEventListener('change', () => {
       if(enabled.checked && indicators.definitions.get(study.id)?.pane === 'oscillator' && studies.filter(s => s.key !== study.key && s.enabled !== false && indicators.definitions.get(s.id)?.pane === 'oscillator').length >= 4) {enabled.checked=false;announce('Show up to four oscillator panels at once.');return;}
-      study.enabled = enabled.checked; calculateStudies(); checkpoint(); });
+      study.enabled = enabled.checked; calculateStudies(); checkpoint();void loadArchive(); });
     const settings = document.createElement('button'); settings.textContent = '⚙'; settings.setAttribute('aria-label', `Settings for ${label}`);
     settings.addEventListener('click', () => openIndicator(study));
     row.append(enabled, heading, colourPicker(study, 'study'), settings, renameButton('study', study.key, label), remove); list.append(row);
@@ -463,49 +485,28 @@ function readDataset(id) {
   });
 }
 
-async function continueHistory(iterator,request) {
-  const timeout=setTimeout(()=>request.controller.abort(),60000);
-  try{
-    for await(const data of iterator){
-      if(request.controller.signal.aborted||historyRequest!==request||scope!==request.scope||kind!=='feed')return;
-      // Polls can supply newer candles while the older files are downloading.
-      // Merge those over the background snapshot rather than rolling them back.
-      dataset={...parseFeedResponse(JSON.stringify(dataset),data.symbol,30,data),historyComplete:data.historyComplete};
-      rebuild();save();
-    }
-  }catch(error){
-    if(!request.controller.signal.aborted&&historyRequest===request&&scope===request.scope)announce('Older candles could not finish loading. The recent chart is available; history will retry automatically.');
-  }finally{clearTimeout(timeout);if(historyRequest===request)historyRequest=null;}
-}
 async function fetchFeed(symbol = preferences.symbol, restoreViewport = false) {
   const generation = ++feedGeneration;
   feedFetching = true;
   feedController?.abort(); feedController = new AbortController();
   const id = 'feed:' + (config.workspaceFeedId ?? new URL(config.feedUrl, location.href).href),targetScope=id+':'+symbol;
-  if(historyRequest?.scope!==targetScope)historyRequest?.controller.abort();
   if(dataset?.symbol!==symbol)archiveRequest?.controller.abort();
   const controller = feedController;
   const timeout = setTimeout(() => controller.abort(), 15000);
   let iterator;
   try {
     const previous = kind === 'feed' && scope === targetScope ? dataset : null;
-    const recentOnly=historyRequest?.scope===targetScope&&!historyRequest.controller.signal.aborted;
-    iterator=cdn.stream(symbol,previous,{signal:controller.signal,timeframe:preferences.timeframe,recentOnly});
+    iterator=cdn.stream(symbol,previous,{signal:controller.signal,timeframe:preferences.timeframe,maxHours:preferences.timeframe>=3600?1:Math.min(12,Math.ceil(41*preferences.timeframe/3600)+1)});
     const {value:data,done}=await iterator.next();
     if (generation !== feedGeneration || done) {await iterator.return();return;}
     if (scope === targetScope) {
-      dataset={...parseFeedResponse(JSON.stringify(data),symbol,30,dataset),historyComplete:recentOnly?dataset.historyComplete:data.historyComplete};
+      dataset={...parseFeedResponse(JSON.stringify(data),symbol,30,dataset),historyComplete:true};
       rebuild();save();
     }
     else useDataset(data, 'feed', id, { restoreViewport });
     feedFailures = 0;$('message').hidden=true;
     void loadArchive();void refreshConversion();
-    if(!recentOnly&&data.historyComplete===false){
-      const request={scope:targetScope,controller};historyRequest=request;
-      // Detach this download from the regular live poll. A slow old file must
-      // never delay the next 30-second price update.
-      feedController=null;void continueHistory(iterator,request);
-    }else await iterator.return();
+    await iterator.return();
   } catch (error) {
     if (generation !== feedGeneration) return;
     feedFailures++;
@@ -529,7 +530,7 @@ function scheduleFeed() {
   }, delay);
 }
 function pauseFeed() {
-  clearTimeout(pollTimer);clearTimeout(fxTimer); feedController?.abort();archiveRequest?.controller.abort();historyRequest?.controller.abort(); feedGeneration++; feedFetching = false;
+  clearTimeout(pollTimer);clearTimeout(fxTimer); feedController?.abort();archiveRequest?.controller.abort();clearTimeout(historyTimer); feedGeneration++; feedFetching = false;
 }
 
 document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => chart.setTool(button.dataset.tool)));
@@ -548,7 +549,7 @@ chart.addEventListener('tool', ({ detail }) => {
 chart.addEventListener('drawings', () => { renderDrawings(); checkpoint(); openPanel(chart.activePosition()?'risk':'drawings'); });
 chart.addEventListener('selection', renderDrawings);
 chart.addEventListener('readout',({detail})=>updateStudyValues(detail));
-chart.addEventListener('viewport', () => {$('price-reset').setAttribute('aria-pressed',String(!chart.getPriceRange()));scheduleSave();});
+chart.addEventListener('viewport', () => {$('price-reset').setAttribute('aria-pressed',String(!chart.getPriceRange()));scheduleSave();maybeLoadOlder();});
 chart.addEventListener('positionpreview',({detail})=>renderRiskReadout(detail.drawing));
 chart.addEventListener('message', ({detail}) => announce(detail.text));
 chart.addEventListener('limit', () => announce('This workspace supports up to 300 drawings. Export or remove some before adding more.'));
@@ -628,13 +629,13 @@ $('indicator-form').addEventListener('submit', event => {
   if (!validated) { announce('Check the indicator settings. RSI lower must be below upper; MACD fast must be below slow.'); return; }
   const next = editingStudy ? studies.map(s => s.key === editingStudy.key ? validated : s) : [...studies, validated];
   if (next.filter(s => s.enabled !== false && indicators.definitions.get(s.id)?.pane === 'oscillator').length > 4) { announce('Show up to four oscillator panels at once. Hide one before adding another.'); return; }
-  studies = next; calculateStudies(); renderStudies(); checkpoint(); $('indicator-dialog').close(); editingStudy = null;
+  studies = next; calculateStudies(); renderStudies(); checkpoint(); $('indicator-dialog').close(); editingStudy = null;void loadArchive();
 });
 $('data-form').addEventListener('submit', async event => {
   event.preventDefault(); const file = $('data-file').files[0]; if (!file) return;
   const button = event.submitter; button.disabled = true; $('import-error').hidden = true;
   try {
-    if (file.size > 8 * 1024 * 1024) throw new Error('Choose a file under 8 MB (up to 50,000 candles).');
+    if (file.size > 8 * 1024 * 1024) throw new Error('Choose a file under 8 MB (up to 100,000 candles).');
     const text = await file.text();
     const data = parseDataset(text, $('import-symbol').value.toUpperCase(), Number($('import-timeframe').value));
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text + data.symbol + data.baseTimeframe));

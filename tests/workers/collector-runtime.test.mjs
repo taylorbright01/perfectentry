@@ -11,6 +11,9 @@ test('upgraded collector preserves batched ingestion, auto archives completed ho
    const r=await post('/ingest',batch);assert.equal(r.status,200,await r.clone().text());assert.equal((await r.json()).accepted,true);
   }
   const bucket=await mf.getR2Bucket('CANDLES');const manifest=await (await bucket.get('pv/v2/archive/EURUSD/manifest.json')).json();assert.equal(manifest.through,end);
+  assert.equal(manifest.retentionBars,100000);assert.equal(manifest.series[60].length,1);
+  const minute=await (await bucket.get(`pv/v2/archive/EURUSD/60/${manifest.series[60][0]}.json`)).json();assert.equal(minute.candles.length,60);assert.deepEqual(minute.candles[0],[start,1,1.2,.9,1.1,2]);
+  const health=await (await mf.dispatchFetch('https://test/health')).json();assert.equal(health.historyVersion,3);assert.equal(health.retentionBars,100000);
   const month=new Date(start*1000).toISOString().slice(0,7);const history=await (await bucket.get(`pv/v2/archive/EURUSD/3600/${month}.json`)).json();assert.deepEqual(history.candles,[[start,1,1.2,.9,1.1,120]]);
   const from=end-48*3600;const older={version:2,base_timeframe:3600,batch_id:'runtime-archive',streams:[{symbol:'EURUSD',from,through:from+24*3600,candles:Array.from({length:24},(_,i)=>[from+i*3600,1,1.2,.9,1.1,100])}]};
   const response=await post('/history',older);assert.equal(response.status,200,await response.clone().text());assert.equal((await response.json()).accepted,true);

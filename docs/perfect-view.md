@@ -36,7 +36,7 @@ There is no third-party chart attribution or chart-library subscription.
 
 The shipped configuration loads explicitly labelled, deterministic synthetic
 historical candles. They are not broker quotes or a live demo. Real CSV/JSON files
-can be imported (8 MB / 50,000-bar limit). Import times are interpreted as UTC;
+can be imported (8 MB / 100,000-bar limit). Import times are interpreted as UTC;
 convert MT5 broker-server times to UTC before loading. Choose the actual source
 candle size; do not label M5 rows as M1. MT5 DATE/TIME tab-separated headers work.
 

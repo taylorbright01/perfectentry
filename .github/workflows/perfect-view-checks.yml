@@ -18,6 +18,7 @@ jobs:
       - run: npm test
       - run: npm run test:workers
       - run: python3 tests/history-import.test.py
+      - run: python3 tests/history-prepare.test.py
       - run: npm audit --audit-level=high
       - run: npx wrangler deploy --dry-run --config cloudflare/collector/wrangler.jsonc
       - run: npx wrangler deploy --dry-run --config cloudflare/accounts/wrangler.jsonc

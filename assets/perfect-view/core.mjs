@@ -2,7 +2,7 @@ import { definitions, validateStudy } from './studies.mjs';
 import {validateFib} from './drawings.mjs';
 // Original Perfect View data and indicator foundation. No charting dependencies.
 export const TIMEFRAMES = [30, 60, 300, 900, 3600, 14400, 86400];
-export const MAX_BARS = 50000;
+export const MAX_BARS = 100000;
 
 export function timestamp(value) {
   if (typeof value === 'number' || /^\d+(\.\d+)?$/.test(String(value))) {
