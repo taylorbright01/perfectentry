@@ -32,7 +32,7 @@ export class PerfectViewCollector {
 export default {
  async fetch(request,env) {
   const path=new URL(request.url).pathname;
-  if (request.method==='GET' && path==='/health') return reply({service:'perfect-view-collector',version:1});
+  if (request.method==='GET' && path==='/health') return reply({service:'perfect-view-collector',version:1,historyVersion:3,retentionBars:100000});
   if (!['/ingest','/history'].includes(path)) return reply({error:'Not found'},404);
   if (request.method!=='POST') return reply({error:'POST required'},405);
   const token=env.PERFECT_VIEW_COLLECTOR_TOKEN;

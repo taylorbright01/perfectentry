@@ -59,6 +59,27 @@ test('native archives stream newest parts first and cancel before fetching older
  controller.abort();await assert.rejects(stream.next(),{name:'AbortError'});assert.equal(requests.length,2);
  const all=await feed.history('EURUSD',86400);assert.equal(all.candles.length,3);assert.equal(requests.length,4);
 });
+test('minute archives fetch only a needed page and another page only on explicit demand',async()=>{
+ const requests=[],end=Math.floor((NOW/1000-21600)/21600)*21600;
+ const parts=Array.from({length:20},(_,i)=>new Date((end-i*21600)*1000).toISOString().slice(0,13)).reverse();
+ const feed=new CdnFeed({url:'https://data.example/',locks:null,now:()=>NOW,fetchImpl:async url=>{
+  const path=new URL(url).pathname;requests.push(path);
+  if(path.endsWith('manifest.json'))return Response.json({version:2,symbol:'EURUSD',through:NOW/1000,series:{60:parts}});
+  const part=path.split('/').at(-1).replace('.json',''),start=Date.parse(part+':00:00Z')/1000;
+  return Response.json({version:2,symbol:'EURUSD',baseTimeframe:60,part,candles:Array.from({length:360},(_,i)=>[start+i*60,1,1.2,.9,1.1,10])});
+ }});
+ const page=await feed.archivePage('EURUSD',300);assert.equal(requests.length,2);assert.equal(page.data.candles.length,360);assert.equal(page.hasMore,true);
+ await new Promise(resolve=>setTimeout(resolve,10));assert.equal(requests.length,2);
+ const older=await feed.archivePage('EURUSD',300,{before:page.nextBefore});assert.equal(requests.length,3);assert.ok(older.data.candles.at(-1).time<page.data.candles[0].time);
+ await feed.archivePage('EURUSD',300,{before:page.nextBefore});assert.equal(requests.length,3);
+ assert.equal((await feed.archivePage('EURUSD',30)).data,null);assert.equal(requests.length,3);
+});
+test('raw fallback can request one bounded older slice without sweeping 72 hours',async()=>{
+ const {feed,requests}=rollingFeed(),first=await feed.load('EURUSD',null,{maxHours:5});
+ assert.equal(requests.length,6);assert.equal(first.candles.length,600);
+ const older=await feed.load('EURUSD',first,{maxHours:5,before:first.candles[0].time});
+ assert.equal(requests.length,11);assert.equal(older.candles.length,1200);
+});
 test('archived bars merge from versioned parts and corrected revisions replace stale local cache',async()=>{
  const requests=[],cache=new Map();let revision=1,clock=NOW;
  const feed=new CdnFeed({url:'https://data.example/',locks:null,now:()=>clock,readCache:async k=>cache.get(k),writeCache:async(k,v)=>cache.set(k,v),fetchImpl:async(url,options)=>{

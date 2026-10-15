@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "id": "perfect-view-rolling-buffer-only",
+      "enabled": true,
+      "conditions": { "prefix": "pv/v1/history/" },
+      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 345600 } }
+    }
+  ]
+}
