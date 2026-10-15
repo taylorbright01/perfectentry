@@ -368,7 +368,7 @@ function renderRiskReadout(drawing=chart.activePosition()) {
 }
 $('risk-form').addEventListener('submit',event=>event.preventDefault());
 $('risk-form').addEventListener('input',readRiskForm);$('risk-form').addEventListener('change',readRiskForm);
-$('risk-new-session').addEventListener('click',()=>{riskSession={...riskSession,balance:0,updated:new Date().toISOString()};store('risk-session',riskSession);renderRiskForm();$('risk-balance').focus();});
+$('risk-new-session').addEventListener('click',()=>{riskSession={...riskSession,balance:0,updated:new Date().toISOString()};store('risk-session',riskSession);renderRiskForm();chart.requestDraw();$('risk-balance').focus();});
 
 // Imported candles are kept in IndexedDB, separate from small workspace documents.
 function withDB(action) {
