@@ -55,7 +55,12 @@ export class Archive {
   }
   for(const [step,streams] of [[3600,hourly],[60,minutes]])for(let i=0;i<2;i++){
    const used=new Set(),chunk=streams.filter(s=>{if(used.has(s.symbol))return false;used.add(s.symbol);return true;});if(!chunk.length)break;
-   await this.ingest({version:2,base_timeframe:step,batch_id:'auto-'+meta.revision+'-'+step+'-'+i,streams:chunk});
+   // A retried live batch can drain another recovery window without changing
+   // meta.revision. Identify the actual archive payload, not that live revision.
+   const payload=JSON.stringify({base_timeframe:step,streams:chunk});
+   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(payload));
+   const id=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+   await this.ingest({version:2,base_timeframe:step,batch_id:'auto-v2-'+step+'-'+id,streams:chunk});
    for(const stream of chunk)streams.splice(streams.indexOf(stream),1);
   }
   await this.storage.transaction(async tx=>{for(const [key,value] of progress)await tx.put(key,value);});
