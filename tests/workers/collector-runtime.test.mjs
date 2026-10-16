@@ -10,7 +10,11 @@ test('upgraded collector preserves batched ingestion, auto archives completed ho
    const batch={version:1,base_timeframe:30,collector_id:'perfect_view_mt5',batch_id:'runtime-'+half,streams:SYMBOLS.map(symbol=>({symbol,broker_symbol:symbol,through:start+(half+1)*1800,candles:Array.from({length:60},(_,i)=>({time:start+half*1800+i*30,open:1,high:1.2,low:.9,close:1.1,volume:1,empty:false}))}))};
    const r=await post('/ingest',batch);assert.equal(r.status,200,await r.clone().text());assert.equal((await r.json()).accepted,true);
   }
-  const bucket=await mf.getR2Bucket('CANDLES');const manifest=await (await bucket.get('pv/v2/archive/EURUSD/manifest.json')).json();assert.equal(manifest.through,end);
+  const bucket=await mf.getR2Bucket('CANDLES');
+  // Archives are published by alarms after the live request has been acknowledged.
+  let ready=false;for(let i=0;i<160;i++){const f=await bucket.get('pv/v2/archive/EURUSD/manifest.json');if(f&&(await f.json()).through===end){ready=true;break;}await new Promise(r=>setTimeout(r,250));}
+  assert.equal(ready,true,'background alarm published EURUSD archive');
+  const manifest=await (await bucket.get('pv/v2/archive/EURUSD/manifest.json')).json();assert.equal(manifest.through,end);
   assert.equal(manifest.retentionBars,100000);assert.equal(manifest.series[60].length,1);
   const minute=await (await bucket.get(`pv/v2/archive/EURUSD/60/${manifest.series[60][0]}.json`)).json();assert.equal(minute.candles.length,60);assert.deepEqual(minute.candles[0],[start,1,1.2,.9,1.1,2]);
   const health=await (await mf.dispatchFetch('https://test/health')).json();assert.equal(health.historyVersion,3);assert.equal(health.retentionBars,100000);
