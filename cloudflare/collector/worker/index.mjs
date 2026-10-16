@@ -10,13 +10,17 @@ export class PerfectViewCollector {
  serialize(action) {const result=this.queue.then(action);this.queue=result.catch(()=>{});return result;}
  async fetch(request) {
   return this.serialize(async()=>{
+   let stage='decode';
    try {
     const {batch,hash}=await request.json();
-    if(batch.version===2)return reply(await this.archive.ingest(batch));
+    if(batch.version===2){stage='history-import';return reply(await this.archive.ingest(batch));}
+    stage='live-ingest';
     const ack=await this.engine.ingest(batch,hash);
+    stage='archive-closed-hours';
     await this.archive.collectClosedHours();
     return reply(ack);
-   } catch {
+   } catch(error) {
+    console.error('Perfect View collector failure',stage,String(error?.message ?? error).slice(0,1000));
     await this.ctx.storage.setAlarm(Date.now()+60000);
     return reply({error:'Publication unavailable; retry the same batch'},503);
    }
@@ -25,7 +29,7 @@ export class PerfectViewCollector {
  async alarm() {
   return this.serialize(async()=>{
    try {await this.engine.flush();await this.archive.flush();}
-   catch {await this.ctx.storage.setAlarm(Date.now()+60000);}
+   catch(error) {console.error('Perfect View collector alarm failure',String(error?.message ?? error).slice(0,1000));await this.ctx.storage.setAlarm(Date.now()+60000);}
   });
  }
 }
