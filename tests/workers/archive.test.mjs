@@ -81,3 +81,29 @@ test('automatic archive drains successive recovery windows with an unchanged liv
  assert.equal(bucket.data.get('pv/v2/archive/EURUSD/60/2026-10-01T00.json').candles.length,240);
  const calls=bucket.calls;await archive.collectClosedHours();assert.equal(bucket.calls,calls);
 });
+test('bounded archive jobs advance one instrument and hour without skipping the rest',async()=>{
+ const storage=new Storage(),bucket=new Bucket(),archive=new Archive(storage,bucket,()=>NOW);
+ await storage.put('meta',{revision:2,streams:Object.fromEntries(['EURUSD','GBPUSD'].map(s=>[s,{firstHour:START,through:START+2*3600}]))});
+ for(let h=0;h<2;h++)for(const [s,g] of [['EURUSD',1],['GBPUSD',2]]){
+  const t=START+h*3600;
+  await storage.put(`h:${String(t).padStart(12,'0')}:${g}`,{streams:{[s]:Array.from({length:120},(_,i)=>[t+i*30,1,1.2,.9,1.1,1,0])}});
+ }
+ assert.equal(await archive.collectClosedHours(1,1),true);
+ assert.equal(await storage.get('archive-progress:EURUSD'),START+3600);
+ assert.equal(await storage.get('archive-progress:GBPUSD'),undefined);
+ for(let n=0;n<3;n++)assert.equal(await archive.collectClosedHours(1,1),true);
+ assert.equal(await archive.collectClosedHours(1,1),false);
+ assert.equal(await storage.get('archive-progress:GBPUSD'),START+7200);
+});
+test('live acknowledgements schedule background archiving without waiting for it or postponing its alarm',async()=>{
+ const {PerfectViewCollector}=await import('../../cloudflare/collector/worker/index.mjs');
+ let alarm=null,scheduled=0,archived=0;
+ const collector=new PerfectViewCollector({storage:{getAlarm:async()=>alarm,setAlarm:async t=>{alarm=t;scheduled++;}}},{});
+ collector.engine.ingest=async()=>({accepted:true});
+ collector.archive.collectClosedHours=async(...limits)=>{assert.deepEqual(limits,[1,1]);archived++;return false;};
+ collector.engine.flush=collector.archive.flush=async()=>{};
+ const req=()=>new Request('https://test',{method:'POST',body:JSON.stringify({batch:{version:1},hash:'test'})});
+ assert.equal((await collector.fetch(req())).status,200);assert.equal(archived,0);assert.equal(scheduled,1);
+ assert.equal((await collector.fetch(req())).status,200);assert.equal(scheduled,1);
+ await collector.alarm();assert.equal(archived,1);
+});
