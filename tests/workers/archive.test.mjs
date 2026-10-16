@@ -66,3 +66,18 @@ test('known no-quote intervals do not manufacture candles and a missing hour is 
  assert.deepEqual(manifest.series[60],[]);assert.deepEqual(manifest.coverage,[[START,START+3600]]);
  assert.ok(!bucket.data.has('pv/v2/archive/EURUSD/86400/2026.json'));
 });
+test('automatic archive drains successive recovery windows with an unchanged live revision',async()=>{
+ const storage=new Storage(),bucket=new Bucket(),archive=new Archive(storage,bucket,()=>NOW);
+ await storage.put('meta',{revision:29,streams:{EURUSD:{firstHour:START,through:START+4*3600}}});
+ for(let h=0;h<4;h++){
+  const t=START+h*3600;
+  await storage.put(`h:${String(t).padStart(12,'0')}:1`,{streams:{EURUSD:Array.from({length:120},(_,i)=>[t+i*30,1,1.2,.9,1.1,1,0])}});
+ }
+ await archive.collectClosedHours();
+ await archive.collectClosedHours();
+ assert.equal(await storage.get('archive-progress:EURUSD'),START+4*3600);
+ assert.equal(await storage.get('archive-minute-progress:EURUSD'),START+4*3600);
+ assert.equal(bucket.data.get('pv/v2/archive/EURUSD/3600/2026-10.json').candles.length,4);
+ assert.equal(bucket.data.get('pv/v2/archive/EURUSD/60/2026-10-01T00.json').candles.length,240);
+ const calls=bucket.calls;await archive.collectClosedHours();assert.equal(bucket.calls,calls);
+});
