@@ -16,8 +16,10 @@ export class PerfectViewCollector {
     if(batch.version===2){stage='history-import';return reply(await this.archive.ingest(batch));}
     stage='live-ingest';
     const ack=await this.engine.ingest(batch,hash);
-    stage='archive-closed-hours';
-    await this.archive.collectClosedHours();
+    // Acknowledge durable live publication before doing archive catch-up.
+    // Keep an existing alarm so continuous ingestion cannot postpone it.
+    stage='schedule-archive';
+    if(await this.ctx.storage.getAlarm()===null)await this.ctx.storage.setAlarm(Date.now()+1000);
     return reply(ack);
    } catch(error) {
     console.error('Perfect View collector failure',stage,String(error?.message ?? error).slice(0,1000));
@@ -28,7 +30,11 @@ export class PerfectViewCollector {
  }
  async alarm() {
   return this.serialize(async()=>{
-   try {await this.engine.flush();await this.archive.flush();}
+   try {
+    await this.engine.flush();await this.archive.flush();
+    // One instrument/hour per alarm bounds recovery work and lets live requests run.
+    if(await this.archive.collectClosedHours(1,1))await this.ctx.storage.setAlarm(Date.now()+1000);
+   }
    catch(error) {console.error('Perfect View collector alarm failure',String(error?.message ?? error).slice(0,1000));await this.ctx.storage.setAlarm(Date.now()+60000);}
   });
  }
