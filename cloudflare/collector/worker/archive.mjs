@@ -27,15 +27,16 @@ export class Archive {
   for(const key of pending.deletes??[])await this.bucket.delete(key);
   await this.storage.delete('archive-pending');
  }
- async collectClosedHours() {
+ async collectClosedHours(maxSymbols=SYMBOLS.length,maxHours=2) {
   const meta=await this.storage.get('meta');if(!meta)return;
   const hourly=[],minutes=[],progress=[];
   for(const [symbol,state] of Object.entries(meta.streams)) {
+   if(progress.length>=maxSymbols*2)break;
    if(state.firstHour===undefined)continue;
    const hourKey='archive-progress:'+symbol,minuteKey='archive-minute-progress:'+symbol;
    const hourFrom=Math.max(await this.storage.get(hourKey)??state.firstHour,state.firstHour);
    const minuteFrom=Math.max(await this.storage.get(minuteKey)??state.firstHour,state.firstHour);
-   const from=Math.min(hourFrom,minuteFrom),through=Math.min(Math.floor(state.through/hour)*hour,from+2*hour);
+   const from=Math.min(hourFrom,minuteFrom),through=Math.min(Math.floor(state.through/hour)*hour,from+maxHours*hour);
    if(through<=from)continue;
    for(let t=from;t<through;t+=hour){
     const group=SYMBOLS.indexOf(symbol)<8?0:SYMBOLS.indexOf(symbol)<16?1:SYMBOLS.indexOf(symbol)<24?2:3;
@@ -63,7 +64,8 @@ export class Archive {
    await this.ingest({version:2,base_timeframe:step,batch_id:'auto-v2-'+step+'-'+id,streams:chunk});
    for(const stream of chunk)streams.splice(streams.indexOf(stream),1);
   }
-  await this.storage.transaction(async tx=>{for(const [key,value] of progress)await tx.put(key,value);});
+  if(progress.length)await this.storage.transaction(async tx=>{for(const [key,value] of progress)await tx.put(key,value);});
+  return progress.length>0;
  }
  // Count-based retention applies independently to every symbol and resolution.
  // Only the boundary shard is rewritten; entire older shards are removed.
